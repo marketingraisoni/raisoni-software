@@ -57,6 +57,22 @@
   @apply after:pointer-events-none after:absolute after:inset-s-0 after:bottom-0 after:hidden after:h-32 after:w-full after:rounded-b-2xl after:bg-[linear-gradient(180deg,transparent_10%,var(--background)_70%)] md:after:block;
 }
 
+button,
+[role='button'],
+[role='menuitem'],
+[role='menuitemcheckbox'],
+[role='menuitemradio'],
+[role='option'],
+[data-slot='dropdown-menu-item'],
+[data-slot='dropdown-menu-checkbox-item'],
+[data-slot='dropdown-menu-radio-item'],
+[data-slot='dropdown-menu-sub-trigger'],
+[data-slot='select-item'],
+[data-slot='select-trigger'],
+[data-slot='command-item'] {
+  cursor: pointer;
+}
+
 /* styles.css */
 .CollapsibleContent {
   overflow: hidden;

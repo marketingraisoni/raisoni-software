@@ -30,6 +30,7 @@ export const getLots = asyncHandler(async (req, res) => {
   const [total, lots] = await Promise.all([
     Lot.countDocuments(query),
     Lot.find(query)
+      .select('-deletedAt')
       .populate('createdBy', 'name username')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -57,9 +58,10 @@ export const getLots = asyncHandler(async (req, res) => {
     const totalPackets = stats?.totalPackets ?? 0;
     const totalMilliCarat = Math.round(Number(stats?.totalCarat ?? 0) * 1000);
     const targetMilliCarat = Math.round(Number(lot.totalCarat) * 1000);
+    const { deletedAt, ...rest } = lot;
 
     return {
-      ...lot,
+      ...rest,
       assortmentComplete:
         totalPackets === lot.totalPcs && totalMilliCarat === targetMilliCarat,
     };
@@ -76,6 +78,7 @@ export const getLots = asyncHandler(async (req, res) => {
 
 export const getLotById = asyncHandler(async (req, res) => {
   const lot = await Lot.findOne({ _id: req.params.id, deletedAt: null })
+    .select('-deletedAt')
     .populate('createdBy', 'name username');
   if (!lot) throw ApiError.notFound(API_MESSAGES.LOT.NOT_FOUND);
 

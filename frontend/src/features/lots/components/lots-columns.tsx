@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { formatDate } from '@/lib/format-date'
 import { type ColumnDef } from '@tanstack/react-table'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -31,13 +31,13 @@ export const lotsColumns: ColumnDef<Lot>[] = [
   {
     accessorKey: 'totalPcs',
     header: ({ column }) => <DataTableColumnHeader column={column} title='Total PCs' />,
-    cell: ({ row }) => <span>{row.original.totalPcs.toLocaleString()} PCs</span>,
+    cell: ({ row }) => <span>{row.original.totalPcs.toLocaleString()}</span>,
     enableSorting: false,
   },
   {
     accessorKey: 'entryDate',
     header: ({ column }) => <DataTableColumnHeader column={column} title='Entry Date' />,
-    cell: ({ row }) => <span>{format(row.original.entryDate, 'MMM d, yyyy')}</span>,
+    cell: ({ row }) => <span>{formatDate(row.original.entryDate)}</span>,
     enableSorting: false,
   },
   {

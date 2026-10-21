@@ -42,13 +42,26 @@ const lotSchema = new mongoose.Schema(
     },
     deletedAt: {
       type: Date,
-      default: null
+      default: null,
+      select: false
     }
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toJSON: {
+      virtuals: true,
+      transform: (_doc, ret) => {
+        delete ret.deletedAt;
+        return ret;
+      }
+    },
+    toObject: {
+      virtuals: true,
+      transform: (_doc, ret) => {
+        delete ret.deletedAt;
+        return ret;
+      }
+    }
   }
 );
 

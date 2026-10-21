@@ -220,7 +220,7 @@ const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <numFmts count="3">
     <numFmt numFmtId="164" formatCode="0.000"/>
-    <numFmt numFmtId="165" formatCode="yyyy-mm-dd"/>
+    <numFmt numFmtId="165" formatCode="dd/mm/yyyy"/>
     <numFmt numFmtId="166" formatCode="#,##0"/>
   </numFmts>
   <fonts count="6">
