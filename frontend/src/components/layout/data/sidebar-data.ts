@@ -9,12 +9,9 @@ import {
   UserCog,
   Users,
   UserRoundKey,
-  AudioWaveform,
-  GalleryVerticalEnd,
   Gem,
   Layers3,
 } from 'lucide-react'
-import { Logo } from '@/assets/logo'
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
@@ -23,23 +20,6 @@ export const sidebarData: SidebarData = {
     email: 'satnaingdev@gmail.com',
     avatar: '/avatars/shadcn.jpg',
   },
-  teams: [
-    {
-      name: 'Raisoni Software',
-      logo: Logo,
-      plan: 'Admin Panel',
-    },
-    {
-      name: 'Acme Inc',
-      logo: GalleryVerticalEnd,
-      plan: 'Enterprise',
-    },
-    {
-      name: 'Acme Corp.',
-      logo: AudioWaveform,
-      plan: 'Startup',
-    },
-  ],
   navGroups: [
     {
       title: 'General',

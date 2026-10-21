@@ -37,9 +37,40 @@ export const getLots = asyncHandler(async (req, res) => {
       .lean(),
   ]);
 
+  const packetStats = lots.length
+    ? await AssortmentPacket.aggregate([
+        { $match: { lot: { $in: lots.map((lot) => lot._id) } } },
+        {
+          $group: {
+            _id: '$lot',
+            totalPackets: { $sum: 1 },
+            totalCarat: { $sum: '$carat' },
+          },
+        },
+      ])
+    : [];
+  const packetStatsByLot = new Map(
+    packetStats.map((stats) => [String(stats._id), stats])
+  );
+  const lotsWithAssortmentStatus = lots.map((lot) => {
+    const stats = packetStatsByLot.get(String(lot._id));
+    const totalPackets = stats?.totalPackets ?? 0;
+    const totalMilliCarat = Math.round(Number(stats?.totalCarat ?? 0) * 1000);
+    const targetMilliCarat = Math.round(Number(lot.totalCarat) * 1000);
+
+    return {
+      ...lot,
+      assortmentComplete:
+        totalPackets === lot.totalPcs && totalMilliCarat === targetMilliCarat,
+    };
+  });
+
   return sendSuccess(res, {
     message: API_MESSAGES.LOT.LIST_SUCCESS,
-    data: { lots, pagination: createPaginationMeta({ page, limit, total }) },
+    data: {
+      lots: lotsWithAssortmentStatus,
+      pagination: createPaginationMeta({ page, limit, total }),
+    },
   });
 });
 

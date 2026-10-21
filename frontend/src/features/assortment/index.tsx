@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
+import { AssortmentExcelButton } from './components/assortment-excel-button'
 
 type Props = {
   onAssort: (lotId: string) => void
@@ -49,7 +50,7 @@ export function AssortmentLots({ onAssort }: Props) {
           <div className='flex flex-wrap items-center justify-between gap-3 border-b p-4'>
             <div>
               <h2 className='font-semibold'>Lots Ready for Assortment</h2>
-              <p className='text-sm text-muted-foreground'>Each Lot opens in its own focused packet workspace.</p>
+              <p className='text-sm text-muted-foreground'>Open a Lot to create and review its packets.</p>
             </div>
             <div className='relative w-full sm:w-64'>
               <Search className='absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
@@ -65,7 +66,7 @@ export function AssortmentLots({ onAssort }: Props) {
                   <TableHead>Total Pieces</TableHead>
                   <TableHead>Total Carat</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className='w-36 text-end'>Action</TableHead>
+                  <TableHead className='w-64 text-end'>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -79,10 +80,15 @@ export function AssortmentLots({ onAssort }: Props) {
                     <TableCell>{lot.totalPcs.toLocaleString()} PCs</TableCell>
                     <TableCell>{formatCarat(lot.totalCarat)} CT</TableCell>
                     <TableCell><Badge variant={lot.status === 'active' ? 'default' : 'secondary'} className='capitalize'>{lot.status}</Badge></TableCell>
-                    <TableCell className='text-end'>
-                      <Button size='sm' variant={lot.status === 'active' ? 'default' : 'outline'} onClick={() => onAssort(lot.id)}>
-                        <Layers3 /> {lot.status === 'active' ? 'Assort' : 'View'} <ArrowRight />
-                      </Button>
+                    <TableCell>
+                      <div className='flex items-center justify-end gap-2'>
+                        {lot.assortmentComplete && (
+                          <AssortmentExcelButton lotId={lot.id} kapanNo={lot.kapanNo} compact />
+                        )}
+                        <Button size='sm' variant={lot.status === 'active' ? 'default' : 'outline'} onClick={() => onAssort(lot.id)}>
+                          <Layers3 /> {lot.status === 'active' ? 'Assort' : 'View'} <ArrowRight />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )) : (

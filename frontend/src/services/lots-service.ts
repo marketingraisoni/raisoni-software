@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { apiClient } from '@/lib/api-client'
 import {
   type AssortmentPacket,
@@ -44,8 +45,10 @@ type PacketsData = {
   summary: AssortmentSummary
 }
 
-type PacketData = { packet: unknown }
-type GradeData = { grade: unknown }
+type PacketData = {
+  packet: unknown
+  summary: AssortmentSummary
+}
 
 function parseLot(value: unknown): Lot {
   const record = value as Record<string, unknown>
@@ -56,6 +59,7 @@ function parseLot(value: unknown): Lot {
     totalPcs: Number(record.totalPcs || 0),
     entryDate: new Date(String(record.entryDate)),
     status: record.status === 'closed' ? 'closed' : 'active',
+    assortmentComplete: record.assortmentComplete === true,
     createdAt: new Date(String(record.createdAt)),
     updatedAt: new Date(String(record.updatedAt)),
   }
@@ -65,11 +69,9 @@ function parsePacket(value: unknown): AssortmentPacket {
   const record = value as Record<string, unknown>
   return {
     id: String(record.id || record._id || ''),
-    lot: String(record.lot || ''),
     srNo: Number(record.srNo || 0),
-    grade: String(record.grade || ''),
+    name: String(record.name || ''),
     carat: Number(record.carat || 0),
-    createdAt: new Date(String(record.createdAt)),
   }
 }
 
@@ -124,13 +126,19 @@ export async function getLotPackets(lotId: string, signal?: AbortSignal) {
 
 export async function createLotPacket(
   lotId: string,
-  input: { grade: string; carat: number }
+  input: { carat: number }
 ) {
   const { data: response } = await apiClient.post<ApiResponse<PacketData>>(
     `/lots/${lotId}/packets`,
     input
   )
-  return { ...response, data: { packet: parsePacket(response.data.packet) } }
+  return {
+    ...response,
+    data: {
+      packet: parsePacket(response.data.packet),
+      summary: response.data.summary,
+    },
+  }
 }
 
 export async function updateLotPacket(
@@ -142,37 +150,43 @@ export async function updateLotPacket(
     `/lots/${lotId}/packets/${packetId}`,
     input
   )
-  return { ...response, data: { packet: parsePacket(response.data.packet) } }
+  return {
+    ...response,
+    data: {
+      packet: parsePacket(response.data.packet),
+      summary: response.data.summary,
+    },
+  }
 }
 
-export async function createLotGrade(
-  lotId: string,
-  input: { grade: string; targetPcs: number }
-) {
-  const { data: response } = await apiClient.post<ApiResponse<GradeData>>(
-    `/lots/${lotId}/grades`,
-    input
-  )
-  return response
-}
+export async function downloadLotAssortmentExcel(lotId: string, kapanNo: string) {
+  try {
+    const response = await apiClient.get<Blob>(`/lots/${lotId}/packets/export`, {
+      responseType: 'blob',
+    })
+    const disposition = String(response.headers['content-disposition'] || '')
+    const matchedFileName = disposition.match(/filename="?([^";]+)"?/i)?.[1]
+    const fallbackFileName = `${kapanNo.replace(/[^a-z0-9_-]/gi, '-')}-packet-assortment.xlsx`
+    const url = URL.createObjectURL(response.data)
+    const link = document.createElement('a')
 
-export async function updateLotGrade(
-  lotId: string,
-  gradeId: string,
-  input: { targetPcs: number }
-) {
-  const { data: response } = await apiClient.put<ApiResponse<GradeData>>(
-    `/lots/${lotId}/grades/${gradeId}`,
-    input
-  )
-  return response
-}
-
-export async function deleteLotGrade(lotId: string, gradeId: string) {
-  const { data } = await apiClient.delete<ApiResponse<{
-    id: string
-    grade: string
-    deletedPackets: number
-  }>>(`/lots/${lotId}/grades/${gradeId}`)
-  return data
+    link.href = url
+    link.download = matchedFileName || fallbackFileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      let message = ''
+      try {
+        const payload = JSON.parse(await error.response.data.text()) as { message?: string }
+        message = payload.message || ''
+      } catch {
+        // The server did not return a JSON error payload.
+      }
+      throw new Error(message || 'Unable to download the Excel file.', { cause: error })
+    }
+    throw error
+  }
 }

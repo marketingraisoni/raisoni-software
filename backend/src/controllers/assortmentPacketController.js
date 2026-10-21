@@ -5,53 +5,74 @@ import { AssortmentPacket } from '../models/AssortmentPacket.js';
 import { AssortmentGrade } from '../models/AssortmentGrade.js';
 import { Lot } from '../models/Lot.js';
 import { logAudit } from '../services/auditService.js';
+import { buildAssortmentExcel } from '../services/assortmentExcelService.js';
 import { broadcastEvent } from '../sockets/socketManager.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 const toMilliCarat = (value) => Math.round(Number(value) * 1000);
 const fromMilliCarat = (value) => value / 1000;
+const PRIMARY_GRADE = 'A';
 
-function buildSummary(lot, packets, gradePlans = []) {
-  const gradeCounts = new Map();
+export function buildPacketName(kapanNo, srNo) {
+  return `${kapanNo}-${srNo}${PRIMARY_GRADE}`;
+}
+
+export function buildSummary(lot, packets) {
   let totalMilliCarat = 0;
 
   for (const packet of packets) {
-    gradeCounts.set(packet.grade, (gradeCounts.get(packet.grade) || 0) + 1);
     totalMilliCarat += toMilliCarat(packet.carat);
   }
 
   const targetMilliCarat = toMilliCarat(lot.totalCarat);
   const totalPackets = packets.length;
-  const plannedPackets = gradePlans.reduce((total, plan) => total + plan.targetPcs, 0);
 
   return {
-    gradeCounts: [...gradeCounts.entries()]
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([grade, count]) => ({ grade, count })),
-    grades: gradePlans
-      .map((plan) => {
-        const createdPackets = gradeCounts.get(plan.grade) || 0;
-        return {
-          id: String(plan._id),
-          grade: plan.grade,
-          targetPcs: plan.targetPcs,
-          createdPackets,
-          remainingPackets: Math.max(plan.targetPcs - createdPackets, 0),
-          complete: createdPackets === plan.targetPcs,
-        };
-      })
-      .sort((left, right) => left.grade.localeCompare(right.grade)),
-    plannedPackets,
-    unplannedPackets: Math.max(lot.totalPcs - plannedPackets, 0),
     totalPackets,
     totalCarat: fromMilliCarat(totalMilliCarat),
-    targetPackets: lot.totalPcs,
-    targetCarat: lot.totalCarat,
     remainingPackets: Math.max(lot.totalPcs - totalPackets, 0),
     remainingCarat: fromMilliCarat(Math.max(targetMilliCarat - totalMilliCarat, 0)),
     complete: totalPackets === lot.totalPcs && totalMilliCarat === targetMilliCarat,
   };
+}
+
+function toPacketResponse(lot, packet) {
+  const storedPacket = typeof packet.toObject === 'function' ? packet.toObject() : packet;
+
+  return {
+    id: String(storedPacket._id ?? storedPacket.id),
+    srNo: storedPacket.srNo,
+    name: storedPacket.name || buildPacketName(lot.kapanNo, storedPacket.srNo),
+    carat: storedPacket.carat,
+  };
+}
+
+export function buildPacketData(lot, packets) {
+  return {
+    packets: packets.map((packet) => toPacketResponse(lot, packet)),
+    summary: buildSummary(lot, packets),
+  };
+}
+
+async function backfillPrimaryPacketData(lot, packets) {
+  const operations = packets
+    .map((packet) => {
+      const name = buildPacketName(lot.kapanNo, packet.srNo);
+      if (packet.name === name && packet.grade === PRIMARY_GRADE) return null;
+
+      return {
+        updateOne: {
+          filter: { _id: packet._id },
+          update: { $set: { name, grade: PRIMARY_GRADE } },
+        },
+      };
+    })
+    .filter(Boolean);
+
+  if (operations.length) {
+    await AssortmentPacket.bulkWrite(operations);
+  }
 }
 
 async function findActiveLot(lotId) {
@@ -62,15 +83,47 @@ async function findActiveLot(lotId) {
 
 export const getAssortmentPackets = asyncHandler(async (req, res) => {
   const lot = await findActiveLot(req.params.lotId);
-  const [packets, gradePlans] = await Promise.all([
-    AssortmentPacket.find({ lot: lot._id }).sort({ srNo: 1 }).lean(),
-    AssortmentGrade.find({ lot: lot._id }).sort({ grade: 1 }).lean(),
-  ]);
+  const storedPackets = await AssortmentPacket.find({ lot: lot._id })
+    .select('srNo name grade carat')
+    .sort({ srNo: 1 })
+    .lean();
+  await backfillPrimaryPacketData(lot, storedPackets);
+  const data = buildPacketData(lot, storedPackets);
 
   return sendSuccess(res, {
     message: API_MESSAGES.PACKET.LIST_SUCCESS,
-    data: { packets, summary: buildSummary(lot, packets, gradePlans) },
+    data,
   });
+});
+
+export const exportAssortmentPackets = asyncHandler(async (req, res) => {
+  const lot = await findActiveLot(req.params.lotId);
+  const packets = await AssortmentPacket.find({ lot: lot._id })
+    .select('srNo name grade carat')
+    .sort({ srNo: 1 })
+    .lean();
+  await backfillPrimaryPacketData(lot, packets);
+
+  const summary = buildSummary(lot, packets);
+  if (!summary.complete) {
+    throw ApiError.badRequest(API_MESSAGES.PACKET.EXPORT_INCOMPLETE);
+  }
+
+  const normalizedPackets = packets.map((packet) => ({
+    srNo: packet.srNo,
+    name: buildPacketName(lot.kapanNo, packet.srNo),
+    grade: packet.grade || 'A',
+    carat: packet.carat,
+  }));
+  const workbook = buildAssortmentExcel(lot, normalizedPackets);
+  const fileName = `${lot.kapanNo.replace(/[^A-Z0-9_-]/gi, '-')}-packet-assortment.xlsx`;
+
+  res.set({
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'Content-Disposition': `attachment; filename="${fileName}"`,
+    'Content-Length': workbook.length,
+  });
+  return res.status(HTTP_STATUS.OK).send(workbook);
 });
 
 export const createAssortmentGrade = asyncHandler(async (req, res) => {
@@ -270,7 +323,7 @@ export const updateAssortmentPacket = asyncHandler(async (req, res) => {
   const otherPackets = await AssortmentPacket.find({
     lot: lot._id,
     _id: { $ne: packet._id },
-  }).select('carat').lean();
+  }).select('srNo name carat').lean();
   const otherMilliCarat = otherPackets.reduce(
     (total, currentPacket) => total + toMilliCarat(currentPacket.carat),
     0
@@ -280,6 +333,8 @@ export const updateAssortmentPacket = asyncHandler(async (req, res) => {
   }
 
   const previousCarat = packet.carat;
+  packet.name = buildPacketName(lot.kapanNo, packet.srNo);
+  packet.grade = PRIMARY_GRADE;
   packet.carat = req.body.carat;
   await packet.save();
 
@@ -303,9 +358,14 @@ export const updateAssortmentPacket = asyncHandler(async (req, res) => {
     packetId: packet._id,
   });
 
+  const { summary } = buildPacketData(lot, [
+    ...otherPackets,
+    packet.toObject(),
+  ]);
+
   return sendSuccess(res, {
     message: API_MESSAGES.PACKET.UPDATED,
-    data: { packet },
+    data: { packet: toPacketResponse(lot, packet), summary },
   });
 });
 
@@ -316,24 +376,11 @@ export const createAssortmentPacket = asyncHandler(async (req, res) => {
   }
 
   const existingPackets = await AssortmentPacket.find({ lot: lot._id })
+    .select('srNo name grade carat')
     .sort({ srNo: 1 })
     .lean();
+  await backfillPrimaryPacketData(lot, existingPackets);
   const currentSummary = buildSummary(lot, existingPackets);
-  const gradePlan = await AssortmentGrade.findOne({
-    lot: lot._id,
-    grade: req.body.grade,
-  });
-
-  if (!gradePlan) {
-    throw ApiError.badRequest(API_MESSAGES.PACKET.GRADE_REQUIRED);
-  }
-
-  const gradePacketCount = existingPackets.filter(
-    (packet) => packet.grade === req.body.grade
-  ).length;
-  if (gradePacketCount >= gradePlan.targetPcs) {
-    throw ApiError.badRequest(API_MESSAGES.PACKET.GRADE_COMPLETE);
-  }
 
   if (currentSummary.totalPackets >= lot.totalPcs) {
     throw ApiError.badRequest(API_MESSAGES.PACKET.PCS_LIMIT);
@@ -345,12 +392,14 @@ export const createAssortmentPacket = asyncHandler(async (req, res) => {
     throw ApiError.badRequest(API_MESSAGES.PACKET.CARAT_LIMIT);
   }
 
+  const nextSrNo = existingPackets.length
+    ? existingPackets[existingPackets.length - 1].srNo + 1
+    : 1;
   const packet = await AssortmentPacket.create({
     lot: lot._id,
-    srNo: existingPackets.length
-      ? existingPackets[existingPackets.length - 1].srNo + 1
-      : 1,
-    grade: req.body.grade,
+    srNo: nextSrNo,
+    name: buildPacketName(lot.kapanNo, nextSrNo),
+    grade: PRIMARY_GRADE,
     carat: req.body.carat,
     createdBy: req.user?._id,
   });
@@ -374,9 +423,14 @@ export const createAssortmentPacket = asyncHandler(async (req, res) => {
     packetId: packet._id,
   });
 
+  const { summary } = buildPacketData(lot, [
+    ...existingPackets,
+    packet.toObject(),
+  ]);
+
   return sendSuccess(res, {
     statusCode: HTTP_STATUS.CREATED,
     message: API_MESSAGES.PACKET.CREATED,
-    data: { packet },
+    data: { packet: toPacketResponse(lot, packet), summary },
   });
 });

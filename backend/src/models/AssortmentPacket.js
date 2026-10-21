@@ -13,6 +13,12 @@ const assortmentPacketSchema = new mongoose.Schema(
       required: true,
       min: 1
     },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true
+    },
     grade: {
       type: String,
       required: true,
@@ -36,5 +42,6 @@ const assortmentPacketSchema = new mongoose.Schema(
 );
 
 assortmentPacketSchema.index({ lot: 1, srNo: 1 }, { unique: true });
+assortmentPacketSchema.index({ lot: 1, name: 1 });
 
 export const AssortmentPacket = mongoose.model('AssortmentPacket', assortmentPacketSchema);

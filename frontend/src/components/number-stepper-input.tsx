@@ -58,10 +58,13 @@ export function NumberStepperInput({
           step='any'
           value={hasValue ? value : ''}
           disabled={disabled}
-          className='h-9 pe-20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
+          className='h-9 pe-[4.5rem] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
           onChange={(event) => onChange(event.target.value === '' ? Number.NaN : event.target.valueAsNumber)}
         />
-        <div className='absolute inset-y-0 end-11 flex w-7 flex-col overflow-hidden rounded-sm border bg-muted/80'>
+        <span className='pointer-events-none absolute inset-y-px end-8 flex w-10 items-center justify-center text-xs text-muted-foreground'>
+          {suffix}
+        </span>
+        <div className='absolute inset-y-px end-px flex w-8 flex-col overflow-hidden rounded-e-[5px] border-s border-input bg-muted/20'>
           <button
             type='button'
             aria-label={`Increase ${ariaLabel}`}
@@ -81,9 +84,6 @@ export function NumberStepperInput({
             <ChevronDown className='size-3.5' />
           </button>
         </div>
-        <span className='pointer-events-none absolute inset-y-1 end-1 flex w-9 items-center justify-center rounded-sm bg-muted/40 text-xs text-muted-foreground'>
-          {suffix}
-        </span>
       </div>
     </div>
   )

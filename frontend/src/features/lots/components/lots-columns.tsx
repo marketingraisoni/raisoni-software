@@ -49,7 +49,7 @@ export const lotsColumns: ColumnDef<Lot>[] = [
   {
     id: 'actions',
     cell: DataTableRowActions,
-    meta: { className: 'w-44 pe-4' },
+    meta: { className: 'w-64 pe-4' },
   },
 ]
 

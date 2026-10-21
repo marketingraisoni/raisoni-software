@@ -12,6 +12,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { AssortmentExcelButton } from '@/features/assortment/components/assortment-excel-button'
 import { type Lot } from '../data/schema'
 import { useLots } from './lots-provider'
 
@@ -26,6 +27,13 @@ export function DataTableRowActions({ row }: { row: Row<Lot> }) {
 
   return (
     <div className='flex items-center justify-end gap-2'>
+      {canRead && row.original.assortmentComplete && (
+        <AssortmentExcelButton
+          lotId={row.original.id}
+          kapanNo={row.original.kapanNo}
+          compact
+        />
+      )}
       {canRead && (
         <Button
           type='button'

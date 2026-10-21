@@ -115,6 +115,7 @@ export const API_MESSAGES = Object.freeze({
     LOT_CLOSED: 'Packets cannot be added to a closed lot',
     PCS_LIMIT: 'Packet count cannot exceed the lot Total PCs',
     CARAT_LIMIT: 'Packet carat weight cannot exceed the lot Total Carat',
+    EXPORT_INCOMPLETE: 'Excel can only be downloaded after all pieces and carat are assorted',
   }),
   PERMISSION: Object.freeze({
     CATALOG_RETRIEVED: 'Permission catalog retrieved successfully',

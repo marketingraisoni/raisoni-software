@@ -24,6 +24,7 @@ release/
 .nuxt/
 .cache/
 .tanstack/
+output/
 
 # Database & Runtime Data
 data/*
