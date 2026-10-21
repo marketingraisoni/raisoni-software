@@ -1,0 +1,81 @@
+{
+  "name": "raisoni-software-demo",
+  "version": "1.0.0",
+  "description": "Offline-capable Windows desktop business management application for shared LAN",
+  "main": "desktop/main.cjs",
+  "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"node --watch backend/server.js\" \"npm run frontend:dev\"",
+    "start": "node backend/server.js",
+    "server": "node --watch backend/server.js",
+    "seed": "node backend/scripts/seed.js",
+    "test": "node --test backend/tests/*.test.js",
+    "frontend": "npm run frontend:dev",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build",
+    "desktop": "electron desktop/main.cjs",
+    "pack": "electron-builder --dir",
+    "dist": "npm run frontend:build && electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "react",
+    "express",
+    "mongodb",
+    "lan-software",
+    "offline-first"
+  ],
+  "author": "Raisoni Software",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "socket.io": "^4.8.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "mongodb-memory-server": "^10.1.3"
+  },
+  "build": {
+    "appId": "com.raisoni.softwaredemo",
+    "productName": "Raisoni Software Demo",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "frontend/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Raisoni Software Demo"
+    }
+  }
+}

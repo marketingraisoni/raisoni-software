@@ -1,0 +1,90 @@
+# Dependencies
+node_modules/
+*/node_modules/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.pnpm-store
+
+# Environment files
+.env
+.env.*
+!.env.example
+*.env
+
+# Build & Compilation Outputs
+dist/
+dist-*/
+build/
+out/
+release/
+.next/
+.nuxt/
+.cache/
+.tanstack/
+
+# Database & Runtime Data
+data/*
+!data/.gitkeep
+data/db/
+data/backups/
+*.wt
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.archive
+
+# Archives & Temporary files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Test coverage & test artifacts
+coverage/
+**/coverage/
+__screenshots__/
+**/*/__screenshots__/
+.vitest-attachments/
+**/.vitest-attachments/
+
+# Editor & OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.bak
+*.local
+
+# VS Code (preserve shared settings/extensions if present, ignore user/workspace state)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
