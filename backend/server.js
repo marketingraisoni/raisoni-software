@@ -35,6 +35,7 @@ import inventoryRoutes from './src/routes/inventoryRoutes.js';
 import settingRoutes from './src/routes/settingRoutes.js';
 import permissionRoutes from './src/routes/permissionRoutes.js';
 import lotRoutes from './src/routes/lotRoutes.js';
+import semiPolishRoutes from './src/routes/semiPolishRoutes.js';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -72,6 +73,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/lots', lotRoutes);
+app.use('/api/semi-polish', semiPolishRoutes);
 
 // 6. 404 Route handler for API endpoints
 app.use('/api/*', apiNotFound);

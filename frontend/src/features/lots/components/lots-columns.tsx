@@ -19,7 +19,6 @@ export const lotsColumns: ColumnDef<Lot>[] = [
     header: ({ column }) => <DataTableColumnHeader column={column} title='Kapan No' />,
     cell: ({ row }) => <LongText className='font-medium'>{row.original.kapanNo}</LongText>,
     meta: { className: 'ps-4' },
-    enableHiding: false,
     enableSorting: false,
   },
   {

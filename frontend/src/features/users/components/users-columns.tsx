@@ -33,7 +33,6 @@ export const usersColumns: ColumnDef<User>[] = [
     ),
     meta: { className: 'w-10' },
     enableSorting: false,
-    enableHiding: false,
   },
   {
     accessorKey: 'username',
@@ -41,7 +40,6 @@ export const usersColumns: ColumnDef<User>[] = [
       <DataTableColumnHeader column={column} title='Username' />
     ),
     cell: ({ row }) => <LongText>{row.original.username}</LongText>,
-    enableHiding: false,
   },
   {
     accessorKey: 'name',
@@ -70,7 +68,6 @@ export const usersColumns: ColumnDef<User>[] = [
         {row.original.status}
       </Badge>
     ),
-    enableHiding: false,
   },
   {
     accessorKey: 'userType',
@@ -90,7 +87,6 @@ export const usersColumns: ColumnDef<User>[] = [
         </div>
       )
     },
-    enableHiding: false,
   },
   {
     accessorKey: 'lastLogin',

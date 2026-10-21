@@ -84,7 +84,7 @@ function createZip(entries) {
   return Buffer.concat([...localParts, centralDirectory, end]);
 }
 
-function escapeXml(value) {
+export function escapeXml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -93,16 +93,16 @@ function escapeXml(value) {
     .replaceAll("'", '&apos;');
 }
 
-function inlineCell(reference, value, style = 0) {
+export function inlineCell(reference, value, style = 0) {
   return `<c r="${reference}" s="${style}" t="inlineStr"><is><t>${escapeXml(value)}</t></is></c>`;
 }
 
-function numberCell(reference, value, style = 0, formula = '') {
+export function numberCell(reference, value, style = 0, formula = '') {
   const formulaXml = formula ? `<f>${escapeXml(formula)}</f>` : '';
   return `<c r="${reference}" s="${style}">${formulaXml}<v>${Number(value)}</v></c>`;
 }
 
-function excelDate(value) {
+export function excelDate(value) {
   const timestamp = new Date(value).getTime();
   return Number.isFinite(timestamp) ? (timestamp / 86400000) + 25569 : 0;
 }
@@ -204,11 +204,13 @@ const rootRelationships = `<?xml version="1.0" encoding="UTF-8" standalone="yes"
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>`;
 
-const workbook = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+function buildWorkbook(sheetName) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="Packets" sheetId="1" r:id="rId1"/></sheets>
+  <sheets><sheet name="${escapeXml(sheetName)}" sheetId="1" r:id="rId1"/></sheets>
   <calcPr calcId="191029" fullCalcOnLoad="1"/>
 </workbook>`;
+}
 
 const workbookRelationships = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -289,13 +291,17 @@ const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   </cellStyles>
 </styleSheet>`;
 
-export function buildAssortmentExcel(lot, packets) {
+export function buildStyledExcel(sheetName, worksheet) {
   return createZip([
     { name: '[Content_Types].xml', content: contentTypes },
     { name: '_rels/.rels', content: rootRelationships },
-    { name: 'xl/workbook.xml', content: workbook },
+    { name: 'xl/workbook.xml', content: buildWorkbook(sheetName) },
     { name: 'xl/_rels/workbook.xml.rels', content: workbookRelationships },
     { name: 'xl/styles.xml', content: styles },
-    { name: 'xl/worksheets/sheet1.xml', content: buildWorksheet(lot, packets) },
+    { name: 'xl/worksheets/sheet1.xml', content: worksheet },
   ]);
+}
+
+export function buildAssortmentExcel(lot, packets) {
+  return buildStyledExcel('Packets', buildWorksheet(lot, packets));
 }

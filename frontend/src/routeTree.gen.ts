@@ -27,6 +27,7 @@ import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authen
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedSemiPolishIndexRouteImport } from './routes/_authenticated/semi-polish/index'
 import { Route as AuthenticatedPermissionsIndexRouteImport } from './routes/_authenticated/permissions/index'
 import { Route as AuthenticatedPacketsIndexRouteImport } from './routes/_authenticated/packets/index'
 import { Route as AuthenticatedLotsIndexRouteImport } from './routes/_authenticated/lots/index'
@@ -40,6 +41,10 @@ import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedSemiPolishReportRouteImport } from './routes/_authenticated/semi-polish/report'
+import { Route as AuthenticatedSemiPolishReadyForIssueRouteImport } from './routes/_authenticated/semi-polish/ready-for-issue'
+import { Route as AuthenticatedSemiPolishHistoryRouteImport } from './routes/_authenticated/semi-polish/history'
+import { Route as AuthenticatedSemiPolishProcessIdRouteImport } from './routes/_authenticated/semi-polish/$processId'
 import { Route as AuthenticatedPacketsLotIdRouteImport } from './routes/_authenticated/packets/$lotId'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 
@@ -132,6 +137,12 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedSemiPolishIndexRoute =
+  AuthenticatedSemiPolishIndexRouteImport.update({
+    id: '/semi-polish/',
+    path: '/semi-polish/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPermissionsIndexRoute =
   AuthenticatedPermissionsIndexRouteImport.update({
     id: '/permissions/',
@@ -205,6 +216,30 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedSemiPolishReportRoute =
+  AuthenticatedSemiPolishReportRouteImport.update({
+    id: '/semi-polish/report',
+    path: '/semi-polish/report',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishReadyForIssueRoute =
+  AuthenticatedSemiPolishReadyForIssueRouteImport.update({
+    id: '/semi-polish/ready-for-issue',
+    path: '/semi-polish/ready-for-issue',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishHistoryRoute =
+  AuthenticatedSemiPolishHistoryRouteImport.update({
+    id: '/semi-polish/history',
+    path: '/semi-polish/history',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishProcessIdRoute =
+  AuthenticatedSemiPolishProcessIdRouteImport.update({
+    id: '/semi-polish/$processId',
+    path: '/semi-polish/$processId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPacketsLotIdRoute =
   AuthenticatedPacketsLotIdRouteImport.update({
     id: '/packets/$lotId',
@@ -233,6 +268,10 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/packets/$lotId': typeof AuthenticatedPacketsLotIdRoute
+  '/semi-polish/$processId': typeof AuthenticatedSemiPolishProcessIdRoute
+  '/semi-polish/history': typeof AuthenticatedSemiPolishHistoryRoute
+  '/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
+  '/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -246,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/lots/': typeof AuthenticatedLotsIndexRoute
   '/packets/': typeof AuthenticatedPacketsIndexRoute
   '/permissions/': typeof AuthenticatedPermissionsIndexRoute
+  '/semi-polish/': typeof AuthenticatedSemiPolishIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
@@ -264,6 +304,10 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/packets/$lotId': typeof AuthenticatedPacketsLotIdRoute
+  '/semi-polish/$processId': typeof AuthenticatedSemiPolishProcessIdRoute
+  '/semi-polish/history': typeof AuthenticatedSemiPolishHistoryRoute
+  '/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
+  '/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -277,6 +321,7 @@ export interface FileRoutesByTo {
   '/lots': typeof AuthenticatedLotsIndexRoute
   '/packets': typeof AuthenticatedPacketsIndexRoute
   '/permissions': typeof AuthenticatedPermissionsIndexRoute
+  '/semi-polish': typeof AuthenticatedSemiPolishIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
@@ -300,6 +345,10 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/packets/$lotId': typeof AuthenticatedPacketsLotIdRoute
+  '/_authenticated/semi-polish/$processId': typeof AuthenticatedSemiPolishProcessIdRoute
+  '/_authenticated/semi-polish/history': typeof AuthenticatedSemiPolishHistoryRoute
+  '/_authenticated/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
+  '/_authenticated/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -313,6 +362,7 @@ export interface FileRoutesById {
   '/_authenticated/lots/': typeof AuthenticatedLotsIndexRoute
   '/_authenticated/packets/': typeof AuthenticatedPacketsIndexRoute
   '/_authenticated/permissions/': typeof AuthenticatedPermissionsIndexRoute
+  '/_authenticated/semi-polish/': typeof AuthenticatedSemiPolishIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
@@ -334,6 +384,10 @@ export interface FileRouteTypes {
     | '/503'
     | '/errors/$error'
     | '/packets/$lotId'
+    | '/semi-polish/$processId'
+    | '/semi-polish/history'
+    | '/semi-polish/ready-for-issue'
+    | '/semi-polish/report'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -347,6 +401,7 @@ export interface FileRouteTypes {
     | '/lots/'
     | '/packets/'
     | '/permissions/'
+    | '/semi-polish/'
     | '/settings/'
     | '/tasks/'
     | '/users/'
@@ -365,6 +420,10 @@ export interface FileRouteTypes {
     | '/'
     | '/errors/$error'
     | '/packets/$lotId'
+    | '/semi-polish/$processId'
+    | '/semi-polish/history'
+    | '/semi-polish/ready-for-issue'
+    | '/semi-polish/report'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -378,6 +437,7 @@ export interface FileRouteTypes {
     | '/lots'
     | '/packets'
     | '/permissions'
+    | '/semi-polish'
     | '/settings'
     | '/tasks'
     | '/users'
@@ -400,6 +460,10 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
     | '/_authenticated/packets/$lotId'
+    | '/_authenticated/semi-polish/$processId'
+    | '/_authenticated/semi-polish/history'
+    | '/_authenticated/semi-polish/ready-for-issue'
+    | '/_authenticated/semi-polish/report'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
@@ -413,6 +477,7 @@ export interface FileRouteTypes {
     | '/_authenticated/lots/'
     | '/_authenticated/packets/'
     | '/_authenticated/permissions/'
+    | '/_authenticated/semi-polish/'
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
@@ -560,6 +625,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/semi-polish/': {
+      id: '/_authenticated/semi-polish/'
+      path: '/semi-polish'
+      fullPath: '/semi-polish/'
+      preLoaderRoute: typeof AuthenticatedSemiPolishIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/permissions/': {
       id: '/_authenticated/permissions/'
       path: '/permissions'
@@ -651,6 +723,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/semi-polish/report': {
+      id: '/_authenticated/semi-polish/report'
+      path: '/semi-polish/report'
+      fullPath: '/semi-polish/report'
+      preLoaderRoute: typeof AuthenticatedSemiPolishReportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/semi-polish/ready-for-issue': {
+      id: '/_authenticated/semi-polish/ready-for-issue'
+      path: '/semi-polish/ready-for-issue'
+      fullPath: '/semi-polish/ready-for-issue'
+      preLoaderRoute: typeof AuthenticatedSemiPolishReadyForIssueRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/semi-polish/history': {
+      id: '/_authenticated/semi-polish/history'
+      path: '/semi-polish/history'
+      fullPath: '/semi-polish/history'
+      preLoaderRoute: typeof AuthenticatedSemiPolishHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/semi-polish/$processId': {
+      id: '/_authenticated/semi-polish/$processId'
+      path: '/semi-polish/$processId'
+      fullPath: '/semi-polish/$processId'
+      preLoaderRoute: typeof AuthenticatedSemiPolishProcessIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/packets/$lotId': {
       id: '/_authenticated/packets/$lotId'
       path: '/packets/$lotId'
@@ -696,12 +796,17 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedPacketsLotIdRoute: typeof AuthenticatedPacketsLotIdRoute
+  AuthenticatedSemiPolishProcessIdRoute: typeof AuthenticatedSemiPolishProcessIdRoute
+  AuthenticatedSemiPolishHistoryRoute: typeof AuthenticatedSemiPolishHistoryRoute
+  AuthenticatedSemiPolishReadyForIssueRoute: typeof AuthenticatedSemiPolishReadyForIssueRoute
+  AuthenticatedSemiPolishReportRoute: typeof AuthenticatedSemiPolishReportRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedLotsIndexRoute: typeof AuthenticatedLotsIndexRoute
   AuthenticatedPacketsIndexRoute: typeof AuthenticatedPacketsIndexRoute
   AuthenticatedPermissionsIndexRoute: typeof AuthenticatedPermissionsIndexRoute
+  AuthenticatedSemiPolishIndexRoute: typeof AuthenticatedSemiPolishIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
 }
@@ -711,12 +816,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedPacketsLotIdRoute: AuthenticatedPacketsLotIdRoute,
+  AuthenticatedSemiPolishProcessIdRoute: AuthenticatedSemiPolishProcessIdRoute,
+  AuthenticatedSemiPolishHistoryRoute: AuthenticatedSemiPolishHistoryRoute,
+  AuthenticatedSemiPolishReadyForIssueRoute:
+    AuthenticatedSemiPolishReadyForIssueRoute,
+  AuthenticatedSemiPolishReportRoute: AuthenticatedSemiPolishReportRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedLotsIndexRoute: AuthenticatedLotsIndexRoute,
   AuthenticatedPacketsIndexRoute: AuthenticatedPacketsIndexRoute,
   AuthenticatedPermissionsIndexRoute: AuthenticatedPermissionsIndexRoute,
+  AuthenticatedSemiPolishIndexRoute: AuthenticatedSemiPolishIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
 }

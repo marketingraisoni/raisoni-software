@@ -3,7 +3,6 @@ import {
   type ColumnFiltersState,
   type OnChangeFn,
   type PaginationState,
-  type VisibilityState,
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -32,18 +31,16 @@ type Props = {
 }
 
 export function LotsTable({ data, pageCount, totalRows, pagination, onPaginationChange, columnFilters, onColumnFiltersChange, isLoading = false, error, onRetry }: Props) {
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const table = useReactTable({
     data,
     columns,
-    state: { pagination, columnFilters, columnVisibility },
+    state: { pagination, columnFilters },
     manualFiltering: true,
     manualPagination: true,
     pageCount,
     getRowId: (row) => row.id,
     onPaginationChange,
     onColumnFiltersChange,
-    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
   })
 
@@ -55,8 +52,17 @@ export function LotsTable({ data, pageCount, totalRows, pagination, onPagination
       <DataTableLayout
         title='Lot List'
         description='Manage master Kapan entries and rough diamond quantities.'
-        actions={<LotsPrimaryButtons />}
-        toolbar={<DataTableToolbar table={table} searchPlaceholder='Filter by Kapan No...' searchKey='kapanNo' searchDebounceMs={400} showFilterCounts={false} filters={[{ columnId: 'status', title: 'Status', options: [...lotStatuses] }]} />}
+        toolbar={
+          <DataTableToolbar
+            table={table}
+            searchPlaceholder='Filter by Kapan No...'
+            searchKey='kapanNo'
+            searchDebounceMs={400}
+            showFilterCounts={false}
+            filters={[{ columnId: 'status', title: 'Status', options: [...lotStatuses] }]}
+            actions={<LotsPrimaryButtons />}
+          />
+        }
         pagination={<DataTablePagination table={table} className='px-0' totalRows={totalRows} />}
         contentClassName='[&_[data-slot=table-container]]:h-full'
       >

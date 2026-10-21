@@ -29,7 +29,6 @@ export const tasksColumns: ColumnDef<Task>[] = [
       />
     ),
     enableSorting: false,
-    enableHiding: false,
   },
   {
     accessorKey: 'id',
@@ -38,7 +37,6 @@ export const tasksColumns: ColumnDef<Task>[] = [
     ),
     cell: ({ row }) => <div className='w-20'>{row.getValue('id')}</div>,
     enableSorting: false,
-    enableHiding: false,
   },
   {
     accessorKey: 'title',

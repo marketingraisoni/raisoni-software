@@ -11,6 +11,10 @@ import {
   UserRoundKey,
   Gem,
   Layers3,
+  Sparkles,
+  Clock,
+  History,
+  BarChart3,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -101,6 +105,37 @@ export const sidebarData: SidebarData = {
           title: 'Packet Creation',
           url: '/packets',
           icon: Layers3,
+        },
+      ],
+    },
+    {
+      title: '4P Process',
+      items: [
+        {
+          title: '4P Semi-Polish',
+          icon: Sparkles,
+          items: [
+            {
+              title: 'Active in 4P',
+              url: '/semi-polish',
+              icon: Clock,
+            },
+            {
+              title: 'Ready for Issue',
+              url: '/semi-polish/ready-for-issue',
+              icon: Layers3,
+            },
+            {
+              title: 'Returned History',
+              url: '/semi-polish/history',
+              icon: History,
+            },
+            {
+              title: 'Process Report',
+              url: '/semi-polish/report',
+              icon: BarChart3,
+            },
+          ],
         },
       ],
     },

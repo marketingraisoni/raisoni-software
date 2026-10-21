@@ -1,0 +1,149 @@
+import axios from 'axios'
+import { apiClient } from '@/lib/api-client'
+import {
+  type SemiPolishProcess,
+  type Vendor,
+  type EligibleLot,
+} from '@/features/semi-polish/data/schema'
+
+export const semiPolishQueryKeys = {
+  all: ['semi-polish'] as const,
+  list: (params: {
+    page?: number
+    limit?: number
+    status?: string
+    search?: string
+    sortBy?: string
+    sortOrder?: 'asc' | 'desc'
+  }) => ['semi-polish', 'list', params] as const,
+  eligibleLots: (params?: { sortBy?: string; sortOrder?: 'asc' | 'desc' }) =>
+    ['semi-polish', 'eligible-lots', params] as const,
+  vendors: ['semi-polish', 'vendors'] as const,
+  detail: (id: string) => ['semi-polish', 'detail', id] as const,
+}
+
+export type SemiPolishListResponse = {
+  processes: SemiPolishProcess[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  metrics: {
+    activeCount: number
+    completedCount: number
+    totalLossCarat: number
+  }
+}
+
+export async function fetchSemiPolishList(params: {
+  page?: number
+  limit?: number
+  status?: string
+  search?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}): Promise<SemiPolishListResponse> {
+  const response = await apiClient.get('/semi-polish', { params })
+  return response.data.data
+}
+
+export async function fetchEligibleLots(params?: {
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}): Promise<EligibleLot[]> {
+  const response = await apiClient.get('/semi-polish/eligible-lots', { params })
+  return response.data.data.lots
+}
+
+export async function fetchVendors(): Promise<Vendor[]> {
+  const response = await apiClient.get('/semi-polish/vendors')
+  return response.data.data.vendors
+}
+
+export async function createVendor(data: {
+  name: string
+  mobile?: string
+  address?: string
+  gstin?: string
+}): Promise<Vendor> {
+  const response = await apiClient.post('/semi-polish/vendors', data)
+  return response.data.data.vendor
+}
+
+export async function issueToSemiPolish(data: {
+  lotId: string
+  vendorId: string
+  issueDate?: string
+  expectedReturnDate?: string
+  notes?: string
+}): Promise<SemiPolishProcess> {
+  const response = await apiClient.post('/semi-polish/issue', data)
+  return response.data.data.process
+}
+
+export async function receiveFromSemiPolish(
+  id: string,
+  data: {
+    returnedPieces: number
+    returnedCarat: number
+    returnDate?: string
+    returnNotes?: string
+  }
+): Promise<SemiPolishProcess> {
+  const response = await apiClient.post(`/semi-polish/${id}/return`, data)
+  return response.data.data.process
+}
+
+export async function cancelSemiPolish(id: string): Promise<void> {
+  await apiClient.post(`/semi-polish/${id}/cancel`)
+}
+
+export async function fetchSemiPolishById(
+  id: string
+): Promise<SemiPolishProcess> {
+  const response = await apiClient.get(`/semi-polish/${id}`)
+  return response.data.data.process
+}
+
+export async function downloadSemiPolishExcel(
+  id: string,
+  issueNo: string
+): Promise<void> {
+  try {
+    const response = await apiClient.get<Blob>(`/semi-polish/${id}/export`, {
+      responseType: 'blob',
+    })
+    const disposition = String(response.headers['content-disposition'] || '')
+    const matchedFileName = disposition.match(/filename="?([^";]+)"?/i)?.[1]
+    const fallbackFileName = `${issueNo.replace(/[^a-z0-9_-]/gi, '-')}-process-record.xlsx`
+    const url = URL.createObjectURL(response.data)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download = matchedFileName || fallbackFileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      let message = ''
+      try {
+        const payload = JSON.parse(await error.response.data.text()) as {
+          message?: string
+        }
+        message = payload.message || ''
+      } catch {
+        // The server did not return a JSON error payload.
+      }
+      const downloadError = new Error(
+        message || 'Unable to download the process Excel file.'
+      )
+      ;(downloadError as Error & { cause?: unknown }).cause = error
+      throw downloadError
+    }
+    throw error
+  }
+}

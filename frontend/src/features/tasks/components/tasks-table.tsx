@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import {
   type SortingState,
-  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
@@ -43,7 +42,6 @@ export function TasksTable({ data, isLoading = false }: DataTableProps) {
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
   const [sorting, setSorting] = useState<SortingState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
   // Local state management for table (uncomment to use local-only state, not synced with URL)
   // const [globalFilter, onGlobalFilterChange] = useState('')
@@ -76,7 +74,6 @@ export function TasksTable({ data, isLoading = false }: DataTableProps) {
     columns,
     state: {
       sorting,
-      columnVisibility,
       rowSelection,
       columnFilters,
       globalFilter,
@@ -85,7 +82,6 @@ export function TasksTable({ data, isLoading = false }: DataTableProps) {
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
     globalFilterFn: (row, _columnId, filterValue) => {
       const id = String(row.getValue('id')).toLowerCase()
       const title = String(row.getValue('title')).toLowerCase()

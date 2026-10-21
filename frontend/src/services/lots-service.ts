@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { type ApiResponse } from '@/types/api'
 import { apiClient } from '@/lib/api-client'
 import {
   type AssortmentPacket,
@@ -6,11 +7,11 @@ import {
   type Lot,
   type LotStatus,
 } from '@/features/lots/data/schema'
-import { type ApiResponse } from '@/types/api'
 
 export const lotsQueryKey = ['lots'] as const
 export const lotQueryKey = (lotId: string) => ['lots', lotId] as const
-export const lotPacketsQueryKey = (lotId: string) => ['lots', lotId, 'packets'] as const
+export const lotPacketsQueryKey = (lotId: string) =>
+  ['lots', lotId, 'packets'] as const
 
 export type CreateLotInput = {
   kapanNo: string
@@ -76,15 +77,18 @@ function parsePacket(value: unknown): AssortmentPacket {
 }
 
 export async function getLots(query: LotsQuery, signal?: AbortSignal) {
-  const { data: response } = await apiClient.get<ApiResponse<LotsData>>('/lots', {
-    signal,
-    params: {
-      page: query.page,
-      limit: query.pageSize,
-      search: query.search || undefined,
-      status: query.status?.length === 1 ? query.status[0] : undefined,
-    },
-  })
+  const { data: response } = await apiClient.get<ApiResponse<LotsData>>(
+    '/lots',
+    {
+      signal,
+      params: {
+        page: query.page,
+        limit: query.pageSize,
+        search: query.search || undefined,
+        status: query.status?.length === 1 ? query.status[0] : undefined,
+      },
+    }
+  )
 
   return {
     lots: response.data.lots.map(parseLot),
@@ -93,22 +97,33 @@ export async function getLots(query: LotsQuery, signal?: AbortSignal) {
 }
 
 export async function getLot(id: string, signal?: AbortSignal) {
-  const { data: response } = await apiClient.get<ApiResponse<LotData>>(`/lots/${id}`, { signal })
+  const { data: response } = await apiClient.get<ApiResponse<LotData>>(
+    `/lots/${id}`,
+    { signal }
+  )
   return parseLot(response.data.lot)
 }
 
 export async function createLot(input: CreateLotInput) {
-  const { data: response } = await apiClient.post<ApiResponse<LotData>>('/lots', input)
+  const { data: response } = await apiClient.post<ApiResponse<LotData>>(
+    '/lots',
+    input
+  )
   return { ...response, data: { lot: parseLot(response.data.lot) } }
 }
 
 export async function updateLotStatus(id: string, status: LotStatus) {
-  const { data: response } = await apiClient.put<ApiResponse<LotData>>(`/lots/${id}`, { status })
+  const { data: response } = await apiClient.put<ApiResponse<LotData>>(
+    `/lots/${id}`,
+    { status }
+  )
   return { ...response, data: { lot: parseLot(response.data.lot) } }
 }
 
 export async function deleteLot(id: string) {
-  const { data } = await apiClient.delete<ApiResponse<{ id: string }>>(`/lots/${id}`)
+  const { data } = await apiClient.delete<ApiResponse<{ id: string }>>(
+    `/lots/${id}`
+  )
   return data
 }
 
@@ -124,10 +139,7 @@ export async function getLotPackets(lotId: string, signal?: AbortSignal) {
   }
 }
 
-export async function createLotPacket(
-  lotId: string,
-  input: { carat: number }
-) {
+export async function createLotPacket(lotId: string, input: { carat: number }) {
   const { data: response } = await apiClient.post<ApiResponse<PacketData>>(
     `/lots/${lotId}/packets`,
     input
@@ -159,11 +171,17 @@ export async function updateLotPacket(
   }
 }
 
-export async function downloadLotAssortmentExcel(lotId: string, kapanNo: string) {
+export async function downloadLotAssortmentExcel(
+  lotId: string,
+  kapanNo: string
+) {
   try {
-    const response = await apiClient.get<Blob>(`/lots/${lotId}/packets/export`, {
-      responseType: 'blob',
-    })
+    const response = await apiClient.get<Blob>(
+      `/lots/${lotId}/packets/export`,
+      {
+        responseType: 'blob',
+      }
+    )
     const disposition = String(response.headers['content-disposition'] || '')
     const matchedFileName = disposition.match(/filename="?([^";]+)"?/i)?.[1]
     const fallbackFileName = `${kapanNo.replace(/[^a-z0-9_-]/gi, '-')}-packet-assortment.xlsx`
@@ -180,12 +198,18 @@ export async function downloadLotAssortmentExcel(lotId: string, kapanNo: string)
     if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
       let message = ''
       try {
-        const payload = JSON.parse(await error.response.data.text()) as { message?: string }
+        const payload = JSON.parse(await error.response.data.text()) as {
+          message?: string
+        }
         message = payload.message || ''
       } catch {
         // The server did not return a JSON error payload.
       }
-      throw new Error(message || 'Unable to download the Excel file.', { cause: error })
+      const downloadError = new Error(
+        message || 'Unable to download the Excel file.'
+      )
+      ;(downloadError as Error & { cause?: unknown }).cause = error
+      throw downloadError
     }
     throw error
   }

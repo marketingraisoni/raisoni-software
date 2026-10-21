@@ -4,7 +4,6 @@ import { type Table } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DataTableFacetedFilter } from './faceted-filter'
-import { DataTableViewOptions } from './view-options'
 
 type DataTableToolbarProps<TData> = {
   table: Table<TData>
@@ -21,6 +20,8 @@ type DataTableToolbarProps<TData> = {
   }[]
   showFilterCounts?: boolean
   searchDebounceMs?: number
+  actions?: React.ReactNode
+  children?: React.ReactNode
 }
 
 export function DataTableToolbar<TData>({
@@ -30,6 +31,8 @@ export function DataTableToolbar<TData>({
   filters = [],
   showFilterCounts = true,
   searchDebounceMs = 0,
+  actions,
+  children,
 }: DataTableToolbarProps<TData>) {
   const appliedSearchValue = searchKey
     ? ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
@@ -111,7 +114,9 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <DataTableViewOptions table={table} />
+      {(actions || children) && (
+        <div className='flex items-center gap-2'>{actions || children}</div>
+      )}
     </div>
   )
 }

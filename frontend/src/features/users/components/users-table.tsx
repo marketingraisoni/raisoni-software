@@ -4,7 +4,6 @@ import {
   type OnChangeFn,
   type PaginationState,
   type SortingState,
-  type VisibilityState,
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -65,7 +64,6 @@ export function UsersTable({
 }: DataTableProps) {
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
   // Fallback internal states when used without external controller
   const [internalPagination, setInternalPagination] = useState<PaginationState>({
@@ -92,7 +90,6 @@ export function UsersTable({
       pagination: currentPagination,
       rowSelection,
       columnFilters: currentColumnFilters,
-      columnVisibility,
     },
     enableRowSelection: true,
     manualFiltering: true,
@@ -104,7 +101,6 @@ export function UsersTable({
     onColumnFiltersChange: handleColumnFiltersChange,
     onRowSelectionChange: setRowSelection,
     onSortingChange: handleSortingChange,
-    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
   })
 
@@ -116,7 +112,6 @@ export function UsersTable({
       <DataTableLayout
         title='User List'
         description='Manage user accounts, access roles, and account status.'
-        actions={<UsersPrimaryButtons />}
         toolbar={
           <DataTableToolbar
             table={table}
@@ -124,6 +119,7 @@ export function UsersTable({
             searchKey='username'
             searchDebounceMs={400}
             showFilterCounts={false}
+            actions={<UsersPrimaryButtons />}
             filters={[
               {
                 columnId: 'status',
