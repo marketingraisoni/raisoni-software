@@ -111,7 +111,7 @@ export function UsersTable({
     <div className='flex min-h-0 flex-1 flex-col max-sm:mb-16'>
       <DataTableLayout
         title='User List'
-        description='Manage user accounts, access roles, and account status.'
+        // description='Manage user accounts, access roles, and account status.'
         toolbar={
           <DataTableToolbar
             table={table}

@@ -51,7 +51,7 @@ export function LotsTable({ data, pageCount, totalRows, pagination, onPagination
     <div className='flex min-h-0 flex-1 flex-col max-sm:mb-16'>
       <DataTableLayout
         title='Lot List'
-        description='Manage master Kapan entries and rough diamond quantities.'
+        // description='Manage master Kapan entries and rough diamond quantities.'
         toolbar={
           <DataTableToolbar
             table={table}
