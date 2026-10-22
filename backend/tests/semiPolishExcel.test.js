@@ -35,4 +35,9 @@ test('4P process export creates a styled Excel record with packet and return dat
   assert.match(storedXml, /Process Loss/);
   assert.match(storedXml, /Receiver/);
   assert.match(storedXml, /SUM\(D2:D3\)/);
+  assert.match(storedXml, /pane ySplit="10" topLeftCell="A11"/);
+  assert.match(
+    storedXml,
+    /numFmtId="164" fontId="4"[^>]*><alignment horizontal="center" vertical="center"\/></,
+  );
 });

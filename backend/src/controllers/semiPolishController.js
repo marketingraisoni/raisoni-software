@@ -350,6 +350,12 @@ export const receiveFromSemiPolish = asyncHandler(async (req, res) => {
     throw ApiError.badRequest(`This record has already been marked as ${processRecord.status}`);
   }
 
+  if (processRecord.activePlanningImport) {
+    throw ApiError.badRequest(
+      'This process uses packet-wise planning returns. Verify every packet and use Finalize 4P Return.'
+    );
+  }
+
   const numReturnedPcs = Number(returnedPieces);
   const numReturnedCarat = Number(returnedCarat);
 

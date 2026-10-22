@@ -40,10 +40,10 @@ function buildWorksheet(process) {
     `${inlineCell('F2', 'Issue / Jangad No', 2)}${inlineCell('G2', process.issueNo, 3)}${inlineCell('H2', 'Status', 2)}${inlineCell('I2', String(process.status).replace('_', ' '), 12)}`,
     `${inlineCell('F3', 'Lot / Kapan', 2)}${inlineCell('G3', process.kapanNo, 3)}${inlineCell('H3', '4P Vendor', 2)}${inlineCell('I3', process.vendorName, 3)}`,
     `${inlineCell('F4', 'Issue Date', 2)}${optionalDateCell('G4', process.issueDate)}${inlineCell('H4', 'Expected Return', 2)}${optionalDateCell('I4', process.expectedReturnDate)}`,
-    `${inlineCell('F5', 'Issued Pieces', 2)}${numberCell('G5', process.issuedPieces, 13)}${inlineCell('H5', 'Issued Carat', 2)}${numberCell('I5', process.issuedCarat, 14)}`,
+    `${inlineCell('F5', 'Issued Pieces', 2)}${numberCell('G5', process.issuedPieces, 13)}${inlineCell('H5', 'Issued Carat', 2)}${numberCell('I5', process.issuedCarat, 15)}`,
     `${inlineCell('F6', 'Return Date', 2)}${optionalDateCell('G6', process.returnDate)}${inlineCell('H6', 'Returned Pieces', 2)}${optionalNumberCell('I6', process.returnedPieces, 13)}`,
-    `${inlineCell('F7', 'Returned Carat', 2)}${optionalNumberCell('G7', process.returnedCarat, 14)}${inlineCell('H7', 'Process Loss', 2)}${optionalNumberCell('I7', process.processLossCarat, 14)}`,
-    `${inlineCell('F8', 'Loss Percentage', 2)}${optionalNumberCell('G8', process.processLossPercentage)}${inlineCell('H8', 'Issued By', 2)}${inlineCell('I8', process.issuedByName || '-', 3)}`,
+    `${inlineCell('F7', 'Returned Carat', 2)}${optionalNumberCell('G7', process.returnedCarat, 15)}${inlineCell('H7', 'Process Loss', 2)}${optionalNumberCell('I7', process.processLossCarat, 15)}`,
+    `${inlineCell('F8', 'Loss Percentage', 2)}${optionalNumberCell('G8', process.processLossPercentage, 15)}${inlineCell('H8', 'Issued By', 2)}${inlineCell('I8', process.issuedByName || '-', 3)}`,
     `${inlineCell('F9', 'Received By', 2)}${inlineCell('G9', process.receivedByName || '-', 3)}${inlineCell('H9', 'Return Remarks', 2)}${inlineCell('I9', process.returnNotes || '-', 3)}`,
     `${inlineCell('F10', 'Instructions', 2)}${inlineCell('G10', process.notes || '-', 3)}${inlineCell('H10', '', 2)}${inlineCell('I10', '', 3)}`,
   ];
@@ -78,7 +78,7 @@ function buildWorksheet(process) {
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetViews><sheetView workbookViewId="0" showGridLines="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+  <sheetViews><sheetView workbookViewId="0" showGridLines="1"><pane ySplit="10" topLeftCell="A11" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
   <cols>
     <col min="1" max="1" width="12" customWidth="1"/>
     <col min="2" max="2" width="24" customWidth="1"/>

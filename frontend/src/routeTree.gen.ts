@@ -47,6 +47,7 @@ import { Route as AuthenticatedSemiPolishHistoryRouteImport } from './routes/_au
 import { Route as AuthenticatedSemiPolishProcessIdRouteImport } from './routes/_authenticated/semi-polish/$processId'
 import { Route as AuthenticatedPacketsLotIdRouteImport } from './routes/_authenticated/packets/$lotId'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedSemiPolishPlanningReturnsProcessIdRouteImport } from './routes/_authenticated/semi-polish/planning-returns.$processId'
 
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
   id: '/clerk',
@@ -252,6 +253,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSemiPolishPlanningReturnsProcessIdRoute =
+  AuthenticatedSemiPolishPlanningReturnsProcessIdRouteImport.update({
+    id: '/semi-polish/planning-returns/$processId',
+    path: '/semi-polish/planning-returns/$processId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
+  '/semi-polish/planning-returns/$processId': typeof AuthenticatedSemiPolishPlanningReturnsProcessIdRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -325,6 +333,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/semi-polish/planning-returns/$processId': typeof AuthenticatedSemiPolishPlanningReturnsProcessIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -366,6 +375,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/semi-polish/planning-returns/$processId': typeof AuthenticatedSemiPolishPlanningReturnsProcessIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -405,6 +415,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks/'
     | '/users/'
+    | '/semi-polish/planning-returns/$processId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -441,6 +452,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/semi-polish/planning-returns/$processId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -481,6 +493,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
+    | '/_authenticated/semi-polish/planning-returns/$processId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -765,6 +778,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/semi-polish/planning-returns/$processId': {
+      id: '/_authenticated/semi-polish/planning-returns/$processId'
+      path: '/semi-polish/planning-returns/$processId'
+      fullPath: '/semi-polish/planning-returns/$processId'
+      preLoaderRoute: typeof AuthenticatedSemiPolishPlanningReturnsProcessIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -809,6 +829,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSemiPolishIndexRoute: typeof AuthenticatedSemiPolishIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedSemiPolishPlanningReturnsProcessIdRoute: typeof AuthenticatedSemiPolishPlanningReturnsProcessIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -830,6 +851,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSemiPolishIndexRoute: AuthenticatedSemiPolishIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedSemiPolishPlanningReturnsProcessIdRoute:
+    AuthenticatedSemiPolishPlanningReturnsProcessIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

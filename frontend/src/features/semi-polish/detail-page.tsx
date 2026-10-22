@@ -1,10 +1,12 @@
 import { type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
   CalendarClock,
   CheckCircle2,
   CircleDot,
+  ClipboardCheck,
   Loader2,
   RefreshCw,
   XCircle,
@@ -17,12 +19,11 @@ import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -274,7 +275,7 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
               <div className='min-w-0'>
                 <div className='flex flex-wrap items-center gap-2'>
                   <h1 className='truncate text-xl font-bold tracking-tight'>
-                    4P Process Details
+                    {isReturned ? 'Completed 4P Process' : '4P Process Details'}
                   </h1>
                   <Badge variant='outline' className={status.className}>
                     {status.label}
@@ -285,10 +286,21 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                 </p>
               </div>
             </div>
-            <ProcessExcelButton
-              processId={(process._id || process.id) as string}
-              issueNo={process.issueNo}
-            />
+            <div className='flex flex-wrap items-center gap-2'>
+              <Button asChild>
+                <Link
+                  to='/semi-polish/planning-returns/$processId'
+                  params={{ processId: (process._id || process.id) as string }}
+                >
+                  <ClipboardCheck />
+                  {isReturned ? 'Packet return records' : 'Planning & returns'}
+                </Link>
+              </Button>
+              <ProcessExcelButton
+                processId={(process._id || process.id) as string}
+                issueNo={process.issueNo}
+              />
+            </div>
           </div>
 
           <section className='hidden border-b pb-4 print:block'>
@@ -395,7 +407,7 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className='min-h-0 flex-1 overflow-y-auto p-0 print:overflow-visible'>
+            <CardContent className='min-h-0 flex-1 overflow-auto p-0 print:overflow-visible [&_[data-slot=table-container]]:overflow-visible'>
               <Table>
                 <TableHeader className='sticky top-0 z-10 bg-background'>
                   <TableRow>
@@ -419,18 +431,16 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                     </TableRow>
                   ))}
                 </TableBody>
-                <TableFooter className='sticky bottom-0 z-10'>
-                  <TableRow>
-                    <TableCell colSpan={3} className='ps-5 font-semibold'>
-                      Total issued · {process.issuedPieces} PCs
-                    </TableCell>
-                    <TableCell className='pe-5 text-right font-mono font-bold text-primary'>
-                      {formatCarat(process.issuedCarat)} CT
-                    </TableCell>
-                  </TableRow>
-                </TableFooter>
               </Table>
             </CardContent>
+            <CardFooter className='sticky bottom-0 z-10 mt-auto flex items-center justify-between border-t bg-muted/80 px-5 pt-0! py-2.5! backdrop-blur-xs print:static print:bg-transparent'>
+              <span className='text-sm font-semibold'>
+                Total issued · {process.issuedPieces} PCs
+              </span>
+              <span className='font-mono text-sm font-bold text-primary'>
+                {formatCarat(process.issuedCarat)} CT
+              </span>
+            </CardFooter>
           </Card>
           </div>
         </div>

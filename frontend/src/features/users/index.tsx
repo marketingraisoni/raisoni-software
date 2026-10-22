@@ -5,7 +5,7 @@ import type {
   PaginationState,
   SortingState,
 } from '@tanstack/react-table'
-import { getUsers, usersQueryKey } from '@/services/users-service'
+import { getUsers, usersQueryKey, type UsersQuery } from '@/services/users-service'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
 import { UsersDialogs } from './components/users-dialogs'
@@ -42,13 +42,13 @@ export function Users() {
   }, [columnFilters])
 
   const sort = sorting[0]
-  const usersQueryParams = {
+  const usersQueryParams: UsersQuery = {
     page: pagination.pageIndex + 1,
     pageSize: pagination.pageSize,
     search: searchUsername,
     status: statusFilter,
-    userType: userTypeFilter,
-    sortBy: sort?.id,
+    userType: userTypeFilter as UsersQuery['userType'],
+    sortBy: sort?.id as UsersQuery['sortBy'],
     sortOrder: sort ? (sort.desc ? ('desc' as const) : ('asc' as const)) : undefined,
   }
 

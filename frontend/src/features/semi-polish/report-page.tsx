@@ -579,9 +579,9 @@ export function SemiPolishReportPage() {
                 <CardHeader className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2'>
                   <div>
                     <CardTitle>Vendor Distribution</CardTitle>
-                    <CardDescription>
+                    {/* <CardDescription>
                       Issued vs returned volume (CT) by vendor
-                    </CardDescription>
+                    </CardDescription> */}
                   </div>
                   <div className='flex items-center gap-4 text-xs text-muted-foreground'>
                     <div className='flex items-center gap-1.5'>
@@ -646,9 +646,9 @@ export function SemiPolishReportPage() {
               <Card className='col-span-1 lg:col-span-3'>
                 <CardHeader>
                   <CardTitle>Recent 4P Activity</CardTitle>
-                  <CardDescription>
+                  {/* <CardDescription>
                     Latest {latestProcesses.length} process lots recorded
-                  </CardDescription>
+                  </CardDescription> */}
                 </CardHeader>
                 <CardContent>
                   {latestProcesses.length === 0 ? (
@@ -993,7 +993,7 @@ export function SemiPolishReportPage() {
                               {isReturned ? (
                                 <>
                                   <span className='font-semibold text-foreground'>
-                                    {formatCarat(process.returnedCarat)} CT
+                                    {formatCarat(process.returnedCarat ?? 0)} CT
                                   </span>{' '}
                                   <span className='text-muted-foreground font-normal'>
                                     ({process.returnedPieces} pcs)
@@ -1015,7 +1015,7 @@ export function SemiPolishReportPage() {
                                         : 'text-emerald-600 dark:text-emerald-400'
                                   )}
                                 >
-                                  {formatCarat(process.processLossCarat)} CT ({process.processLossPercentage}%)
+                                  {formatCarat(process.processLossCarat ?? 0)} CT ({process.processLossPercentage ?? 0}%)
                                 </span>
                               ) : (
                                 <span className='text-muted-foreground'>-</span>

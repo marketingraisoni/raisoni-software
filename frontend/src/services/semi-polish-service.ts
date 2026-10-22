@@ -4,6 +4,9 @@ import {
   type SemiPolishProcess,
   type Vendor,
   type EligibleLot,
+  type PlanningDifference,
+  type SemiPolishPlanningData,
+  type SemiPolishPlanningImport,
 } from '@/features/semi-polish/data/schema'
 
 export const semiPolishQueryKeys = {
@@ -20,6 +23,7 @@ export const semiPolishQueryKeys = {
     ['semi-polish', 'eligible-lots', params] as const,
   vendors: ['semi-polish', 'vendors'] as const,
   detail: (id: string) => ['semi-polish', 'detail', id] as const,
+  planning: (id: string) => ['semi-polish', 'planning', id] as const,
 }
 
 export type SemiPolishListResponse = {
@@ -146,4 +150,103 @@ export async function downloadSemiPolishExcel(
     }
     throw error
   }
+}
+
+export async function fetchSemiPolishPlanning(
+  id: string
+): Promise<SemiPolishPlanningData> {
+  const response = await apiClient.get(`/semi-polish/${id}/planning`)
+  return response.data.data
+}
+
+export async function importSemiPolishPlanning(
+  id: string,
+  file: File
+): Promise<{
+  planningImport: SemiPolishPlanningImport
+  differences: PlanningDifference[]
+  requiresConfirmation: boolean
+}> {
+  const response = await apiClient.post(
+    `/semi-polish/${id}/planning/import`,
+    file,
+    {
+      params: { fileName: file.name },
+      headers: {
+        'Content-Type':
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    }
+  )
+  return response.data.data
+}
+
+export async function confirmSemiPolishPlanning(
+  processId: string,
+  importId: string,
+  reason: string
+): Promise<SemiPolishPlanningImport> {
+  const response = await apiClient.post(
+    `/semi-polish/${processId}/planning/${importId}/confirm`,
+    { reason }
+  )
+  return response.data.data.planningImport
+}
+
+export async function downloadPlanningWorkbook(
+  id: string,
+  fileName: string
+): Promise<void> {
+  const response = await apiClient.get<Blob>(`/semi-polish/${id}/planning/file`, {
+    responseType: 'blob',
+  })
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+export async function receiveSemiPolishPacket(
+  processId: string,
+  packetNumber: number,
+  data: {
+    hasDifference?: boolean
+    issueType?: string
+    issueDetails?: string
+    observedPieceCount?: number
+    notes?: string
+    source?: 'manual' | 'barcode'
+  }
+) {
+  const response = await apiClient.post(
+    `/semi-polish/${processId}/packets/${packetNumber}/receive`,
+    data
+  )
+  return response.data.data
+}
+
+export async function resolveSemiPolishPacketIssue(
+  processId: string,
+  packetNumber: number,
+  data: { resolutionNote: string; verifiedPieceCount: number }
+) {
+  const response = await apiClient.post(
+    `/semi-polish/${processId}/packets/${packetNumber}/resolve`,
+    data
+  )
+  return response.data.data
+}
+
+export async function finalizeSemiPolishReturn(
+  processId: string,
+  returnNotes = ''
+): Promise<SemiPolishProcess> {
+  const response = await apiClient.post(`/semi-polish/${processId}/finalize-return`, {
+    returnNotes,
+  })
+  return response.data.data.process
 }

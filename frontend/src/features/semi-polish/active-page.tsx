@@ -61,14 +61,9 @@ import {
   semiPolishQueryKeys,
 } from '@/services/semi-polish-service';
 import { type SemiPolishProcess } from './data/schema';
-import { ReturnDialog } from './components/return-dialog';
 
 export function SemiPolishActivePage() {
   const queryClient = useQueryClient();
-
-  // Dialog states
-  const [selectedProcessForReturn, setSelectedProcessForReturn] = useState<SemiPolishProcess | null>(null);
-  const [isReturnOpen, setIsReturnOpen] = useState(false);
 
   const [processToCancel, setProcessToCancel] = useState<SemiPolishProcess | null>(null);
 
@@ -110,11 +105,6 @@ export function SemiPolishActivePage() {
   const inProcessList = useMemo(() => {
     return processes.filter((p) => p.status === 'in_process');
   }, [processes]);
-
-  const handleOpenReturn = (proc: SemiPolishProcess) => {
-    setSelectedProcessForReturn(proc);
-    setIsReturnOpen(true);
-  };
 
   const handleConfirmCancel = () => {
     if (!processToCancel) return;
@@ -173,8 +163,17 @@ export function SemiPolishActivePage() {
     },
     {
       accessorKey: 'issuedPieces',
-      header: ({ column }) => <DataTableColumnHeader column={column} title='Issued Pieces' />,
-      cell: ({ row }) => <span>{row.original.issuedPieces} pcs</span>,
+      header: ({ column }) => <DataTableColumnHeader column={column} title='Return Progress' />,
+      cell: ({ row }) => (
+        <div>
+          <span className='font-semibold'>
+            {row.original.returnedPacketCount ?? 0} / {row.original.issuedPieces} packets
+          </span>
+          <p className='text-xs text-muted-foreground'>
+            {row.original.activePlanningImport ? 'Planning imported' : 'Planning pending'}
+          </p>
+        </div>
+      ),
       enableSorting: false,
     },
     {
@@ -203,12 +202,14 @@ export function SemiPolishActivePage() {
       header: () => <span className='text-right block pe-4'>Actions</span>,
       cell: ({ row }) => (
         <div className='flex items-center justify-end gap-1.5 pe-4'>
-          <DataTableActionButton
-            tooltip='Receive Return'
-            onClick={() => handleOpenReturn(row.original)}
-            aria-label='Receive return'
-          >
-            <ArrowDownToLine className='size-4' />
+          <DataTableActionButton tooltip='Receive / verify packets' asChild>
+            <Link
+              to='/semi-polish/planning-returns/$processId'
+              params={{ processId: (row.original._id || row.original.id) as string }}
+              aria-label='Receive or verify packets'
+            >
+              <ArrowDownToLine className='size-4' />
+            </Link>
           </DataTableActionButton>
           <DataTableActionButton tooltip='View Details' asChild>
             <Link
@@ -349,13 +350,6 @@ export function SemiPolishActivePage() {
             </Table>
           </DataTableLayout>
         </div>
-
-        {/* Return Dialog */}
-        <ReturnDialog
-          process={selectedProcessForReturn}
-          open={isReturnOpen}
-          onOpenChange={setIsReturnOpen}
-        />
 
         {/* Cancel Confirmation Dialog */}
         <AlertDialog

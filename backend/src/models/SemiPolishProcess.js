@@ -1,10 +1,10 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const packetSnapshotSchema = new mongoose.Schema(
   {
     packetId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'AssortmentPacket',
+      ref: "AssortmentPacket",
       required: true,
     },
     srNo: {
@@ -17,21 +17,21 @@ const packetSnapshotSchema = new mongoose.Schema(
     },
     grade: {
       type: String,
-      default: 'A',
+      default: "A",
     },
     carat: {
       type: Number,
       required: true,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const semiPolishProcessSchema = new mongoose.Schema(
   {
     lot: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Lot',
+      ref: "Lot",
       required: true,
       index: true,
     },
@@ -49,7 +49,7 @@ const semiPolishProcessSchema = new mongoose.Schema(
     },
     vendor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Vendor',
+      ref: "Vendor",
       required: true,
     },
     vendorName: {
@@ -58,8 +58,8 @@ const semiPolishProcessSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['in_process', 'returned', 'cancelled'],
-      default: 'in_process',
+      enum: ["in_process", "returned", "cancelled"],
+      default: "in_process",
       index: true,
     },
     issueDate: {
@@ -80,6 +80,43 @@ const semiPolishProcessSchema = new mongoose.Schema(
       required: true,
     },
     packets: [packetSnapshotSchema],
+    activePlanningImport: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SemiPolishPlanningImport",
+      default: null,
+    },
+    planningImportedAt: {
+      type: Date,
+      default: null,
+    },
+    plannedPacketCount: {
+      type: Number,
+      default: 0,
+    },
+    plannedPolishedPieces: {
+      type: Number,
+      default: 0,
+    },
+    planningRoughCarat: {
+      type: Number,
+      default: null,
+    },
+    plannedPolishedCarat: {
+      type: Number,
+      default: null,
+    },
+    plannedYieldPercentage: {
+      type: Number,
+      default: null,
+    },
+    returnedPacketCount: {
+      type: Number,
+      default: 0,
+    },
+    returnedPolishedPieceCount: {
+      type: Number,
+      default: 0,
+    },
     returnedPieces: {
       type: Number,
       default: null,
@@ -102,29 +139,36 @@ const semiPolishProcessSchema = new mongoose.Schema(
     },
     notes: {
       type: String,
-      default: '',
+      default: "",
     },
     returnNotes: {
       type: String,
-      default: '',
+      default: "",
     },
     issuedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     receivedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
+    },
+    finalizedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 semiPolishProcessSchema.index({ lot: 1, status: 1 });
 semiPolishProcessSchema.index({ issueDate: -1 });
 
-export const SemiPolishProcess = mongoose.model('SemiPolishProcess', semiPolishProcessSchema);
+export const SemiPolishProcess = mongoose.model(
+  "SemiPolishProcess",
+  semiPolishProcessSchema,
+);

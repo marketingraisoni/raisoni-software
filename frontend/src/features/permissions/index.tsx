@@ -79,7 +79,7 @@ export function Permissions() {
 
   useEffect(() => {
     if (userPermissionsQuery.data) {
-      setPermissions(userPermissionsQuery.data.permissions)
+      setPermissions(userPermissionsQuery.data.permissions ?? [])
     }
   }, [userPermissionsQuery.data])
 
@@ -91,7 +91,7 @@ export function Permissions() {
   const updateMutation = useMutation({
     mutationFn: () => updateUserPermissions(selectedUserId, permissions),
     onSuccess: async (response) => {
-      setPermissions(response.user.permissions)
+      setPermissions(response.user.permissions ?? [])
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: usersQueryKey }),
         queryClient.invalidateQueries({
