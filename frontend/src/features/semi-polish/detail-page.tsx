@@ -507,7 +507,7 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                   </TableBody>
                 </Table>
               </CardContent>
-              <CardFooter className='sticky bottom-0 z-10 mt-auto flex items-center justify-between border-t bg-muted/80 px-5 py-2.5! pt-0! backdrop-blur-xs print:static print:bg-transparent'>
+              <CardFooter className='sticky bottom-0 z-10 mt-auto flex items-center justify-between border-t bg-muted/80 px-5 py-2.5! backdrop-blur-xs print:static print:bg-transparent'>
                 <span className='text-sm font-semibold'>
                   Total issued · {process.issuedPieces} PCs
                 </span>
