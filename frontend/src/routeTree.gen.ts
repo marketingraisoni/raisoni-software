@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedPacketScannerRouteImport } from './routes/_authenticated/packet-scanner'
+import { Route as AuthenticatedPacketReturnRouteImport } from './routes/_authenticated/packet-return'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -43,6 +45,8 @@ import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_a
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedSemiPolishReportRouteImport } from './routes/_authenticated/semi-polish/report'
 import { Route as AuthenticatedSemiPolishReadyForIssueRouteImport } from './routes/_authenticated/semi-polish/ready-for-issue'
+import { Route as AuthenticatedSemiPolishPacketScannerRouteImport } from './routes/_authenticated/semi-polish/packet-scanner'
+import { Route as AuthenticatedSemiPolishPacketReturnRouteImport } from './routes/_authenticated/semi-polish/packet-return'
 import { Route as AuthenticatedSemiPolishHistoryRouteImport } from './routes/_authenticated/semi-polish/history'
 import { Route as AuthenticatedSemiPolishProcessIdRouteImport } from './routes/_authenticated/semi-polish/$processId'
 import { Route as AuthenticatedPacketsLotIdRouteImport } from './routes/_authenticated/packets/$lotId'
@@ -63,6 +67,18 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPacketScannerRoute =
+  AuthenticatedPacketScannerRouteImport.update({
+    id: '/packet-scanner',
+    path: '/packet-scanner',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPacketReturnRoute =
+  AuthenticatedPacketReturnRouteImport.update({
+    id: '/packet-return',
+    path: '/packet-return',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const errors503Route = errors503RouteImport.update({
   id: '/(errors)/503',
   path: '/503',
@@ -229,6 +245,18 @@ const AuthenticatedSemiPolishReadyForIssueRoute =
     path: '/semi-polish/ready-for-issue',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSemiPolishPacketScannerRoute =
+  AuthenticatedSemiPolishPacketScannerRouteImport.update({
+    id: '/semi-polish/packet-scanner',
+    path: '/semi-polish/packet-scanner',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishPacketReturnRoute =
+  AuthenticatedSemiPolishPacketReturnRouteImport.update({
+    id: '/semi-polish/packet-return',
+    path: '/semi-polish/packet-return',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSemiPolishHistoryRoute =
   AuthenticatedSemiPolishHistoryRouteImport.update({
     id: '/semi-polish/history',
@@ -273,10 +301,14 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/packet-return': typeof AuthenticatedPacketReturnRoute
+  '/packet-scanner': typeof AuthenticatedPacketScannerRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/packets/$lotId': typeof AuthenticatedPacketsLotIdRoute
   '/semi-polish/$processId': typeof AuthenticatedSemiPolishProcessIdRoute
   '/semi-polish/history': typeof AuthenticatedSemiPolishHistoryRoute
+  '/semi-polish/packet-return': typeof AuthenticatedSemiPolishPacketReturnRoute
+  '/semi-polish/packet-scanner': typeof AuthenticatedSemiPolishPacketScannerRoute
   '/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
   '/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -309,11 +341,15 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/packet-return': typeof AuthenticatedPacketReturnRoute
+  '/packet-scanner': typeof AuthenticatedPacketScannerRoute
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/packets/$lotId': typeof AuthenticatedPacketsLotIdRoute
   '/semi-polish/$processId': typeof AuthenticatedSemiPolishProcessIdRoute
   '/semi-polish/history': typeof AuthenticatedSemiPolishHistoryRoute
+  '/semi-polish/packet-return': typeof AuthenticatedSemiPolishPacketReturnRoute
+  '/semi-polish/packet-scanner': typeof AuthenticatedSemiPolishPacketScannerRoute
   '/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
   '/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -351,11 +387,15 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/_authenticated/packet-return': typeof AuthenticatedPacketReturnRoute
+  '/_authenticated/packet-scanner': typeof AuthenticatedPacketScannerRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/packets/$lotId': typeof AuthenticatedPacketsLotIdRoute
   '/_authenticated/semi-polish/$processId': typeof AuthenticatedSemiPolishProcessIdRoute
   '/_authenticated/semi-polish/history': typeof AuthenticatedSemiPolishHistoryRoute
+  '/_authenticated/semi-polish/packet-return': typeof AuthenticatedSemiPolishPacketReturnRoute
+  '/_authenticated/semi-polish/packet-scanner': typeof AuthenticatedSemiPolishPacketScannerRoute
   '/_authenticated/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
   '/_authenticated/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -392,10 +432,14 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/packet-return'
+    | '/packet-scanner'
     | '/errors/$error'
     | '/packets/$lotId'
     | '/semi-polish/$processId'
     | '/semi-polish/history'
+    | '/semi-polish/packet-return'
+    | '/semi-polish/packet-scanner'
     | '/semi-polish/ready-for-issue'
     | '/semi-polish/report'
     | '/settings/account'
@@ -428,11 +472,15 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/packet-return'
+    | '/packet-scanner'
     | '/'
     | '/errors/$error'
     | '/packets/$lotId'
     | '/semi-polish/$processId'
     | '/semi-polish/history'
+    | '/semi-polish/packet-return'
+    | '/semi-polish/packet-scanner'
     | '/semi-polish/ready-for-issue'
     | '/semi-polish/report'
     | '/settings/account'
@@ -469,11 +517,15 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/packet-return'
+    | '/_authenticated/packet-scanner'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
     | '/_authenticated/packets/$lotId'
     | '/_authenticated/semi-polish/$processId'
     | '/_authenticated/semi-polish/history'
+    | '/_authenticated/semi-polish/packet-return'
+    | '/_authenticated/semi-polish/packet-scanner'
     | '/_authenticated/semi-polish/ready-for-issue'
     | '/_authenticated/semi-polish/report'
     | '/_authenticated/settings/account'
@@ -531,6 +583,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/packet-scanner': {
+      id: '/_authenticated/packet-scanner'
+      path: '/packet-scanner'
+      fullPath: '/packet-scanner'
+      preLoaderRoute: typeof AuthenticatedPacketScannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/packet-return': {
+      id: '/_authenticated/packet-return'
+      path: '/packet-return'
+      fullPath: '/packet-return'
+      preLoaderRoute: typeof AuthenticatedPacketReturnRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/(errors)/503': {
@@ -750,6 +816,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSemiPolishReadyForIssueRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/semi-polish/packet-scanner': {
+      id: '/_authenticated/semi-polish/packet-scanner'
+      path: '/semi-polish/packet-scanner'
+      fullPath: '/semi-polish/packet-scanner'
+      preLoaderRoute: typeof AuthenticatedSemiPolishPacketScannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/semi-polish/packet-return': {
+      id: '/_authenticated/semi-polish/packet-return'
+      path: '/semi-polish/packet-return'
+      fullPath: '/semi-polish/packet-return'
+      preLoaderRoute: typeof AuthenticatedSemiPolishPacketReturnRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/semi-polish/history': {
       id: '/_authenticated/semi-polish/history'
       path: '/semi-polish/history'
@@ -813,11 +893,15 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedPacketReturnRoute: typeof AuthenticatedPacketReturnRoute
+  AuthenticatedPacketScannerRoute: typeof AuthenticatedPacketScannerRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedPacketsLotIdRoute: typeof AuthenticatedPacketsLotIdRoute
   AuthenticatedSemiPolishProcessIdRoute: typeof AuthenticatedSemiPolishProcessIdRoute
   AuthenticatedSemiPolishHistoryRoute: typeof AuthenticatedSemiPolishHistoryRoute
+  AuthenticatedSemiPolishPacketReturnRoute: typeof AuthenticatedSemiPolishPacketReturnRoute
+  AuthenticatedSemiPolishPacketScannerRoute: typeof AuthenticatedSemiPolishPacketScannerRoute
   AuthenticatedSemiPolishReadyForIssueRoute: typeof AuthenticatedSemiPolishReadyForIssueRoute
   AuthenticatedSemiPolishReportRoute: typeof AuthenticatedSemiPolishReportRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
@@ -834,11 +918,17 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedPacketReturnRoute: AuthenticatedPacketReturnRoute,
+  AuthenticatedPacketScannerRoute: AuthenticatedPacketScannerRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedPacketsLotIdRoute: AuthenticatedPacketsLotIdRoute,
   AuthenticatedSemiPolishProcessIdRoute: AuthenticatedSemiPolishProcessIdRoute,
   AuthenticatedSemiPolishHistoryRoute: AuthenticatedSemiPolishHistoryRoute,
+  AuthenticatedSemiPolishPacketReturnRoute:
+    AuthenticatedSemiPolishPacketReturnRoute,
+  AuthenticatedSemiPolishPacketScannerRoute:
+    AuthenticatedSemiPolishPacketScannerRoute,
   AuthenticatedSemiPolishReadyForIssueRoute:
     AuthenticatedSemiPolishReadyForIssueRoute,
   AuthenticatedSemiPolishReportRoute: AuthenticatedSemiPolishReportRoute,

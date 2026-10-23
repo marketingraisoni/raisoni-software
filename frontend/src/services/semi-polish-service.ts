@@ -7,6 +7,7 @@ import {
   type PlanningDifference,
   type SemiPolishPlanningData,
   type SemiPolishPlanningImport,
+  type SemiPolishPacketLookup,
 } from '@/features/semi-polish/data/schema'
 
 export const semiPolishQueryKeys = {
@@ -24,6 +25,8 @@ export const semiPolishQueryKeys = {
   vendors: ['semi-polish', 'vendors'] as const,
   detail: (id: string) => ['semi-polish', 'detail', id] as const,
   planning: (id: string) => ['semi-polish', 'planning', id] as const,
+  packetLookup: (code: string) =>
+    ['semi-polish', 'packet-lookup', code] as const,
 }
 
 export type SemiPolishListResponse = {
@@ -159,6 +162,19 @@ export async function fetchSemiPolishPlanning(
   return response.data.data
 }
 
+export async function lookupSemiPolishPacket(
+  packetNumberOrPayload: string | number | { packetNumber: string | number }
+): Promise<SemiPolishPacketLookup> {
+  const packetNumber =
+    typeof packetNumberOrPayload === 'object' && packetNumberOrPayload !== null
+      ? packetNumberOrPayload.packetNumber
+      : packetNumberOrPayload
+  const response = await apiClient.post('/semi-polish/packet-lookup', {
+    packetNumber,
+  })
+  return response.data.data
+}
+
 export async function importSemiPolishPlanning(
   id: string,
   file: File
@@ -197,9 +213,12 @@ export async function downloadPlanningWorkbook(
   id: string,
   fileName: string
 ): Promise<void> {
-  const response = await apiClient.get<Blob>(`/semi-polish/${id}/planning/file`, {
-    responseType: 'blob',
-  })
+  const response = await apiClient.get<Blob>(
+    `/semi-polish/${id}/planning/file`,
+    {
+      responseType: 'blob',
+    }
+  )
   const url = URL.createObjectURL(response.data)
   const link = document.createElement('a')
   link.href = url
@@ -217,7 +236,13 @@ export async function receiveSemiPolishPacket(
     hasDifference?: boolean
     issueType?: string
     issueDetails?: string
-    observedPieceCount?: number
+    receivedPieces: Array<{
+      pieceNumber: number
+      hphtCarat?: number
+      fourPCarat?: number
+      shape?: string
+      barcode?: string
+    }>
     notes?: string
     source?: 'manual' | 'barcode'
   }
@@ -245,8 +270,11 @@ export async function finalizeSemiPolishReturn(
   processId: string,
   returnNotes = ''
 ): Promise<SemiPolishProcess> {
-  const response = await apiClient.post(`/semi-polish/${processId}/finalize-return`, {
-    returnNotes,
-  })
+  const response = await apiClient.post(
+    `/semi-polish/${processId}/finalize-return`,
+    {
+      returnNotes,
+    }
+  )
   return response.data.data.process
 }

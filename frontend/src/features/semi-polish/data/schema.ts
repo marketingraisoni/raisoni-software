@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 export const vendorSchema = z.object({
   _id: z.string().optional(),
@@ -10,9 +10,9 @@ export const vendorSchema = z.object({
   processType: z.string().default('4P'),
   status: z.enum(['active', 'inactive']).default('active'),
   createdAt: z.coerce.date().optional(),
-});
+})
 
-export type Vendor = z.infer<typeof vendorSchema>;
+export type Vendor = z.infer<typeof vendorSchema>
 
 export const packetSnapshotSchema = z.object({
   packetId: z.string(),
@@ -20,9 +20,9 @@ export const packetSnapshotSchema = z.object({
   name: z.string(),
   grade: z.string(),
   carat: z.number(),
-});
+})
 
-export type PacketSnapshot = z.infer<typeof packetSnapshotSchema>;
+export type PacketSnapshot = z.infer<typeof packetSnapshotSchema>
 
 export const semiPolishProcessSchema = z.object({
   _id: z.string().optional(),
@@ -59,9 +59,9 @@ export const semiPolishProcessSchema = z.object({
   finalizedAt: z.coerce.date().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-});
+})
 
-export type SemiPolishProcess = z.infer<typeof semiPolishProcessSchema>;
+export type SemiPolishProcess = z.infer<typeof semiPolishProcessSchema>
 
 export type PlanningDifference = {
   type: string
@@ -137,12 +137,36 @@ export type SemiPolishPacketReturn = {
   packetPlan: string
   packet: string
   packetNumber: number
-  status: 'verified' | 'issue'
+  status: 'partial' | 'verified' | 'issue'
   source: 'manual' | 'barcode'
   plannedPieceCount: number
   verifiedPieceCount: number
+  receivedPieceNumbers?: number[]
   plannedPolishedCarat: number
   pieces: PlannedPiece[]
+  receivedPieces?: Array<{
+    _id?: string
+    id?: string
+    planningPieceId?: string | null
+    pieceNumber: number
+    hphtCarat?: number | null
+    fourPCarat?: number | null
+    shape?: string
+    receivedDate?: Date | string
+    barcode?: string
+    receivedAt: Date | string
+    receivedBy?: unknown
+  }>
+  receipts?: Array<{
+    _id?: string
+    id?: string
+    pieceNumbers: number[]
+    pieceCount: number
+    source: 'manual' | 'barcode'
+    notes?: string
+    receivedAt: Date | string
+    receivedBy?: unknown
+  }>
   issue?: {
     reported?: boolean
     type?: string
@@ -168,6 +192,7 @@ export type SemiPolishPlanningData = {
     receivedPackets: number
     verifiedPackets: number
     issuePackets: number
+    partialPackets?: number
     pendingPackets: number
     verifiedPieces: number
     plannedPieces: number
@@ -176,11 +201,17 @@ export type SemiPolishPlanningData = {
   }
 }
 
+export type SemiPolishPacketLookup = {
+  process: SemiPolishProcess
+  packetPlan: SemiPolishPacketPlan
+  packetReturn: SemiPolishPacketReturn | null
+}
+
 export type EligibleLot = {
-  _id: string;
-  id?: string;
-  kapanNo: string;
-  totalCarat: number;
-  totalPcs: number;
-  entryDate: string | Date;
-};
+  _id: string
+  id?: string
+  kapanNo: string
+  totalCarat: number
+  totalPcs: number
+  entryDate: string | Date
+}

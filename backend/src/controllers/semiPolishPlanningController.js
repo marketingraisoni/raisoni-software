@@ -39,6 +39,19 @@ function packetNumberFromIssuedPacket(packet) {
   return extractPacketIdentity(packet.name).packetNumber ?? Number(packet.srNo);
 }
 
+function normalizeLookupCode(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+}
+
+function normalizeKapanLookup(value) {
+  return normalizeLookupCode(value)
+    .replace(/^NEVD[-_/]?/, "")
+    .replace(/[^A-Z0-9]/g, "");
+}
+
 function pieceSignature(pieces) {
   return JSON.stringify(
     pieces.map((piece) => ({
@@ -93,7 +106,13 @@ async function buildProgress(process) {
     verifiedPackets: returns.filter((item) => item.status === "verified")
       .length,
     issuePackets: returns.filter((item) => item.status === "issue").length,
-    pendingPackets: Math.max(process.packets.length - returns.length, 0),
+    partialPackets: returns.filter((item) => item.status === "partial").length,
+    pendingPackets: Math.max(
+      process.packets.length -
+        returns.filter((item) => item.status === "verified").length -
+        returns.filter((item) => item.status === "issue").length,
+      0,
+    ),
     verifiedPieces: returns.reduce(
       (total, item) => total + Number(item.verifiedPieceCount || 0),
       0,
@@ -454,6 +473,8 @@ export const getPlanningDetails = asyncHandler(async (req, res) => {
         .lean(),
       SemiPolishPacketReturn.find({ process: process._id })
         .populate("receivedBy", "name username")
+        .populate("receivedPieces.receivedBy", "name username")
+        .populate("receipts.receivedBy", "name username")
         .populate("issue.resolvedBy", "name username")
         .sort({ receivedAt: -1 })
         .lean(),
@@ -468,6 +489,93 @@ export const getPlanningDetails = asyncHandler(async (req, res) => {
       packetPlans,
       packetReturns,
       progress,
+    },
+  });
+});
+
+export const lookupPlannedPacket = asyncHandler(async (req, res) => {
+  const rawInput =
+    req.body?.packetNumber ??
+    req.body?.code ??
+    req.query?.packetNumber ??
+    req.query?.code;
+  const code = normalizeLookupCode(rawInput);
+  if (!code) {
+    throw ApiError.badRequest("Scan a packet QR or enter a packet number.");
+  }
+
+  const packetNumber = extractPacketIdentity(code).packetNumber;
+  if (!Number.isInteger(packetNumber) || packetNumber < 1) {
+    throw ApiError.badRequest("The scanned value does not contain a valid packet number.");
+  }
+
+  // Fetch only candidate plans for this exact packetNumber and populate only the active process summary
+  const candidatePlans = await SemiPolishPacketPlan.find({ packetNumber })
+    .populate({
+      path: "process",
+      match: { status: "in_process" },
+      select: "kapanNo issueNo vendorName status issueDate expectedReturnDate activePlanningImport",
+    })
+    .lean();
+
+  let matches = candidatePlans
+    .filter((plan) => {
+      if (!plan.process) return false;
+      return String(plan.planningImport) === String(plan.process.activePlanningImport);
+    })
+    .map((packetPlan) => ({
+      packetPlan,
+      process: packetPlan.process,
+    }));
+
+  const slashIndex = code.lastIndexOf("/");
+  if (slashIndex > 0) {
+    const scannedKapan = normalizeKapanLookup(code.slice(0, slashIndex));
+    matches = matches.filter(({ process, packetPlan }) => {
+      const planningLotKapan = String(packetPlan.planningLotNo || "").split("/")[0];
+      return [process.kapanNo, planningLotKapan]
+        .map(normalizeKapanLookup)
+        .filter(Boolean)
+        .includes(scannedKapan);
+    });
+  }
+
+  if (!matches.length) {
+    throw ApiError.notFound(`No active 4P planning packet matches ${code}.`);
+  }
+  if (matches.length > 1) {
+    const kapans = matches.map(({ process }) => process.kapanNo).join(", ");
+    throw ApiError.conflict(
+      `Packet ${packetNumber} exists in multiple active kapans (${kapans}). Scan or enter the complete QR value.`,
+    );
+  }
+
+  const { process, packetPlan } = matches[0];
+  const packetReturn = await SemiPolishPacketReturn.findOne({
+    process: process._id,
+    packetNumber,
+  })
+    .populate("receivedBy", "name username")
+    .populate("receivedPieces.receivedBy", "name username")
+    .populate("receipts.receivedBy", "name username")
+    .populate("issue.resolvedBy", "name username")
+    .lean();
+
+  return sendSuccess(res, {
+    message: `Packet ${packetNumber} found in kapan ${process.kapanNo}.`,
+    data: {
+      process: {
+        _id: process._id,
+        id: process._id,
+        kapanNo: process.kapanNo,
+        issueNo: process.issueNo,
+        vendorName: process.vendorName,
+        status: process.status,
+        issueDate: process.issueDate,
+        expectedReturnDate: process.expectedReturnDate,
+      },
+      packetPlan,
+      packetReturn,
     },
   });
 });
@@ -512,17 +620,6 @@ export const receivePlannedPacket = asyncHandler(async (req, res) => {
     throw ApiError.badRequest("Enter a valid packet number.");
   }
 
-  const existing = await SemiPolishPacketReturn.findOne({
-    process: process._id,
-    packetNumber,
-  });
-  if (existing) {
-    throw ApiError.conflict(`Packet ${packetNumber} was already received.`, {
-      packetReturnId: existing._id,
-      receivedAt: existing.receivedAt,
-    });
-  }
-
   const packetPlan = await SemiPolishPacketPlan.findOne({
     planningImport: process.activePlanningImport,
     packetNumber,
@@ -537,58 +634,214 @@ export const receivePlannedPacket = asyncHandler(async (req, res) => {
     );
   }
 
+  const existing = await SemiPolishPacketReturn.findOne({
+    process: process._id,
+    packetNumber,
+  });
+  if (existing?.status === "verified") {
+    throw ApiError.conflict(`Packet ${packetNumber} is already fully received.`, {
+      packetReturnId: existing._id,
+      receivedAt: existing.receivedAt,
+    });
+  }
+  if (existing?.status === "issue") {
+    throw ApiError.conflict(
+      `Resolve the current issue for packet ${packetNumber} before receiving more pieces.`,
+      { packetReturnId: existing._id },
+    );
+  }
+
   const hasDifference = Boolean(req.body.hasDifference);
   const issueDetails = String(req.body.issueDetails || "").trim();
   const issueType = String(req.body.issueType || "").trim();
-  const observedPieceCount =
-    req.body.observedPieceCount === undefined
-      ? packetPlan.plannedPieceCount
-      : Number(req.body.observedPieceCount);
-  if (!Number.isInteger(observedPieceCount) || observedPieceCount < 0) {
-    throw ApiError.badRequest(
-      "Observed piece count must be a whole number of zero or more.",
-    );
-  }
+  const alreadyReceivedCount = Number(existing?.verifiedPieceCount || 0);
   if (hasDifference && (!issueType || !issueDetails)) {
     throw ApiError.badRequest(
       "Issue type and details are required when reporting a difference.",
     );
   }
 
-  const packetReturn = await SemiPolishPacketReturn.create({
-    process: process._id,
-    planningImport: packetPlan.planningImport,
-    packetPlan: packetPlan._id,
-    packet: packetPlan.matchedPacket,
-    packetNumber,
-    status: hasDifference ? "issue" : "verified",
-    source: req.body.source === "barcode" ? "barcode" : "manual",
-    plannedPieceCount: packetPlan.plannedPieceCount,
-    verifiedPieceCount: observedPieceCount,
-    plannedPolishedCarat: packetPlan.plannedPolishedCarat,
-    pieces: packetPlan.pieces.map((piece) => ({
-      planningPieceId: piece._id,
-      pieceNumber: piece.pieceNumber,
-      sourceRow: piece.sourceRow,
-      polishedCarat: piece.polishedCarat,
-      shape: piece.shape,
-      cut: piece.cut,
-      color: piece.color,
-      clarity: piece.clarity,
-      ls: piece.ls,
-    })),
-    issue: hasDifference
-      ? {
-          reported: true,
-          type: issueType,
-          details: issueDetails,
-          observedPieceCount,
-        }
-      : { reported: false, resolved: true },
-    notes: String(req.body.notes || "").trim(),
-    receivedAt: new Date(),
-    receivedBy: req.user?._id,
+  const source = req.body.source === "barcode" ? "barcode" : "manual";
+  const notes = String(req.body.notes || "").trim();
+  const receivedAt = new Date();
+  const previouslyReceivedNumbers = new Set(
+    existing?.receivedPieceNumbers?.length
+      ? existing.receivedPieceNumbers
+      : existing?.receivedPieces?.length
+        ? existing.receivedPieces.map((piece) => piece.pieceNumber)
+      : existing
+        ? existing.pieces
+            .slice(0, alreadyReceivedCount)
+            .map((piece) => piece.pieceNumber)
+        : [],
+  );
+  const requestedPieces = Array.isArray(req.body.receivedPieces)
+    ? req.body.receivedPieces
+    : [];
+  if (!hasDifference && requestedPieces.length === 0) {
+    throw ApiError.badRequest(
+      "Select at least one specific planned diamond to receive.",
+    );
+  }
+
+  const planPiecesByNumber = new Map(
+    packetPlan.pieces.map((piece) => [piece.pieceNumber, piece]),
+  );
+  const requestPieceNumbers = new Set();
+  const requestBarcodes = new Set();
+  const receivedPieceDetails = requestedPieces.map((input, index) => {
+    const pieceNumber = Number(input?.pieceNumber);
+    const plannedPiece = planPiecesByNumber.get(pieceNumber);
+    if (!Number.isInteger(pieceNumber) || !plannedPiece) {
+      throw ApiError.badRequest(
+        `Received diamond ${index + 1} does not match a planned piece.`,
+      );
+    }
+    if (
+      requestPieceNumbers.has(pieceNumber) ||
+      previouslyReceivedNumbers.has(pieceNumber)
+    ) {
+      throw ApiError.badRequest(
+        `Planned piece ${pieceNumber} is duplicated or was already received.`,
+      );
+    }
+
+    const hasHphtCarat = input.hphtCarat !== "" && input.hphtCarat != null;
+    const hasFourPCarat = input.fourPCarat !== "" && input.fourPCarat != null;
+    const hphtCarat = hasHphtCarat ? Number(input.hphtCarat) : null;
+    const fourPCarat = hasFourPCarat ? Number(input.fourPCarat) : null;
+    const shape = String(input.shape || "").trim();
+    const barcode = String(input.barcode || "").trim().toUpperCase();
+    if (hasHphtCarat && (!Number.isFinite(hphtCarat) || hphtCarat <= 0)) {
+      throw ApiError.badRequest(
+        `HPHT carat must be greater than zero for planned piece ${pieceNumber}.`,
+      );
+    }
+    if (hasFourPCarat && (!Number.isFinite(fourPCarat) || fourPCarat <= 0)) {
+      throw ApiError.badRequest(
+        `4P carat must be greater than zero for planned piece ${pieceNumber}.`,
+      );
+    }
+    if (barcode && requestBarcodes.has(barcode)) {
+      throw ApiError.badRequest(`Barcode ${barcode} is duplicated.`);
+    }
+
+    requestPieceNumbers.add(pieceNumber);
+    if (barcode) requestBarcodes.add(barcode);
+    return {
+      planningPieceId: plannedPiece._id,
+      pieceNumber,
+      hphtCarat: hphtCarat == null ? null : roundCarat(hphtCarat),
+      fourPCarat: fourPCarat == null ? null : roundCarat(fourPCarat),
+      shape,
+      receivedDate: receivedAt,
+      barcode,
+      receivedAt,
+      receivedBy: req.user?._id,
+    };
   });
+
+  if (requestBarcodes.size) {
+    const barcodeOwner = await SemiPolishPacketReturn.findOne({
+      process: process._id,
+      "receivedPieces.barcode": { $in: [...requestBarcodes] },
+    })
+      .select("packetNumber receivedPieces.barcode")
+      .lean();
+    if (barcodeOwner) {
+      const duplicateBarcode = barcodeOwner.receivedPieces.find((piece) =>
+        requestBarcodes.has(piece.barcode),
+      )?.barcode;
+      throw ApiError.conflict(
+        `Barcode ${duplicateBarcode || "entered"} was already received in packet ${barcodeOwner.packetNumber}.`,
+      );
+    }
+  }
+
+  const newlyReceivedPieceNumbers = receivedPieceDetails.map(
+    (piece) => piece.pieceNumber,
+  );
+  const allReceivedPieceNumbers = [
+    ...previouslyReceivedNumbers,
+    ...newlyReceivedPieceNumbers,
+  ];
+  const totalReceivedPieceCount =
+    alreadyReceivedCount + newlyReceivedPieceNumbers.length;
+  const status = hasDifference
+    ? "issue"
+    : totalReceivedPieceCount >= packetPlan.plannedPieceCount
+      ? "verified"
+      : "partial";
+  const pieceSnapshots = packetPlan.pieces.map((piece) => ({
+    planningPieceId: piece._id,
+    pieceNumber: piece.pieceNumber,
+    sourceRow: piece.sourceRow,
+    polishedCarat: piece.polishedCarat,
+    shape: piece.shape,
+    cut: piece.cut,
+    color: piece.color,
+    clarity: piece.clarity,
+    ls: piece.ls,
+  }));
+  const receipt = {
+    pieceNumbers: newlyReceivedPieceNumbers,
+    pieceCount: newlyReceivedPieceNumbers.length,
+    source,
+    notes,
+    receivedAt,
+    receivedBy: req.user?._id,
+  };
+
+  let packetReturn;
+  if (existing) {
+    existing.status = status;
+    existing.source = source;
+    existing.verifiedPieceCount = totalReceivedPieceCount;
+    existing.receivedPieceNumbers = allReceivedPieceNumbers;
+    existing.receivedPieces.push(...receivedPieceDetails);
+    existing.receipts.push(receipt);
+    existing.notes = notes || existing.notes;
+    existing.receivedAt = receivedAt;
+    existing.receivedBy = req.user?._id;
+    if (hasDifference) {
+      existing.issue = {
+        reported: true,
+        type: issueType,
+        details: issueDetails,
+        observedPieceCount: totalReceivedPieceCount,
+        resolved: false,
+      };
+    }
+    packetReturn = await existing.save();
+  } else {
+    packetReturn = await SemiPolishPacketReturn.create({
+      process: process._id,
+      planningImport: packetPlan.planningImport,
+      packetPlan: packetPlan._id,
+      packet: packetPlan.matchedPacket,
+      packetNumber,
+      status,
+      source,
+      plannedPieceCount: packetPlan.plannedPieceCount,
+      verifiedPieceCount: totalReceivedPieceCount,
+      receivedPieceNumbers: allReceivedPieceNumbers,
+      plannedPolishedCarat: packetPlan.plannedPolishedCarat,
+      pieces: pieceSnapshots,
+      receivedPieces: receivedPieceDetails,
+      receipts: [receipt],
+      issue: hasDifference
+        ? {
+            reported: true,
+            type: issueType,
+            details: issueDetails,
+            observedPieceCount: totalReceivedPieceCount,
+          }
+        : { reported: false, resolved: true },
+      notes,
+      receivedAt,
+      receivedBy: req.user?._id,
+    });
+  }
 
   const progress = await buildProgress(process);
   process.returnedPacketCount = progress.receivedPackets;
@@ -606,7 +859,10 @@ export const receivePlannedPacket = asyncHandler(async (req, res) => {
       issueNo: process.issueNo,
       packetNumber,
       plannedPieceCount: packetPlan.plannedPieceCount,
-      observedPieceCount,
+      receivedPieceCount: newlyReceivedPieceNumbers.length,
+      totalReceivedPieceCount,
+      remainingPieceCount:
+        packetPlan.plannedPieceCount - totalReceivedPieceCount,
       hasDifference,
     },
   });
@@ -620,7 +876,9 @@ export const receivePlannedPacket = asyncHandler(async (req, res) => {
   return sendSuccess(res, {
     message: hasDifference
       ? `Packet ${packetNumber} recorded with an issue requiring resolution.`
-      : `Packet ${packetNumber} and ${packetPlan.plannedPieceCount} pieces verified.`,
+      : status === "verified"
+        ? `Packet ${packetNumber} and all ${packetPlan.plannedPieceCount} pieces verified.`
+        : `Packet ${packetNumber}: ${newlyReceivedPieceNumbers.length} piece(s) received, ${packetPlan.plannedPieceCount - totalReceivedPieceCount} remaining.`,
     data: { packetReturn, progress },
   });
 });
@@ -653,14 +911,32 @@ export const resolvePacketIssue = asyncHandler(async (req, res) => {
     req.body.verifiedPieceCount === undefined
       ? packetReturn.plannedPieceCount
       : Number(req.body.verifiedPieceCount);
-  if (!Number.isInteger(verifiedPieceCount) || verifiedPieceCount < 0) {
+  if (
+    !Number.isInteger(verifiedPieceCount) ||
+    verifiedPieceCount < 0 ||
+    verifiedPieceCount > packetReturn.plannedPieceCount
+  ) {
     throw ApiError.badRequest(
-      "Verified piece count must be a whole number of zero or more.",
+      `Verified piece count must be between zero and ${packetReturn.plannedPieceCount}.`,
     );
   }
 
-  packetReturn.status = "verified";
-  packetReturn.verifiedPieceCount = verifiedPieceCount;
+  const exactReceivedPieceNumbers = packetReturn.receivedPieces?.map(
+    (piece) => piece.pieceNumber,
+  );
+  const resolvedPieceCount = exactReceivedPieceNumbers?.length
+    ? exactReceivedPieceNumbers.length
+    : verifiedPieceCount;
+  packetReturn.status =
+    resolvedPieceCount >= packetReturn.plannedPieceCount
+      ? "verified"
+      : "partial";
+  packetReturn.verifiedPieceCount = resolvedPieceCount;
+  packetReturn.receivedPieceNumbers = exactReceivedPieceNumbers?.length
+    ? exactReceivedPieceNumbers
+    : packetReturn.pieces
+        .slice(0, verifiedPieceCount)
+        .map((piece) => piece.pieceNumber);
   packetReturn.issue.resolved = true;
   packetReturn.issue.resolutionNote = resolutionNote;
   packetReturn.issue.resolvedAt = new Date();
@@ -680,7 +956,7 @@ export const resolvePacketIssue = asyncHandler(async (req, res) => {
     details: {
       processId: process._id.toString(),
       packetNumber,
-      verifiedPieceCount,
+      verifiedPieceCount: resolvedPieceCount,
       resolutionNote,
     },
   });
@@ -709,10 +985,18 @@ export const finalizePlanningReturn = asyncHandler(async (req, res) => {
   const packetReturns = await SemiPolishPacketReturn.find({
     process: process._id,
   }).lean();
-  const unresolved = packetReturns.filter((item) => item.status !== "verified");
-  if (unresolved.length) {
+  const issueReturns = packetReturns.filter((item) => item.status === "issue");
+  if (issueReturns.length) {
     throw ApiError.badRequest(
-      `${unresolved.length} packet issue(s) must be resolved first.`,
+      `${issueReturns.length} packet issue(s) must be resolved first.`,
+    );
+  }
+  const incompleteReturns = packetReturns.filter(
+    (item) => item.status !== "verified",
+  );
+  if (incompleteReturns.length) {
+    throw ApiError.badRequest(
+      `${incompleteReturns.length} packet(s) still have pieces remaining.`,
     );
   }
   if (packetReturns.length !== process.packets.length) {
@@ -727,7 +1011,23 @@ export const finalizePlanningReturn = asyncHandler(async (req, res) => {
   );
   const returnedCarat = roundCarat(
     packetReturns.reduce(
-      (total, item) => total + Number(item.plannedPolishedCarat || 0),
+      (total, item) =>
+        total +
+        (item.receivedPieces?.length
+          ? item.receivedPieces.reduce(
+              (pieceTotal, piece) => {
+                const plannedPiece = item.pieces?.find(
+                  (planned) => planned.pieceNumber === piece.pieceNumber,
+                );
+                const returnedPieceCarat =
+                  piece.fourPCarat == null
+                    ? Number(plannedPiece?.polishedCarat || 0)
+                    : Number(piece.fourPCarat);
+                return pieceTotal + returnedPieceCarat;
+              },
+              0,
+            )
+          : Number(item.plannedPolishedCarat || 0)),
       0,
     ),
   );

@@ -37,6 +37,18 @@ router.get(
 );
 
 router.get(
+  "/packet-lookup",
+  permit(PERMISSION_MODULE.LOTS, PERMISSION_ACTION.READ),
+  planningController.lookupPlannedPacket,
+);
+
+router.post(
+  "/packet-lookup",
+  permit(PERMISSION_MODULE.LOTS, PERMISSION_ACTION.READ),
+  planningController.lookupPlannedPacket,
+);
+
+router.get(
   "/:id/export",
   permit(PERMISSION_MODULE.LOTS, PERMISSION_ACTION.READ),
   semiPolishController.exportSemiPolishRecord,

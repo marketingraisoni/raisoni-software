@@ -15,6 +15,24 @@ const returnedPieceSnapshotSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const receivedDiamondSchema = new mongoose.Schema(
+  {
+    planningPieceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    pieceNumber: { type: Number, required: true },
+    hphtCarat: { type: Number, default: null, min: 0 },
+    fourPCarat: { type: Number, default: null, min: 0 },
+    shape: { type: String, default: "", trim: true },
+    receivedDate: { type: Date, default: Date.now, required: true },
+    barcode: { type: String, default: "", trim: true, uppercase: true },
+    receivedAt: { type: Date, default: Date.now, required: true },
+    receivedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  },
+  { _id: true },
+);
+
 const issueSchema = new mongoose.Schema(
   {
     reported: { type: Boolean, default: false },
@@ -31,6 +49,22 @@ const issueSchema = new mongoose.Schema(
     },
   },
   { _id: false },
+);
+
+const packetReceiptSchema = new mongoose.Schema(
+  {
+    pieceNumbers: { type: [Number], default: [] },
+    pieceCount: { type: Number, required: true, min: 0 },
+    source: {
+      type: String,
+      enum: ["manual", "barcode"],
+      default: "manual",
+    },
+    notes: { type: String, default: "" },
+    receivedAt: { type: Date, default: Date.now, required: true },
+    receivedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  },
+  { _id: true },
 );
 
 const semiPolishPacketReturnSchema = new mongoose.Schema(
@@ -59,7 +93,7 @@ const semiPolishPacketReturnSchema = new mongoose.Schema(
     packetNumber: { type: Number, required: true, min: 1 },
     status: {
       type: String,
-      enum: ["verified", "issue"],
+      enum: ["partial", "verified", "issue"],
       required: true,
       index: true,
     },
@@ -70,8 +104,11 @@ const semiPolishPacketReturnSchema = new mongoose.Schema(
     },
     plannedPieceCount: { type: Number, required: true },
     verifiedPieceCount: { type: Number, required: true },
+    receivedPieceNumbers: { type: [Number], default: [] },
     plannedPolishedCarat: { type: Number, required: true },
     pieces: { type: [returnedPieceSnapshotSchema], default: [] },
+    receivedPieces: { type: [receivedDiamondSchema], default: [] },
+    receipts: { type: [packetReceiptSchema], default: [] },
     issue: { type: issueSchema, default: () => ({}) },
     notes: { type: String, default: "" },
     receivedAt: { type: Date, default: Date.now, required: true },
@@ -86,6 +123,7 @@ semiPolishPacketReturnSchema.index(
   { unique: true },
 );
 semiPolishPacketReturnSchema.index({ process: 1, receivedAt: -1 });
+semiPolishPacketReturnSchema.index({ process: 1, "receivedPieces.barcode": 1 });
 
 export const SemiPolishPacketReturn = mongoose.model(
   "SemiPolishPacketReturn",

@@ -15,6 +15,7 @@ import {
   Clock,
   History,
   BarChart3,
+  ScanLine,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -51,7 +52,7 @@ export const sidebarData: SidebarData = {
         // },
       ],
     },
-    
+
     // {
     //   title: 'Pages',
     //   items: [
@@ -119,6 +120,11 @@ export const sidebarData: SidebarData = {
               title: 'Active in 4P',
               url: '/semi-polish',
               icon: Clock,
+            },
+            {
+              title: 'Packet Scanner',
+              url: '/semi-polish/packet-scanner',
+              icon: ScanLine,
             },
             {
               title: 'Ready for Issue',
