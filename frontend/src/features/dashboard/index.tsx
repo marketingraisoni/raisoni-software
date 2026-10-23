@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query'
+import { Boxes, Clock, Gem, Layers3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -11,11 +13,22 @@ import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
 import { TopNav } from '@/components/layout/top-nav'
 import { Search } from '@/components/search'
+import {
+  dashboardQueryKey,
+  fetchDashboardData,
+} from '@/services/dashboard-service'
 import { Analytics } from './components/analytics'
 import { Overview } from './components/overview'
 import { RecentSales } from './components/recent-sales'
 
 export function Dashboard() {
+  const { data } = useQuery({
+    queryKey: dashboardQueryKey,
+    queryFn: ({ signal }) => fetchDashboardData(signal),
+  })
+
+  const metrics = data?.metrics
+
   return (
     <>
       {/* ===== Top Heading ===== */}
@@ -53,101 +66,64 @@ export function Dashboard() {
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    Total Revenue
+                    Total Rough Carat
                   </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
-                  </svg>
+                  <Gem className='h-5 w-5 text-muted-foreground' />
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>$45,231.89</div>
+                  <div className='text-2xl font-bold'>
+                    {metrics ? `${metrics.totalCarat.toLocaleString()} Cts` : '—'}
+                  </div>
                   <p className='text-xs text-muted-foreground'>
-                    +20.1% from last month
+                    {metrics ? `Across ${metrics.totalLots} total lots` : 'Registered lots'}
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    Subscriptions
+                    Total Pieces
                   </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
-                    <circle cx='9' cy='7' r='4' />
-                    <path d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' />
-                  </svg>
+                  <Boxes className='h-5 w-5 text-muted-foreground' />
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>+2350</div>
+                  <div className='text-2xl font-bold'>
+                    {metrics ? `+${metrics.totalPieces.toLocaleString()}` : '—'}
+                  </div>
                   <p className='text-xs text-muted-foreground'>
-                    +180.1% from last month
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>Sales</CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <rect width='20' height='14' x='2' y='5' rx='2' />
-                    <path d='M2 10h20' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+12,234</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +19% from last month
+                    {metrics ? `In ${metrics.activeLots} active lots` : 'Active lot inventory'}
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    Active Now
+                    Assorted Packets
                   </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M22 12h-4l-3 9L9 3l-3 9H2' />
-                  </svg>
+                  <Layers3 className='h-5 w-5 text-muted-foreground' />
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>+573</div>
+                  <div className='text-2xl font-bold'>
+                    {metrics ? `+${metrics.totalPackets.toLocaleString()}` : '—'}
+                  </div>
                   <p className='text-xs text-muted-foreground'>
-                    +201 since last hour
+                    {metrics ? `${metrics.totalPacketCarat.toLocaleString()} carats assorted` : 'Grade A packets'}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    4P In Process
+                  </CardTitle>
+                  <Clock className='h-5 w-5 text-muted-foreground' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold'>
+                    {metrics ? `+${metrics.inProcessCount}` : '—'}
+                  </div>
+                  <p className='text-xs text-muted-foreground'>
+                    {metrics ? `${metrics.totalProcesses} total 4P processes` : 'Active process batches'}
                   </p>
                 </CardContent>
               </Card>
@@ -155,27 +131,27 @@ export function Dashboard() {
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
               <Card className='col-span-1 lg:col-span-4'>
                 <CardHeader>
-                  <CardTitle>Overview</CardTitle>
+                  <CardTitle>Production Intake Overview</CardTitle>
                 </CardHeader>
                 <CardContent className='ps-2'>
-                  <Overview />
+                  <Overview data={data?.overviewChart} />
                 </CardContent>
               </Card>
               <Card className='col-span-1 lg:col-span-3'>
                 <CardHeader>
-                  <CardTitle>Recent Sales</CardTitle>
+                  <CardTitle>Recent Lots</CardTitle>
                   <CardDescription>
-                    You made 265 sales this month.
+                    {metrics ? `${metrics.totalLots} total lots registered in system.` : 'Recent lot inward operations.'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <RecentSales />
+                  <RecentSales items={data?.recentSales} />
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
           <TabsContent value='analytics' className='space-y-4'>
-            <Analytics />
+            <Analytics data={data?.analytics} />
           </TabsContent>
         </Tabs>
       </Main>
@@ -191,21 +167,21 @@ const topNav = [
     disabled: false,
   },
   {
-    title: 'Customers',
-    href: 'dashboard/customers',
+    title: 'All Lots',
+    href: '/lots',
     isActive: false,
-    disabled: true,
+    disabled: false,
   },
   {
-    title: 'Products',
-    href: 'dashboard/products',
+    title: 'Packet Assortment',
+    href: '/packets',
     isActive: false,
-    disabled: true,
+    disabled: false,
   },
   {
-    title: 'Settings',
-    href: 'dashboard/settings',
+    title: '4P Semi-Polish',
+    href: '/semi-polish',
     isActive: false,
-    disabled: true,
+    disabled: false,
   },
 ]

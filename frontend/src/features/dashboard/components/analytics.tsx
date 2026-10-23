@@ -5,144 +5,96 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Boxes, Gem, Layers3, Percent } from 'lucide-react'
+import { type DashboardAnalytics } from '@/services/dashboard-service'
 import { AnalyticsChart } from './analytics-chart'
 
-export function Analytics() {
+export function Analytics({ data }: { data?: DashboardAnalytics }) {
   return (
     <div className='space-y-4'>
       <Card>
         <CardHeader>
-          <CardTitle>Traffic Overview</CardTitle>
-          <CardDescription>Weekly clicks and unique visitors</CardDescription>
+          <CardTitle>Production & Process Volume</CardTitle>
+          <CardDescription>Daily diamond pieces and rough carats in processing</CardDescription>
         </CardHeader>
         <CardContent className='px-6'>
-          <AnalyticsChart />
+          <AnalyticsChart data={data?.chart} />
         </CardContent>
       </Card>
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Clicks</CardTitle>
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              strokeWidth='2'
-              className='h-4 w-4 text-muted-foreground'
-            >
-              <path d='M3 3v18h18' />
-              <path d='M7 15l4-4 4 4 4-6' />
-            </svg>
+            <CardTitle className='text-sm font-medium'>Total Pieces</CardTitle>
+            <Boxes className='h-5 w-5 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>1,248</div>
-            <p className='text-xs text-muted-foreground'>+12.4% vs last week</p>
+            <div className='text-2xl font-bold'>{data?.totalPieces ?? data?.totalClicks ?? '—'}</div>
+            <p className='text-xs text-muted-foreground'>Total diamond pieces in inventory</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
             <CardTitle className='text-sm font-medium'>
-              Unique Visitors
+              Total Carats
             </CardTitle>
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              strokeWidth='2'
-              className='h-4 w-4 text-muted-foreground'
-            >
-              <circle cx='12' cy='7' r='4' />
-              <path d='M6 21v-2a6 6 0 0 1 12 0v2' />
-            </svg>
+            <Gem className='h-5 w-5 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>832</div>
-            <p className='text-xs text-muted-foreground'>+5.8% vs last week</p>
+            <div className='text-2xl font-bold'>{data?.totalCarats ?? data?.uniqueVisitors ?? '—'}</div>
+            <p className='text-xs text-muted-foreground'>Total intake rough weight</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Bounce Rate</CardTitle>
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              strokeWidth='2'
-              className='h-4 w-4 text-muted-foreground'
-            >
-              <path d='M3 12h6l3 6 3-6h6' />
-            </svg>
+            <CardTitle className='text-sm font-medium'>4P Yield Rate</CardTitle>
+            <Percent className='h-5 w-5 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>42%</div>
-            <p className='text-xs text-muted-foreground'>-3.2% vs last week</p>
+            <div className='text-2xl font-bold'>{data?.yieldRate ?? data?.bounceRate ?? '—'}</div>
+            <p className='text-xs text-muted-foreground'>Average polished recovery yield</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Avg. Session</CardTitle>
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              strokeWidth='2'
-              className='h-4 w-4 text-muted-foreground'
-            >
-              <circle cx='12' cy='12' r='10' />
-              <path d='M12 6v6l4 2' />
-            </svg>
+            <CardTitle className='text-sm font-medium'>Assorted Packets</CardTitle>
+            <Layers3 className='h-5 w-5 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>3m 24s</div>
-            <p className='text-xs text-muted-foreground'>+18s vs last week</p>
+            <div className='text-2xl font-bold'>{data?.totalPackets ?? data?.avgSession ?? '—'}</div>
+            <p className='text-xs text-muted-foreground'>Grade A assortment packets</p>
           </CardContent>
         </Card>
       </div>
       <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
         <Card className='col-span-1 lg:col-span-4'>
           <CardHeader>
-            <CardTitle>Referrers</CardTitle>
-            <CardDescription>Top sources driving traffic</CardDescription>
+            <CardTitle>4P Vendors</CardTitle>
+            <CardDescription>Carats issued to external processing vendors</CardDescription>
           </CardHeader>
           <CardContent>
             <SimpleBarList
-              items={[
-                { name: 'Direct', value: 512 },
-                { name: 'Product Hunt', value: 238 },
-                { name: 'Twitter', value: 174 },
-                { name: 'Blog', value: 104 },
+              items={data?.referrers ?? [
+                { name: 'In-House 4P', value: 100 },
               ]}
               barClass='bg-primary'
-              valueFormatter={(n) => `${n}`}
+              valueFormatter={(n) => `${n} Cts`}
             />
           </CardContent>
         </Card>
         <Card className='col-span-1 lg:col-span-3'>
           <CardHeader>
-            <CardTitle>Devices</CardTitle>
-            <CardDescription>How users access your app</CardDescription>
+            <CardTitle>Pipeline Distribution</CardTitle>
+            <CardDescription>Current status of lots and 4P batches</CardDescription>
           </CardHeader>
           <CardContent>
             <SimpleBarList
-              items={[
-                { name: 'Desktop', value: 74 },
-                { name: 'Mobile', value: 22 },
-                { name: 'Tablet', value: 4 },
+              items={data?.devices ?? [
+                { name: 'Active Lots', value: 0 },
+                { name: 'Closed Lots', value: 0 },
+                { name: 'In-Process 4P', value: 0 },
               ]}
               barClass='bg-muted-foreground'
-              valueFormatter={(n) => `${n}%`}
+              valueFormatter={(n) => `${n}`}
             />
           </CardContent>
         </Card>

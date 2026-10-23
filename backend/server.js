@@ -20,7 +20,7 @@ const frontendDistPath = path.resolve(__dirname, '../frontend/dist');
 
 import { User } from './src/models/User.js';
 import { Lot } from './src/models/Lot.js';
-import { seedDatabase } from './scripts/seed.js';
+import { seedDatabase, cleanupDummyData } from './scripts/seed.js';
 import { migrateLegacyUserTypes } from './src/services/userMigrationService.js';
 
 // Route imports
@@ -105,6 +105,7 @@ export async function startServer(port = config.port) {
     // index required by soft deletion and Kapan reuse.
     await Lot.syncIndexes();
     await migrateLegacyUserTypes();
+    await cleanupDummyData();
 
     // Auto-seed initial accounts if database is empty
     try {

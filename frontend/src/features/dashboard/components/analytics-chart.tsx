@@ -1,47 +1,22 @@
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+import { type AnalyticsChartPoint } from '@/services/dashboard-service'
 
-const data = [
-  {
-    name: 'Mon',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Tue',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Wed',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Thu',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Fri',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Sat',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: 'Sun',
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
+const defaultData = [
+  { name: 'Mon', clicks: 120, uniques: 80 },
+  { name: 'Tue', clicks: 140, uniques: 90 },
+  { name: 'Wed', clicks: 180, uniques: 110 },
+  { name: 'Thu', clicks: 160, uniques: 105 },
+  { name: 'Fri', clicks: 210, uniques: 130 },
+  { name: 'Sat', clicks: 190, uniques: 120 },
+  { name: 'Sun', clicks: 150, uniques: 95 },
 ]
 
-export function AnalyticsChart() {
+export function AnalyticsChart({ data }: { data?: AnalyticsChartPoint[] }) {
+  const chartData = data && data.length > 0 ? data : defaultData
+
   return (
     <ResponsiveContainer width='100%' height={300}>
-      <AreaChart data={data}>
+      <AreaChart data={chartData}>
         <XAxis
           dataKey='name'
           stroke='#888888'
