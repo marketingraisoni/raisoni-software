@@ -376,7 +376,7 @@ export function SemiPolishPacketReturnScannerPage() {
               </span>
             </div>
 
-            <div className='inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground shadow-2xs backdrop-blur-xs'>
+            <div className='inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-sm font-medium text-muted-foreground shadow-2xs backdrop-blur-xs'>
               <span className='size-2 rounded-full bg-emerald-500 animate-pulse' />
               Scanner ready & auto-focused
             </div>
@@ -399,7 +399,7 @@ export function SemiPolishPacketReturnScannerPage() {
                     autoFocus
                     value={packetCode}
                     autoComplete='off'
-                    placeholder='Example: NEVD-UPA/741 or 741'
+                    placeholder='Scan or enter packet number'
                     className='h-12 bg-background pl-10 pr-16 text-base shadow-xs'
                     onChange={(event) => setPacketCode(event.target.value)}
                     onKeyDown={handleInputKeyDown}
@@ -417,7 +417,7 @@ export function SemiPolishPacketReturnScannerPage() {
                       <X className='size-3.5' />
                     </button>
                   ) : (
-                    <kbd className='pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 select-none items-center gap-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex'>
+                    <kbd className='pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 select-none items-center gap-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-muted-foreground sm:inline-flex'>
                       ↵ Enter
                     </kbd>
                   )}
@@ -425,7 +425,7 @@ export function SemiPolishPacketReturnScannerPage() {
                 <Button
                   className='h-12 shrink-0 px-6 font-medium shadow-xs'
                   disabled={lookupMutation.isPending}
-                  onClick={findPacket}
+                  onClick={() => findPacket()}
                 >
                   {lookupMutation.isPending ? (
                     <Loader2 className='animate-spin' />
@@ -437,7 +437,7 @@ export function SemiPolishPacketReturnScannerPage() {
               </div>
             </div>
 
-            <div className='mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground'>
+            <div className='mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground'>
               <span className='inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-2.5 py-1 backdrop-blur-xs'>
                 <Barcode className='size-3.5 text-primary' /> Barcode / QR wedge mode
               </span>

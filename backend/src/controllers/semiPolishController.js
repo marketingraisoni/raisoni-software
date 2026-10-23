@@ -34,12 +34,24 @@ export const createVendor = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Vendor name is required');
   }
 
+  const escapedName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const existing = await Vendor.findOne({
-    name: new RegExp(`^${name.trim()}$`, 'i'),
+    name: new RegExp(`^${escapedName}$`, 'i'),
     processType: '4P',
   });
   if (existing) {
-    throw ApiError.conflict('A vendor with this name already exists');
+    if (existing.status !== 'active') {
+      existing.status = 'active';
+      if (mobile && mobile.trim()) existing.mobile = mobile.trim();
+      if (address && address.trim()) existing.address = address.trim();
+      if (gstin && gstin.trim()) existing.gstin = gstin.trim().toUpperCase();
+      await existing.save();
+    }
+    return sendSuccess(res, {
+      statusCode: HTTP_STATUS.OK,
+      message: 'Vendor ready to use',
+      data: { vendor: existing },
+    });
   }
 
   const vendor = await Vendor.create({
@@ -153,6 +165,9 @@ export const getSemiPolishList = asyncHandler(async (req, res) => {
   const [total, processes, activeCount, completedCount, lossAgg] = await Promise.all([
     SemiPolishProcess.countDocuments(filter),
     SemiPolishProcess.find(filter)
+      .select('-packets')
+      .populate('vendor', 'name mobile address gstin processType status')
+      .populate('lot', 'kapanNo totalCarat totalPcs entryDate')
       .populate('issuedBy', 'name username')
       .populate('receivedBy', 'name username')
       .sort(sortOptions)
@@ -169,10 +184,24 @@ export const getSemiPolishList = asyncHandler(async (req, res) => {
 
   const totalLossCarat = lossAgg[0]?.totalLoss ?? 0;
 
+  const formattedProcesses = processes.map((proc) => {
+    let vendorObj = proc.vendor;
+    if (!vendorObj || typeof vendorObj !== 'object' || !vendorObj._id) {
+      vendorObj = {
+        _id: proc.vendor || null,
+        name: proc.vendorName || '',
+      };
+    }
+    return {
+      ...proc,
+      vendor: vendorObj,
+    };
+  });
+
   return sendSuccess(res, {
     message: '4P Semi-Polish records retrieved successfully',
     data: {
-      processes,
+      processes: formattedProcesses,
       pagination: createPaginationMeta({ page, limit, total }),
       metrics: {
         activeCount,
@@ -185,8 +214,8 @@ export const getSemiPolishList = asyncHandler(async (req, res) => {
 
 export const getSemiPolishById = asyncHandler(async (req, res) => {
   const process = await SemiPolishProcess.findById(req.params.id)
-    .populate('vendor')
-    .populate('lot')
+    .populate('vendor', 'name mobile address gstin processType status')
+    .populate('lot', 'kapanNo totalCarat totalPcs entryDate')
     .populate('issuedBy', 'name username')
     .populate('receivedBy', 'name username')
     .lean();
@@ -194,6 +223,15 @@ export const getSemiPolishById = asyncHandler(async (req, res) => {
   if (!process) {
     throw ApiError.notFound('4P Semi-Polish record not found');
   }
+
+  let vendorObj = process.vendor;
+  if (!vendorObj || typeof vendorObj !== 'object' || !vendorObj._id) {
+    vendorObj = {
+      _id: process.vendor || null,
+      name: process.vendorName || '',
+    };
+  }
+  process.vendor = vendorObj;
 
   return sendSuccess(res, {
     message: '4P Semi-Polish record retrieved successfully',
@@ -331,10 +369,32 @@ export const issueToSemiPolish = asyncHandler(async (req, res) => {
 
   broadcastEvent('semi-polish:issued', { processId: processRecord._id, lotId: lot._id });
 
+  const processResponse = processRecord.toObject ? processRecord.toObject() : { ...processRecord };
+  delete processResponse.packets;
+  processResponse.vendor = {
+    _id: vendor._id,
+    name: vendor.name,
+    mobile: vendor.mobile || '',
+    address: vendor.address || '',
+    gstin: vendor.gstin || '',
+    processType: vendor.processType || '4P',
+    status: vendor.status || 'active',
+  };
+  processResponse.lot = {
+    _id: lot._id,
+    kapanNo: lot.kapanNo,
+    totalCarat: lot.totalCarat,
+    totalPcs: lot.totalPcs,
+    entryDate: lot.entryDate,
+  };
+  processResponse.issuedBy = req.user
+    ? { _id: req.user._id, name: req.user.name, username: req.user.username }
+    : null;
+
   return sendSuccess(res, {
     statusCode: HTTP_STATUS.CREATED,
     message: `Lot ${lot.kapanNo} issued to 4P successfully with Issue No ${issueNo}`,
-    data: { process: processRecord },
+    data: { process: processResponse },
   });
 });
 
@@ -425,9 +485,32 @@ export const receiveFromSemiPolish = asyncHandler(async (req, res) => {
 
   broadcastEvent('semi-polish:returned', { processId: processRecord._id });
 
+  const populatedProcess = await SemiPolishProcess.findById(processRecord._id)
+    .select('-packets')
+    .populate('vendor', 'name mobile address gstin processType status')
+    .populate('lot', 'kapanNo totalCarat totalPcs entryDate')
+    .populate('issuedBy', 'name username')
+    .populate('receivedBy', 'name username')
+    .lean();
+
+  let receiveResponse = populatedProcess;
+  if (!receiveResponse) {
+    receiveResponse = processRecord.toObject ? processRecord.toObject() : { ...processRecord };
+    delete receiveResponse.packets;
+  }
+
+  let vendorObj = receiveResponse.vendor;
+  if (!vendorObj || typeof vendorObj !== 'object' || !vendorObj._id) {
+    vendorObj = {
+      _id: receiveResponse.vendor || null,
+      name: receiveResponse.vendorName || '',
+    };
+  }
+  receiveResponse.vendor = vendorObj;
+
   return sendSuccess(res, {
     message: `Lot ${processRecord.kapanNo} received from 4P successfully`,
-    data: { process: processRecord },
+    data: { process: receiveResponse },
   });
 });
 

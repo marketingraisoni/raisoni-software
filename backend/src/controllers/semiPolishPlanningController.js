@@ -1067,8 +1067,32 @@ export const finalizePlanningReturn = asyncHandler(async (req, res) => {
   });
 
   broadcastEvent("semi-polish:returned", { processId: process._id });
+
+  const populatedProcess = await SemiPolishProcess.findById(process._id)
+    .select("-packets")
+    .populate("vendor", "name mobile address gstin processType status")
+    .populate("lot", "kapanNo totalCarat totalPcs entryDate")
+    .populate("issuedBy", "name username")
+    .populate("receivedBy", "name username")
+    .lean();
+
+  let finalResponse = populatedProcess;
+  if (!finalResponse) {
+    finalResponse = process.toObject ? process.toObject() : { ...process };
+    delete finalResponse.packets;
+  }
+
+  let vendorObj = finalResponse.vendor;
+  if (!vendorObj || typeof vendorObj !== "object" || !vendorObj._id) {
+    vendorObj = {
+      _id: finalResponse.vendor || null,
+      name: finalResponse.vendorName || "",
+    };
+  }
+  finalResponse.vendor = vendorObj;
+
   return sendSuccess(res, {
     message: `4P return ${process.issueNo} finalized successfully.`,
-    data: { process },
+    data: { process: finalResponse },
   });
 });

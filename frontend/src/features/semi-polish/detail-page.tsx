@@ -403,7 +403,7 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
               <div className='relative flex w-full items-center justify-center'>
                 <CardTitle className='text-center text-base'>Packet handover manifest</CardTitle>
                 <Badge variant='secondary' className='absolute end-0'>
-                  {process.packets.length} packets
+                  {(process.packets || []).length} packets
                 </Badge>
               </div>
             </CardHeader>
@@ -418,18 +418,26 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {process.packets.map((packet, index) => (
-                    <TableRow key={packet.packetId || `${packet.name}-${index}`}>
-                      <TableCell className='ps-5 font-mono text-muted-foreground'>
-                        {packet.srNo}
-                      </TableCell>
-                      <TableCell className='font-semibold'>{packet.name}</TableCell>
-                      <TableCell>{packet.grade || 'A'}</TableCell>
-                      <TableCell className='pe-5 text-right font-mono font-semibold'>
-                        {formatCarat(packet.carat)} CT
+                  {(process.packets || []).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className='py-8 text-center text-muted-foreground'>
+                        No packet snapshots recorded for this process.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    (process.packets || []).map((packet, index) => (
+                      <TableRow key={packet.packetId || `${packet.name}-${index}`}>
+                        <TableCell className='ps-5 font-mono text-muted-foreground'>
+                          {packet.srNo}
+                        </TableCell>
+                        <TableCell className='font-semibold'>{packet.name}</TableCell>
+                        <TableCell>{packet.grade || 'A'}</TableCell>
+                        <TableCell className='pe-5 text-right font-mono font-semibold'>
+                          {formatCarat(packet.carat)} CT
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

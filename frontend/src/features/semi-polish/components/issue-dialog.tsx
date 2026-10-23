@@ -40,12 +40,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { type EligibleLot } from '../data/schema'
+import { type EligibleLot, type Vendor } from '../data/schema'
 import { ProcessSummary } from './process-summary'
 
 const vendorFormSchema = z.object({
   name: z.string().trim().min(1, 'Vendor name is required.').max(100),
-  mobile: z.string().trim().max(20, 'Mobile number is too long.'),
+  mobile: z
+    .string()
+    .trim()
+    .max(20, 'Mobile number is too long.')
+    .optional()
+    .or(z.literal('')),
 })
 
 const startOfDay = (date: Date) => {
@@ -144,16 +149,30 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
   const createVendorMutation = useMutation({
     mutationFn: createVendor,
     onSuccess: async (newVendor) => {
-      await queryClient.invalidateQueries({ queryKey: semiPolishQueryKeys.vendors })
       const vendorId = newVendor._id || newVendor.id
+      queryClient.setQueryData(
+        semiPolishQueryKeys.vendors,
+        (oldVendors: Vendor[] = []) => {
+          const exists = oldVendors.some(
+            (v) => (v._id || v.id) === vendorId
+          )
+          if (exists) return oldVendors
+          return [...oldVendors, newVendor].sort((a, b) =>
+            a.name.localeCompare(b.name)
+          )
+        }
+      )
+      await queryClient.invalidateQueries({
+        queryKey: semiPolishQueryKeys.vendors,
+      })
       if (vendorId) {
         form.setValue('vendorId', vendorId, {
           shouldDirty: true,
           shouldValidate: true,
         })
       }
-      toast.success(`Vendor "${newVendor.name}" created`)
-      vendorForm.reset()
+      toast.success(`Vendor "${newVendor.name}" ready`)
+      vendorForm.reset({ name: '', mobile: '' })
       setIsAddingVendor(false)
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
@@ -245,9 +264,12 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
             <form
               id='semi-polish-vendor-form'
               className='space-y-4 rounded-lg border bg-muted/10 p-4'
-              onSubmit={vendorForm.handleSubmit((values) =>
-                createVendorMutation.mutate(values)
-              )}
+              onSubmit={(e) => {
+                e.preventDefault()
+                vendorForm.handleSubmit((values) =>
+                  createVendorMutation.mutate(values)
+                )(e)
+              }}
             >
               <div className='flex items-center justify-between gap-3'>
                 <div className='flex items-center gap-2'>
@@ -261,7 +283,7 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
                   className='size-8'
                   aria-label='Cancel adding vendor'
                   onClick={() => {
-                    vendorForm.reset()
+                    vendorForm.reset({ name: '', mobile: '' })
                     setIsAddingVendor(false)
                   }}
                 >
@@ -284,6 +306,7 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -308,6 +331,7 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
                 />
               </div>
 
+              <button type='submit' className='hidden' tabIndex={-1} aria-hidden='true' />
             </form>
           </Form>
         ) : (
@@ -315,7 +339,10 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
             <form
               id='semi-polish-issue-form'
               className='space-y-5'
-              onSubmit={form.handleSubmit(handleIssue)}
+              onSubmit={(e) => {
+                e.preventDefault()
+                form.handleSubmit(handleIssue)(e)
+              }}
             >
               <FormField
                 control={form.control}
@@ -438,24 +465,37 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
           <Button
             type='button'
             variant='outline'
-            onClick={() => handleOpenChange(false)}
+            onClick={() => {
+              if (isAddingVendor) {
+                vendorForm.reset({ name: '', mobile: '' })
+                setIsAddingVendor(false)
+              } else {
+                handleOpenChange(false)
+              }
+            }}
           >
             Cancel
           </Button>
           {isAddingVendor ? (
             <Button
-              type='submit'
-              form='semi-polish-vendor-form'
+              type='button'
               disabled={createVendorMutation.isPending}
+              onClick={() => {
+                vendorForm.handleSubmit((values) =>
+                  createVendorMutation.mutate(values)
+                )()
+              }}
             >
               {createVendorMutation.isPending && <Loader2 className='animate-spin' />}
               Save vendor
             </Button>
           ) : (
             <Button
-              type='submit'
-              form='semi-polish-issue-form'
+              type='button'
               disabled={issueMutation.isPending || !lot}
+              onClick={() => {
+                form.handleSubmit(handleIssue)()
+              }}
             >
               {issueMutation.isPending && <Loader2 className='animate-spin' />}
               {issueMutation.isPending ? 'Issuing…' : 'Issue to 4P'}

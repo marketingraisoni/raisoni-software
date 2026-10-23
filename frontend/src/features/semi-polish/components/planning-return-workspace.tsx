@@ -1384,7 +1384,7 @@ export function PlanningReturnWorkspace({
                     variant='destructive'
                     onClick={() => beginDifference(plan)}
                   >
-                    <AlertTriangle /> Report difference
+                    <AlertTriangle /> Report
                   </Button>
                   <Button
                     size='sm'
