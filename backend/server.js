@@ -36,6 +36,7 @@ import settingRoutes from './src/routes/settingRoutes.js';
 import permissionRoutes from './src/routes/permissionRoutes.js';
 import lotRoutes from './src/routes/lotRoutes.js';
 import semiPolishRoutes from './src/routes/semiPolishRoutes.js';
+import chatRoutes from './src/routes/chatRoutes.js';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -74,6 +75,14 @@ app.use('/api/settings', settingRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/lots', lotRoutes);
 app.use('/api/semi-polish', semiPolishRoutes);
+app.use('/api/chats', chatRoutes);
+
+// 5b. Uploads static directory
+const uploadsDir = path.resolve(__dirname, '../data/uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // 6. 404 Route handler for API endpoints
 app.use('/api/*', apiNotFound);
@@ -82,7 +91,11 @@ app.use('/api/*', apiNotFound);
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
   app.get('*', (req, res, next) => {
-    if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/socket.io')) {
+    if (
+      req.originalUrl.startsWith('/api') ||
+      req.originalUrl.startsWith('/socket.io') ||
+      req.originalUrl.startsWith('/uploads')
+    ) {
       return next();
     }
     res.sendFile(path.join(frontendDistPath, 'index.html'));

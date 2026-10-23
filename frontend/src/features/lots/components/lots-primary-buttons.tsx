@@ -17,7 +17,7 @@ export function LotsPrimaryButtons() {
 
   return (
     <Button className='space-x-1' onClick={() => setOpen('add')}>
-      <span>Add Lot</span>
+      <span>Create Lot</span>
       <Gem size={18} />
     </Button>
   )

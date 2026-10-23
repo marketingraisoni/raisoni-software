@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth-store'
+import { useSocket } from '@/context/socket-context'
 import { PERMISSION_ACTION, hasPermission } from '@/constants/permissions'
 import { USER_TYPE_LABEL } from '@/constants/user-types'
 import { useLayout } from '@/context/layout-provider'
@@ -18,6 +19,7 @@ import type { NavItem } from './types'
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const user = useAuthStore((state) => state.auth.user)
+  const { unreadChatCount } = useSocket()
   const filterNavItem = (item: NavItem): NavItem | null => {
     if (
       item.permission &&
@@ -50,7 +52,21 @@ export function AppSidebar() {
       ...group,
       items: group.items
         .map(filterNavItem)
-        .filter((item): item is NavItem => item !== null),
+        .filter((item): item is NavItem => item !== null)
+        .map((item) => {
+          if (item.url === '/chats') {
+            return {
+              ...item,
+              badge:
+                unreadChatCount > 0
+                  ? unreadChatCount > 99
+                    ? '99+'
+                    : String(unreadChatCount)
+                  : undefined,
+            }
+          }
+          return item
+        }),
     }))
     .filter((group) => group.items.length > 0)
 

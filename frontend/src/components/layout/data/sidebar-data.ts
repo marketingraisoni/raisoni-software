@@ -17,6 +17,7 @@ import {
   ScanLine,
   FileCheck,
   ClipboardClock,
+  MessagesSquare,
 } from 'lucide-react'
 import { PERMISSION_ACTION, PERMISSION_MODULE } from '@/constants/permissions'
 import { type SidebarData } from '../types'
@@ -37,22 +38,11 @@ export const sidebarData: SidebarData = {
           icon: LayoutDashboard,
           permission: { module: PERMISSION_MODULE.DASHBOARD },
         },
-        // {
-        //   title: 'Tasks',
-        //   url: '/tasks',
-        //   icon: ListTodo,
-        // },
-        // {
-        //   title: 'Apps',
-        //   url: '/apps',
-        //   icon: Package,
-        // },
-        // {
-        //   title: 'Chats',
-        //   url: '/chats',
-        //   badge: '3',
-        //   icon: MessagesSquare,
-        // },
+        {
+          title: 'Chat',
+          url: '/chats',
+          icon: MessagesSquare,
+        },
       ],
     },
 
