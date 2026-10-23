@@ -417,7 +417,9 @@ export function SemiPolishReportPage() {
       p.returnedCarat ?? '',
       p.returnedPieces ?? '',
       p.processLossCarat ?? '',
-      p.processLossPercentage ?? '',
+      p.processLossPercentage != null
+        ? `"${p.processLossPercentage}%"`
+        : '',
       `"${p.status || ''}"`,
     ])
 

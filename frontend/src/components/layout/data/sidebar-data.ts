@@ -13,11 +13,9 @@ import {
   Layers3,
   AppWindow,
   Clock,
-  History,
   BarChart3,
   ScanLine,
   FileCheck,
-  FileClock,
   ClipboardClock,
 } from 'lucide-react'
 import { PERMISSION_ACTION, PERMISSION_MODULE } from '@/constants/permissions'

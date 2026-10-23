@@ -1270,9 +1270,9 @@ export function PlanningReturnWorkspace({
           </div>
         )}
 
-        {(hasIssue || ((!returned || isPartial) && processIsActive)) && (
+        {((hasIssue && returned) || ((!returned || isPartial) && processIsActive)) && (
           <div className='border-t p-3'>
-            {hasIssue ? (
+            {hasIssue && returned ? (
               <div className='space-y-3'>
                 <Alert variant='destructive'>
                   <AlertTriangle />
@@ -2042,7 +2042,7 @@ export function PlanningReturnWorkspace({
                                         ((!returned || isPartial) &&
                                           processIsActive)) && (
                                         <div className='border-t p-2'>
-                                          {hasIssue ? (
+                                          {hasIssue && returned ? (
                                             <div className='space-y-3'>
                                               <Alert variant='destructive'>
                                                 <AlertTriangle />
@@ -2368,7 +2368,7 @@ export function PlanningReturnWorkspace({
                   variant='outline'
                   className='border-amber-500/50 text-amber-700 dark:text-amber-400'
                 >
-                  <Clock3 /> {scannedPacketReturn.verifiedPieceCount}/
+                  <Clock3 /> {scannedPacketReturn?.verifiedPieceCount}/
                   {scannedPacketPlan?.plannedPieceCount} received
                 </Badge>
               ) : (
@@ -2435,6 +2435,10 @@ export function PlanningReturnWorkspace({
                 <SummaryTile
                   label='Planned polished'
                   value={`${formatCarat(planningImport.plannedPolishedCarat)} CT`}
+                />
+                <SummaryTile
+                  label='Planned yield'
+                  value={`${Number(planningImport.plannedYieldPercentage ?? 0).toFixed(2)}%`}
                 />
                 <SummaryTile
                   label='Returned packets'

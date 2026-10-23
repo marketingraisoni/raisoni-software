@@ -490,7 +490,7 @@ export function SemiPolishPacketReturnScannerPage() {
                     </Badge>
                   ) : packetIsPartial ? (
                     <Badge variant='outline'>
-                      {packetReturn.verifiedPieceCount}/
+                      {packetReturn?.verifiedPieceCount}/
                       {packetPlan.plannedPieceCount} received
                     </Badge>
                   ) : packetHasIssue ? (
@@ -524,7 +524,7 @@ export function SemiPolishPacketReturnScannerPage() {
                     <AlertTriangle />
                     <AlertTitle>Packet has an unresolved issue</AlertTitle>
                     <AlertDescription>
-                      {packetReturn.issue?.details ||
+                      {packetReturn?.issue?.details ||
                         'Resolve this packet issue from its planning return page first.'}
                     </AlertDescription>
                   </Alert>

@@ -176,15 +176,12 @@ export function SemiPolishHistoryPage() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title='Loss (%)' />
         ),
-        cell: ({ row }) =>
-          row.original.processLossPercentage !== null &&
-          row.original.processLossPercentage !== undefined ? (
-            <Badge variant='outline'>
-              {row.original.processLossPercentage}%
-            </Badge>
-          ) : (
-            '-'
-          ),
+        cell: ({ row }) => {
+          const val = row.original.processLossPercentage
+          if (val === null || val === undefined) return '-'
+          const formatted = String(val).endsWith('%') ? val : `${val}%`
+          return <Badge variant='outline'>{formatted}</Badge>
+        },
         enableSorting: true,
       },
       {

@@ -387,8 +387,20 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                       />
                       <OverviewItem
                         label='Loss percentage'
-                        value={`${process.processLossPercentage ?? 0}%`}
+                        value={
+                          process.processLossPercentage != null
+                            ? String(process.processLossPercentage).endsWith('%')
+                              ? process.processLossPercentage
+                              : `${process.processLossPercentage}%`
+                            : '0%'
+                        }
                       />
+                      {process.plannedYieldPercentage != null && (
+                        <OverviewItem
+                          label='Planned yield'
+                          value={`${Number(process.plannedYieldPercentage).toFixed(2)}%`}
+                        />
+                      )}
                     </>
                   )}
                 </CardContent>

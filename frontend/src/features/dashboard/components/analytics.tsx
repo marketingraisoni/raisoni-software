@@ -50,7 +50,13 @@ export function Analytics({ data }: { data?: DashboardAnalytics }) {
             <Percent className='h-5 w-5 text-muted-foreground' />
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>{data?.yieldRate ?? data?.bounceRate ?? '—'}</div>
+            <div className='text-2xl font-bold'>
+              {(() => {
+                const val = data?.yieldRate ?? data?.bounceRate
+                if (val == null || val === '—') return '—'
+                return String(val).endsWith('%') ? val : `${val}%`
+              })()}
+            </div>
             <p className='text-xs text-muted-foreground'>Average polished recovery yield</p>
           </CardContent>
         </Card>

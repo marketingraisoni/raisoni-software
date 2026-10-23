@@ -17,6 +17,15 @@ function optionalNumberCell(reference, value, style = 8) {
     : numberCell(reference, value, style);
 }
 
+function optionalPercentageCell(reference, value, style = 15) {
+  if (value === null || value === undefined || value === '') {
+    return inlineCell(reference, '-', 3);
+  }
+  const numeric = Number(value);
+  const formatted = Number.isFinite(numeric) ? `${numeric.toFixed(2)}%` : `${value}%`;
+  return inlineCell(reference, formatted, style);
+}
+
 function buildWorksheet(process) {
   const packets = process.packets || [];
   const firstDataRow = 2;
@@ -43,9 +52,9 @@ function buildWorksheet(process) {
     `${inlineCell('F5', 'Issued Pieces', 2)}${numberCell('G5', process.issuedPieces, 13)}${inlineCell('H5', 'Issued Carat', 2)}${numberCell('I5', process.issuedCarat, 15)}`,
     `${inlineCell('F6', 'Return Date', 2)}${optionalDateCell('G6', process.returnDate)}${inlineCell('H6', 'Returned Pieces', 2)}${optionalNumberCell('I6', process.returnedPieces, 13)}`,
     `${inlineCell('F7', 'Returned Carat', 2)}${optionalNumberCell('G7', process.returnedCarat, 15)}${inlineCell('H7', 'Process Loss', 2)}${optionalNumberCell('I7', process.processLossCarat, 15)}`,
-    `${inlineCell('F8', 'Loss Percentage', 2)}${optionalNumberCell('G8', process.processLossPercentage, 15)}${inlineCell('H8', 'Issued By', 2)}${inlineCell('I8', process.issuedByName || '-', 3)}`,
+    `${inlineCell('F8', 'Loss Percentage', 2)}${optionalPercentageCell('G8', process.processLossPercentage, 15)}${inlineCell('H8', 'Issued By', 2)}${inlineCell('I8', process.issuedByName || '-', 3)}`,
     `${inlineCell('F9', 'Received By', 2)}${inlineCell('G9', process.receivedByName || '-', 3)}${inlineCell('H9', 'Return Remarks', 2)}${inlineCell('I9', process.returnNotes || '-', 3)}`,
-    `${inlineCell('F10', 'Instructions', 2)}${inlineCell('G10', process.notes || '-', 3)}${inlineCell('H10', '', 2)}${inlineCell('I10', '', 3)}`,
+    `${inlineCell('F10', 'Instructions', 2)}${inlineCell('G10', process.notes || '-', 3)}${inlineCell('H10', process.plannedYieldPercentage != null ? 'Planned Yield' : '', 2)}${process.plannedYieldPercentage != null ? optionalPercentageCell('I10', process.plannedYieldPercentage, 3) : inlineCell('I10', '', 3)}`,
   ];
 
   const finalDetailRow = details.length + 1;
