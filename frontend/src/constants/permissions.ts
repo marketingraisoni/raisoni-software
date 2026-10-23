@@ -1,19 +1,39 @@
 import { USER_TYPE, type UserType } from './user-types'
 
-export const PERMISSION_ACTIONS = ['read', 'create', 'update', 'delete'] as const
-export type PermissionAction = (typeof PERMISSION_ACTIONS)[number]
+export const PERMISSION_ACTION = {
+  READ: 'read',
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+} as const
 
-export const PERMISSION_MODULES = [
-  'dashboard',
-  'users',
-  'customers',
-  'products',
-  'orders',
-  'inventory',
-  'settings',
-  'lots',
-] as const
-export type PermissionModule = (typeof PERMISSION_MODULES)[number]
+export const PERMISSION_ACTIONS = Object.values(PERMISSION_ACTION) as [
+  PermissionAction,
+  ...PermissionAction[],
+]
+export type PermissionAction =
+  (typeof PERMISSION_ACTION)[keyof typeof PERMISSION_ACTION]
+
+export const PERMISSION_MODULE = {
+  DASHBOARD: 'dashboard',
+  USERS: 'users',
+  PERMISSIONS: 'permissions',
+  CUSTOMERS: 'customers',
+  PRODUCTS: 'products',
+  ORDERS: 'orders',
+  INVENTORY: 'inventory',
+  SETTINGS: 'settings',
+  LOTS: 'lots',
+  ASSORTMENT: 'assortment',
+  SEMI_POLISH: 'semi_polish',
+} as const
+
+export type PermissionModule =
+  (typeof PERMISSION_MODULE)[keyof typeof PERMISSION_MODULE]
+export const PERMISSION_MODULES = Object.values(PERMISSION_MODULE) as [
+  PermissionModule,
+  ...PermissionModule[],
+]
 
 export type PermissionGrant = {
   module: PermissionModule
@@ -26,54 +46,164 @@ export type PermissionCatalogItem = {
   actions: PermissionAction[]
 }
 
-export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
-  { module: 'dashboard', label: 'Dashboard', actions: ['read'] },
-  { module: 'users', label: 'Users', actions: [...PERMISSION_ACTIONS] },
-  { module: 'customers', label: 'Customers', actions: [...PERMISSION_ACTIONS] },
-  { module: 'products', label: 'Products', actions: [...PERMISSION_ACTIONS] },
-  { module: 'orders', label: 'Orders', actions: [...PERMISSION_ACTIONS] },
-  { module: 'inventory', label: 'Inventory', actions: ['read', 'update'] },
-  { module: 'settings', label: 'Settings', actions: ['read', 'update'] },
-  { module: 'lots', label: 'Lots', actions: [...PERMISSION_ACTIONS] },
-]
+type PermissionProfile = 'manager' | 'staff'
+type PermissionModuleDefinition = PermissionCatalogItem & {
+  defaults: Partial<Record<PermissionProfile, readonly PermissionAction[]>>
+}
+
+const ALL_ACTIONS = PERMISSION_ACTIONS
+const READ_ONLY = [PERMISSION_ACTION.READ] as const
+const READ_UPDATE = [PERMISSION_ACTION.READ, PERMISSION_ACTION.UPDATE] as const
+
+export const PERMISSION_MODULE_DEFINITIONS: Record<
+  PermissionModule,
+  PermissionModuleDefinition
+> = {
+  [PERMISSION_MODULE.DASHBOARD]: {
+    module: PERMISSION_MODULE.DASHBOARD,
+    label: 'Dashboard',
+    actions: [...READ_ONLY],
+    defaults: { manager: READ_ONLY, staff: READ_ONLY },
+  },
+  [PERMISSION_MODULE.USERS]: {
+    module: PERMISSION_MODULE.USERS,
+    label: 'User Management',
+    actions: [...ALL_ACTIONS],
+    defaults: {},
+  },
+  [PERMISSION_MODULE.PERMISSIONS]: {
+    module: PERMISSION_MODULE.PERMISSIONS,
+    label: 'Permission Management',
+    actions: [...READ_UPDATE],
+    defaults: {},
+  },
+  [PERMISSION_MODULE.CUSTOMERS]: {
+    module: PERMISSION_MODULE.CUSTOMERS,
+    label: 'Customers',
+    actions: [...ALL_ACTIONS],
+    defaults: {
+      manager: ALL_ACTIONS,
+      staff: [
+        PERMISSION_ACTION.READ,
+        PERMISSION_ACTION.CREATE,
+        PERMISSION_ACTION.UPDATE,
+      ],
+    },
+  },
+  [PERMISSION_MODULE.PRODUCTS]: {
+    module: PERMISSION_MODULE.PRODUCTS,
+    label: 'Products',
+    actions: [...ALL_ACTIONS],
+    defaults: {
+      manager: [
+        PERMISSION_ACTION.READ,
+        PERMISSION_ACTION.CREATE,
+        PERMISSION_ACTION.UPDATE,
+      ],
+      staff: READ_ONLY,
+    },
+  },
+  [PERMISSION_MODULE.ORDERS]: {
+    module: PERMISSION_MODULE.ORDERS,
+    label: 'Orders',
+    actions: [...ALL_ACTIONS],
+    defaults: {
+      manager: ALL_ACTIONS,
+      staff: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
+    },
+  },
+  [PERMISSION_MODULE.INVENTORY]: {
+    module: PERMISSION_MODULE.INVENTORY,
+    label: 'Inventory',
+    actions: [...READ_UPDATE],
+    defaults: { manager: READ_UPDATE, staff: READ_ONLY },
+  },
+  [PERMISSION_MODULE.SETTINGS]: {
+    module: PERMISSION_MODULE.SETTINGS,
+    label: 'Settings',
+    actions: [...READ_UPDATE],
+    defaults: { manager: READ_ONLY },
+  },
+  [PERMISSION_MODULE.LOTS]: {
+    module: PERMISSION_MODULE.LOTS,
+    label: 'Lot Management',
+    actions: [...ALL_ACTIONS],
+    defaults: {
+      manager: [
+        PERMISSION_ACTION.READ,
+        PERMISSION_ACTION.CREATE,
+        PERMISSION_ACTION.UPDATE,
+      ],
+      staff: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
+    },
+  },
+  [PERMISSION_MODULE.ASSORTMENT]: {
+    module: PERMISSION_MODULE.ASSORTMENT,
+    label: 'Assortment / Packet Creation',
+    actions: [...ALL_ACTIONS],
+    defaults: {
+      manager: [
+        PERMISSION_ACTION.READ,
+        PERMISSION_ACTION.CREATE,
+        PERMISSION_ACTION.UPDATE,
+      ],
+      staff: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
+    },
+  },
+  [PERMISSION_MODULE.SEMI_POLISH]: {
+    module: PERMISSION_MODULE.SEMI_POLISH,
+    label: '4P Semi-Polish',
+    actions: [...ALL_ACTIONS],
+    defaults: {
+      manager: [
+        PERMISSION_ACTION.READ,
+        PERMISSION_ACTION.CREATE,
+        PERMISSION_ACTION.UPDATE,
+      ],
+      staff: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
+    },
+  },
+}
+
+export const PERMISSION_CATALOG: PermissionCatalogItem[] =
+  PERMISSION_MODULES.map((module) => {
+    const definition = PERMISSION_MODULE_DEFINITIONS[module]
+    return { module, label: definition.label, actions: [...definition.actions] }
+  })
 
 const fullPermissions = (): PermissionGrant[] =>
-  PERMISSION_CATALOG.map(({ module, actions }) => ({ module, actions: [...actions] }))
+  PERMISSION_CATALOG.map(({ module, actions }) => ({
+    module,
+    actions: [...actions],
+  }))
 
 export function getDefaultPermissions(userType: UserType): PermissionGrant[] {
   if (userType === USER_TYPE.SUPER_ADMIN || userType === USER_TYPE.ADMIN) {
     return fullPermissions()
   }
 
-  if (userType === USER_TYPE.MANAGER) {
-    return [
-      { module: 'dashboard', actions: ['read'] },
-      { module: 'customers', actions: [...PERMISSION_ACTIONS] },
-      { module: 'products', actions: ['read', 'create', 'update'] },
-      { module: 'orders', actions: [...PERMISSION_ACTIONS] },
-      { module: 'inventory', actions: ['read', 'update'] },
-      { module: 'settings', actions: ['read'] },
-      { module: 'lots', actions: ['read', 'create', 'update'] },
-    ]
-  }
-
-  return [
-    { module: 'dashboard', actions: ['read'] },
-    { module: 'customers', actions: ['read', 'create', 'update'] },
-    { module: 'products', actions: ['read'] },
-    { module: 'orders', actions: ['read', 'create'] },
-    { module: 'inventory', actions: ['read'] },
-    { module: 'lots', actions: ['read', 'create'] },
-  ]
+  const profile: PermissionProfile =
+    userType === USER_TYPE.MANAGER ? 'manager' : 'staff'
+  return PERMISSION_MODULES.map((module) => ({
+    module,
+    actions: [
+      ...(PERMISSION_MODULE_DEFINITIONS[module].defaults[profile] || []),
+    ],
+  })).filter(({ actions }) => actions.length > 0)
 }
 
 export function hasPermission(
-  user: { userType: UserType; permissions?: PermissionGrant[] } | null | undefined,
+  user:
+    | { userType: UserType; permissions?: PermissionGrant[] }
+    | null
+    | undefined,
   module: PermissionModule,
   action: PermissionAction
 ) {
   if (user?.userType === USER_TYPE.SUPER_ADMIN) return true
   return Boolean(
-    user?.permissions?.find((permission) => permission.module === module)?.actions.includes(action)
+    user?.permissions
+      ?.find((permission) => permission.module === module)
+      ?.actions.includes(action)
   )
 }

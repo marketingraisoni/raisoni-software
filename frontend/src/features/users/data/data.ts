@@ -1,10 +1,19 @@
 import { Crown, ShieldCheck, UserCog, Users } from 'lucide-react'
 import { USER_TYPE } from '@/constants/user-types'
-import { type UserStatus } from './schema'
+import { USER_STATUS, type UserStatus } from './schema'
+
+export const USER_TABLE_COLUMN = {
+  USERNAME: 'username',
+  STATUS: 'status',
+  USER_TYPE: 'userType',
+} as const
 
 export const callTypes = new Map<UserStatus, string>([
-  ['active', 'bg-teal-100/30 text-teal-900 dark:text-teal-200 border-teal-200'],
-  ['inactive', 'bg-neutral-300/40 border-neutral-300'],
+  [
+    USER_STATUS.ACTIVE,
+    'bg-teal-100/30 text-teal-900 dark:text-teal-200 border-teal-200',
+  ],
+  [USER_STATUS.INACTIVE, 'bg-neutral-300/40 border-neutral-300'],
 ])
 
 export const userTypes = [

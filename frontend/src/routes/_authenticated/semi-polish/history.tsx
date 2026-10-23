@@ -1,17 +1,10 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
-import { hasPermission } from '@/constants/permissions';
-import { SemiPolishHistoryPage } from '@/features/semi-polish';
-import { useAuthStore } from '@/stores/auth-store';
+import { createFileRoute } from '@tanstack/react-router'
+import { SemiPolishHistoryPage } from '@/features/semi-polish'
 
 export const Route = createFileRoute('/_authenticated/semi-polish/history')({
-  beforeLoad: () => {
-    if (!hasPermission(useAuthStore.getState().auth.user, 'lots', 'read')) {
-      throw redirect({ to: '/403' });
-    }
-  },
   component: SemiPolishHistoryRoute,
-});
+})
 
 function SemiPolishHistoryRoute() {
-  return <SemiPolishHistoryPage />;
+  return <SemiPolishHistoryPage />
 }

@@ -1,11 +1,16 @@
+import { type ApiResponse } from '@/types/api'
 import { apiClient } from '@/lib/api-client'
+import { type PermissionGrant } from '@/constants/permissions'
+import {
+  USER_TYPE,
+  USER_TYPE_LABEL,
+  legacyRoleToUserType,
+} from '@/constants/user-types'
 import {
   type User,
   type UserStatus,
   type UserType,
 } from '@/features/users/data/schema'
-import { USER_TYPE, USER_TYPE_LABEL, legacyRoleToUserType } from '@/constants/user-types'
-import { type ApiResponse } from '@/types/api'
 
 export const usersQueryKey = ['users'] as const
 
@@ -66,10 +71,19 @@ function parseUsers(users: unknown[]): User[] {
   if (!Array.isArray(users)) return []
   return users.map((user) => {
     const record = user as Record<string, unknown>
-    const rawType = Number(record.userType) || legacyRoleToUserType(String(record.role || ''))
-    const userType = (rawType >= 1 && rawType <= 4 ? rawType : USER_TYPE.STAFF) as UserType
-    const userTypeLabel = (record.userTypeLabel ? String(record.userTypeLabel) : USER_TYPE_LABEL[userType]) || 'Staff'
-    const status: UserStatus = String(record.status || '').toLowerCase() === 'inactive' ? 'inactive' : 'active'
+    const rawType =
+      Number(record.userType) || legacyRoleToUserType(String(record.role || ''))
+    const userType = (
+      rawType >= 1 && rawType <= 4 ? rawType : USER_TYPE.STAFF
+    ) as UserType
+    const userTypeLabel =
+      (record.userTypeLabel
+        ? String(record.userTypeLabel)
+        : USER_TYPE_LABEL[userType]) || 'Staff'
+    const status: UserStatus =
+      String(record.status || '').toLowerCase() === 'inactive'
+        ? 'inactive'
+        : 'active'
 
     const userObj: User = {
       id: String(record.id || record._id || ''),
@@ -80,12 +94,18 @@ function parseUsers(users: unknown[]): User[] {
       userTypeLabel,
       status,
       notes: record.notes != null ? String(record.notes) : '',
-      lastLogin: record.lastLogin ? new Date(record.lastLogin as string) : undefined,
-      createdAt: record.createdAt ? new Date(record.createdAt as string) : new Date(),
-      updatedAt: record.updatedAt ? new Date(record.updatedAt as string) : new Date(),
+      lastLogin: record.lastLogin
+        ? new Date(record.lastLogin as string)
+        : undefined,
+      createdAt: record.createdAt
+        ? new Date(record.createdAt as string)
+        : new Date(),
+      updatedAt: record.updatedAt
+        ? new Date(record.updatedAt as string)
+        : new Date(),
     }
     if (Array.isArray(record.permissions)) {
-      userObj.permissions = record.permissions as any
+      userObj.permissions = record.permissions as PermissionGrant[]
     }
     return userObj
   })
@@ -111,7 +131,10 @@ function paginateLegacyUsers(users: User[], query: UsersQuery) {
     filtered.sort((left, right) => {
       const leftValue = left[query.sortBy!]
       const rightValue = right[query.sortBy!]
-      return String(leftValue ?? '').localeCompare(String(rightValue ?? '')) * direction
+      return (
+        String(leftValue ?? '').localeCompare(String(rightValue ?? '')) *
+        direction
+      )
     })
   }
 
@@ -127,10 +150,14 @@ function paginateLegacyUsers(users: User[], query: UsersQuery) {
   }
 }
 
-export async function getUsers(query: UsersQuery, signal?: AbortSignal) {
+async function fetchUsers(
+  endpoint: '/users' | '/permissions/users',
+  query: UsersQuery,
+  signal?: AbortSignal
+) {
   const { data: response } = await apiClient.get<
     ApiResponse<UsersData> | LegacyUsersResponse
-  >('/users', {
+  >(endpoint, {
     signal,
     params: {
       page: query.page,
@@ -153,6 +180,17 @@ export async function getUsers(query: UsersQuery, signal?: AbortSignal) {
   return paginateLegacyUsers(parseUsers(response.users), query)
 }
 
+export function getUsers(query: UsersQuery, signal?: AbortSignal) {
+  return fetchUsers('/users', query, signal)
+}
+
+export function getPermissionManagementUsers(
+  query: UsersQuery,
+  signal?: AbortSignal
+) {
+  return fetchUsers('/permissions/users', query, signal)
+}
+
 export async function createUser(input: CreateUserInput) {
   const { data: response } = await apiClient.post<
     ApiResponse<UserData> | LegacyUserResponse
@@ -170,6 +208,8 @@ export async function updateUser(id: string, input: UpdateUserInput) {
 }
 
 export async function deleteUser(id: string) {
-  const { data } = await apiClient.delete<ApiResponse<{ id: string }>>(`/users/${id}`)
+  const { data } = await apiClient.delete<ApiResponse<{ id: string }>>(
+    `/users/${id}`
+  )
   return data
 }

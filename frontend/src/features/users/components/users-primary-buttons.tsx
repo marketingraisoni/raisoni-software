@@ -1,13 +1,18 @@
 import { UserPlus } from 'lucide-react'
+import { useAuthStore } from '@/stores/auth-store'
+import {
+  PERMISSION_ACTION,
+  PERMISSION_MODULE,
+  hasPermission,
+} from '@/constants/permissions'
 import { Button } from '@/components/ui/button'
 import { useUsers } from './users-provider'
-import { useAuthStore } from '@/stores/auth-store'
-import { hasPermission } from '@/constants/permissions'
 
 export function UsersPrimaryButtons() {
   const { setOpen } = useUsers()
   const user = useAuthStore((state) => state.auth.user)
-  if (!hasPermission(user, 'users', 'create')) return null
+  if (!hasPermission(user, PERMISSION_MODULE.USERS, PERMISSION_ACTION.CREATE))
+    return null
   return (
     <div className='flex gap-2'>
       <Button className='space-x-1' onClick={() => setOpen('add')}>

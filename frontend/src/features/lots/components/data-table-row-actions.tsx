@@ -2,8 +2,12 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { useNavigate } from '@tanstack/react-router'
 import { type Row } from '@tanstack/react-table'
 import { ArrowRight, Layers3, Trash2 } from 'lucide-react'
-import { hasPermission } from '@/constants/permissions'
 import { useAuthStore } from '@/stores/auth-store'
+import {
+  PERMISSION_ACTION,
+  PERMISSION_MODULE,
+  hasPermission,
+} from '@/constants/permissions'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,15 +17,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { AssortmentExcelButton } from '@/features/assortment/components/assortment-excel-button'
-import { type Lot } from '../data/schema'
+import { LOT_STATUS, type Lot } from '../data/schema'
 import { useLots } from './lots-provider'
 
 export function DataTableRowActions({ row }: { row: Row<Lot> }) {
   const { setOpen, setCurrentRow } = useLots()
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.auth.user)
-  const canRead = hasPermission(user, 'lots', 'read')
-  const canDelete = hasPermission(user, 'lots', 'delete')
+  const canRead = hasPermission(
+    user,
+    PERMISSION_MODULE.ASSORTMENT,
+    PERMISSION_ACTION.READ
+  )
+  const canDelete = hasPermission(
+    user,
+    PERMISSION_MODULE.LOTS,
+    PERMISSION_ACTION.DELETE
+  )
+  const isActive = row.original.status === LOT_STATUS.ACTIVE
 
   if (!canRead && !canDelete) return null
 
@@ -38,10 +51,16 @@ export function DataTableRowActions({ row }: { row: Row<Lot> }) {
         <Button
           type='button'
           size='sm'
-          variant={row.original.status === 'active' ? 'default' : 'outline'}
-          onClick={() => void navigate({ to: '/packets/$lotId', params: { lotId: row.original.id } })}
+          variant={isActive ? 'default' : 'outline'}
+          onClick={() =>
+            void navigate({
+              to: '/packets/$lotId',
+              params: { lotId: row.original.id },
+            })
+          }
         >
-          <Layers3 /> {row.original.status === 'active' ? 'Assort' : 'View'} <ArrowRight />
+          <Layers3 /> {isActive ? 'Assort' : 'View'}{' '}
+          <ArrowRight />
         </Button>
       )}
       {canDelete && (
@@ -55,10 +74,15 @@ export function DataTableRowActions({ row }: { row: Row<Lot> }) {
           <DropdownMenuContent align='end' className='w-40'>
             <DropdownMenuItem
               className='text-red-500!'
-              onClick={() => { setCurrentRow(row.original); setOpen('delete') }}
+              onClick={() => {
+                setCurrentRow(row.original)
+                setOpen('delete')
+              }}
             >
               Delete
-              <DropdownMenuShortcut><Trash2 size={16} /></DropdownMenuShortcut>
+              <DropdownMenuShortcut>
+                <Trash2 size={16} />
+              </DropdownMenuShortcut>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

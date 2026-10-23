@@ -2,7 +2,15 @@ import { z } from 'zod'
 import { USER_TYPE } from '@/constants/user-types'
 import { PERMISSION_ACTIONS, PERMISSION_MODULES } from '@/constants/permissions'
 
-export const userStatusSchema = z.enum(['active', 'inactive'])
+export const USER_STATUS = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+} as const
+
+export const userStatusSchema = z.enum([
+  USER_STATUS.ACTIVE,
+  USER_STATUS.INACTIVE,
+])
 export type UserStatus = z.infer<typeof userStatusSchema>
 
 export const userTypeSchema = z.union([

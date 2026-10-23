@@ -51,6 +51,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
+import { SEMI_POLISH_PROCESS_STATUS } from './data/schema'
 
 const REPORT_QUERY = {
   page: 1,
@@ -185,14 +186,15 @@ export function SemiPolishReportPage() {
   const summary = useMemo(() => {
     const totalLots = allProcesses.length
     const activeLots = allProcesses.filter(
-      (process) => process.status === 'in_process'
+      (process) =>
+        process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
     ).length
     const completed = allProcesses.filter(
-      (process) => process.status === 'returned'
+      (process) => process.status === SEMI_POLISH_PROCESS_STATUS.RETURNED
     )
     const completedLots = completed.length
     const cancelledLots = allProcesses.filter(
-      (process) => process.status === 'cancelled'
+      (process) => process.status === SEMI_POLISH_PROCESS_STATUS.CANCELLED
     ).length
     const totalIssuedCarat = allProcesses.reduce(
       (total, process) => total + (process.issuedCarat || 0),
@@ -259,7 +261,7 @@ export function SemiPolishReportPage() {
 
       current.count += 1
       current.issued += process.issuedCarat || 0
-      if (process.status === 'returned') {
+      if (process.status === SEMI_POLISH_PROCESS_STATUS.RETURNED) {
         current.returned += process.returnedCarat || 0
         current.loss += process.processLossCarat || 0
       }
@@ -280,7 +282,9 @@ export function SemiPolishReportPage() {
 
   const trendData = useMemo(() => {
     return [...allProcesses]
-      .filter((process) => process.status === 'returned')
+      .filter(
+        (process) => process.status === SEMI_POLISH_PROCESS_STATUS.RETURNED
+      )
       .sort(
         (a, b) =>
           new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime()
@@ -318,7 +322,7 @@ export function SemiPolishReportPage() {
       }
 
       current.totalLots += 1
-      if (process.status === 'returned') {
+      if (process.status === SEMI_POLISH_PROCESS_STATUS.RETURNED) {
         current.completedLots += 1
         current.completedIssuedCarat += process.issuedCarat || 0
         current.returnedCarat += process.returnedCarat || 0
@@ -350,9 +354,9 @@ export function SemiPolishReportPage() {
     let cancelled = 0
 
     allProcesses.forEach((process) => {
-      if (process.status === 'in_process') {
+      if (process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS) {
         inProcess += 1
-      } else if (process.status === 'cancelled') {
+      } else if (process.status === SEMI_POLISH_PROCESS_STATUS.CANCELLED) {
         cancelled += 1
       } else {
         const loss = process.processLossPercentage || 0
@@ -660,6 +664,12 @@ export function SemiPolishReportPage() {
                       {latestProcesses.map((process) => {
                         const vendorInitials =
                           process.vendorName?.slice(0, 2).toUpperCase() || '4P'
+                        const isInProcess =
+                          process.status ===
+                          SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
+                        const isReturned =
+                          process.status ===
+                          SEMI_POLISH_PROCESS_STATUS.RETURNED
                         return (
                           <div
                             key={process._id || process.id}
@@ -684,11 +694,11 @@ export function SemiPolishReportPage() {
                                   {formatCarat(process.issuedCarat)} CT
                                 </div>
                                 <div className='text-xs'>
-                                  {process.status === 'in_process' ? (
+                                  {isInProcess ? (
                                     <span className='font-medium text-amber-600 dark:text-amber-400'>
                                       In Process
                                     </span>
-                                  ) : process.status === 'returned' ? (
+                                  ) : isReturned ? (
                                     <span className='font-medium text-emerald-600 dark:text-emerald-400'>
                                       {process.processLossPercentage}% loss
                                     </span>
@@ -963,7 +973,12 @@ export function SemiPolishReportPage() {
                     </TableHeader>
                     <TableBody>
                       {filteredTableRecords.map((process) => {
-                        const isReturned = process.status === 'returned'
+                        const isInProcess =
+                          process.status ===
+                          SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
+                        const isReturned =
+                          process.status ===
+                          SEMI_POLISH_PROCESS_STATUS.RETURNED
                         return (
                           <TableRow
                             key={process._id || process.id}
@@ -1026,16 +1041,16 @@ export function SemiPolishReportPage() {
                                 variant='outline'
                                 className={cn(
                                   'font-medium text-xs',
-                                  process.status === 'in_process'
+                                  isInProcess
                                     ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                    : process.status === 'returned'
+                                    : isReturned
                                       ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                       : 'border-slate-500/40 bg-slate-500/10 text-slate-600 dark:text-slate-300'
                                 )}
                               >
-                                {process.status === 'in_process'
+                                {isInProcess
                                   ? 'In 4P Process'
-                                  : process.status === 'returned'
+                                  : isReturned
                                     ? 'Returned'
                                     : 'Cancelled'}
                               </Badge>

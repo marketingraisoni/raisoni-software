@@ -4,32 +4,18 @@ import {
   type OnChangeFn,
   type PaginationState,
   type SortingState,
-  flexRender,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DataTableLayout,
-  DataTablePagination,
-  DataTableSkeleton,
-  DataTableToolbar,
+  DataTable,
+  type DataTableAsyncState,
 } from '@/components/data-table'
-import { userTypes } from '../data/data'
-import { type User } from '../data/schema'
+import { USER_TABLE_COLUMN, userTypes } from '../data/data'
+import { USER_STATUS, type User } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
-import { UsersPrimaryButtons } from './users-primary-buttons'
 import { usersColumns as columns } from './users-columns'
+import { UsersPrimaryButtons } from './users-primary-buttons'
 
 type DataTableProps = {
   data: User[]
@@ -41,9 +27,7 @@ type DataTableProps = {
   onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>
   sorting?: SortingState
   onSortingChange?: OnChangeFn<SortingState>
-  isLoading?: boolean
-  error?: unknown
-  onRetry?: () => void
+  asyncState?: DataTableAsyncState
   search?: Record<string, unknown>
   navigate?: unknown
 }
@@ -58,28 +42,19 @@ export function UsersTable({
   onColumnFiltersChange,
   sorting,
   onSortingChange,
-  isLoading = false,
-  error,
-  onRetry,
+  asyncState,
 }: DataTableProps) {
-  // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
-
-  // Fallback internal states when used without external controller
-  const [internalPagination, setInternalPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  })
-  const [internalColumnFilters, setInternalColumnFilters] = useState<ColumnFiltersState>([])
+  const [internalPagination, setInternalPagination] = useState<PaginationState>(
+    { pageIndex: 0, pageSize: 10 }
+  )
+  const [internalColumnFilters, setInternalColumnFilters] =
+    useState<ColumnFiltersState>([])
   const [internalSorting, setInternalSorting] = useState<SortingState>([])
 
   const currentPagination = pagination ?? internalPagination
   const currentColumnFilters = columnFilters ?? internalColumnFilters
   const currentSorting = sorting ?? internalSorting
-
-  const handlePaginationChange = onPaginationChange ?? setInternalPagination
-  const handleColumnFiltersChange = onColumnFiltersChange ?? setInternalColumnFilters
-  const handleSortingChange = onSortingChange ?? setInternalSorting
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -97,146 +72,47 @@ export function UsersTable({
     manualSorting: true,
     pageCount,
     getRowId: (row) => row.id,
-    onPaginationChange: handlePaginationChange,
-    onColumnFiltersChange: handleColumnFiltersChange,
+    onPaginationChange: onPaginationChange ?? setInternalPagination,
+    onColumnFiltersChange: onColumnFiltersChange ?? setInternalColumnFilters,
     onRowSelectionChange: setRowSelection,
-    onSortingChange: handleSortingChange,
+    onSortingChange: onSortingChange ?? setInternalSorting,
     getCoreRowModel: getCoreRowModel(),
   })
 
-  const hasRows = table.getRowModel().rows.length > 0
-  const hasEmptyOrErrorState = Boolean(error) || (!isLoading && !hasRows)
-
   return (
     <div className='flex min-h-0 flex-1 flex-col max-sm:mb-16'>
-      <DataTableLayout
+      <DataTable
+        table={table}
         title='User List'
-        // description='Manage user accounts, access roles, and account status.'
-        toolbar={
-          <DataTableToolbar
-            table={table}
-            searchPlaceholder='Filter users...'
-            searchKey='username'
-            searchDebounceMs={400}
-            showFilterCounts={false}
-            actions={<UsersPrimaryButtons />}
-            filters={[
-              {
-                columnId: 'status',
-                title: 'Status',
-                options: [
-                  { label: 'Active', value: 'active' },
-                  { label: 'Inactive', value: 'inactive' },
-                ],
-              },
-              {
-                columnId: 'userType',
-                title: 'User Type',
-                options: userTypes.map((userType) => ({
-                  ...userType,
-                  value: String(userType.value),
-                })),
-              },
-            ]}
-          />
-        }
-        pagination={
-          <DataTablePagination
-            table={table}
-            className='px-0'
-            totalRows={totalRows}
-          />
-        }
-        contentClassName='[&_[data-slot=table-container]]:h-full'
-      >
-        <Table className={cn(hasEmptyOrErrorState && 'h-full')}>
-          <TableHeader className='sticky top-0 z-10 bg-background'>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className='group/row'>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      className={cn(
-                        'bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted',
-                        header.column.columnDef.meta?.className,
-                        header.column.columnDef.meta?.thClassName
-                      )}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody className={cn(hasEmptyOrErrorState && 'h-full')}>
-            {isLoading ? (
-              <DataTableSkeleton
-                columnCount={table.getVisibleLeafColumns().length || columns.length}
-                rowCount={currentPagination.pageSize || 10}
-              />
-            ) : error ? (
-              <TableRow className='h-full'>
-                <TableCell colSpan={columns.length} className='h-full text-center'>
-                  <div className='flex flex-col items-center gap-3'>
-                    <div>
-                      <p className='font-medium'>Unable to load users.</p>
-                      <p className='text-sm text-muted-foreground'>
-                        Check the backend connection and try again.
-                      </p>
-                    </div>
-                    {onRetry ? (
-                      <Button variant='outline' onClick={onRetry}>
-                        <RefreshCw /> Try again
-                      </Button>
-                    ) : null}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : hasRows ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className='group/row'
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        'bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted',
-                        cell.column.columnDef.meta?.className,
-                        cell.column.columnDef.meta?.tdClassName
-                      )}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow className='h-full'>
-                <TableCell
-                  colSpan={columns.length}
-                  className='h-full text-center'
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </DataTableLayout>
+        toolbar={{
+          searchPlaceholder: 'Filter users...',
+          searchKey: USER_TABLE_COLUMN.USERNAME,
+          searchDebounceMs: 400,
+          showFilterCounts: false,
+          actions: <UsersPrimaryButtons />,
+          filters: [
+            {
+              columnId: USER_TABLE_COLUMN.STATUS,
+              title: 'Status',
+              options: [
+                { label: 'Active', value: USER_STATUS.ACTIVE },
+                { label: 'Inactive', value: USER_STATUS.INACTIVE },
+              ],
+            },
+            {
+              columnId: USER_TABLE_COLUMN.USER_TYPE,
+              title: 'User Type',
+              options: userTypes.map((userType) => ({
+                ...userType,
+                value: String(userType.value),
+              })),
+            },
+          ],
+        }}
+        pagination={{ totalRows }}
+        asyncState={asyncState}
+        messages={{ errorTitle: 'Unable to load users.' }}
+      />
       <DataTableBulkActions table={table} />
     </div>
   )

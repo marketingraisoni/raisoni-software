@@ -2,6 +2,10 @@ import { type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
+  fetchSemiPolishById,
+  semiPolishQueryKeys,
+} from '@/services/semi-polish-service'
+import {
   ArrowLeft,
   CalendarClock,
   CheckCircle2,
@@ -11,15 +15,24 @@ import {
   RefreshCw,
   XCircle,
 } from 'lucide-react'
-import { fetchSemiPolishById, semiPolishQueryKeys } from '@/services/semi-polish-service'
+import { useAuthStore } from '@/stores/auth-store'
 import { formatCarat } from '@/lib/format-carat'
 import { formatDate } from '@/lib/format-date'
 import { cn } from '@/lib/utils'
-import { AppHeader } from '@/components/layout/app-header'
-import { Main } from '@/components/layout/main'
+import {
+  PERMISSION_ACTION,
+  PERMISSION_MODULE,
+  hasPermission,
+} from '@/constants/permissions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -28,8 +41,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { type SemiPolishProcess } from './data/schema'
+import { AppHeader } from '@/components/layout/app-header'
+import { Main } from '@/components/layout/main'
 import { ProcessExcelButton } from './components/process-excel-button'
+import {
+  SEMI_POLISH_PROCESS_STATUS,
+  type SemiPolishProcess,
+} from './data/schema'
 
 type Props = {
   processId: string
@@ -95,12 +113,7 @@ function OverviewItem({ label, value, mono, wide }: OverviewItemProps) {
   )
 }
 
-function TimelineStep({
-  title,
-  description,
-  state,
-  last,
-}: TimelineStepProps) {
+function TimelineStep({ title, description, state, last }: TimelineStepProps) {
   const Icon =
     state === 'complete'
       ? CheckCircle2
@@ -142,13 +155,15 @@ function TimelineStep({
 }
 
 function ProcessLifecycle({ process }: { process: SemiPolishProcess }) {
-  const isReturned = process.status === 'returned'
-  const isCancelled = process.status === 'cancelled'
+  const isReturned = process.status === SEMI_POLISH_PROCESS_STATUS.RETURNED
+  const isCancelled = process.status === SEMI_POLISH_PROCESS_STATUS.CANCELLED
 
   return (
     <Card className='gap-0 py-0 shadow-none'>
       <CardHeader className='grid-rows-1 place-items-center gap-0 border-b px-4 py-3!'>
-        <CardTitle className='text-center text-base'>Process lifecycle</CardTitle>
+        <CardTitle className='text-center text-base'>
+          Process lifecycle
+        </CardTitle>
       </CardHeader>
       <CardContent className='p-4'>
         <TimelineStep
@@ -182,7 +197,11 @@ function ProcessLifecycle({ process }: { process: SemiPolishProcess }) {
               state={isReturned ? 'complete' : 'current'}
             />
             <TimelineStep
-              title={isReturned ? 'Material received and verified' : 'Return and verification'}
+              title={
+                isReturned
+                  ? 'Material received and verified'
+                  : 'Return and verification'
+              }
               description={
                 isReturned && process.returnDate
                   ? `${formatDate(process.returnDate)} · ${process.returnedPieces ?? 0} PCs · ${formatCarat(process.returnedCarat ?? 0)} CT received.`
@@ -199,6 +218,12 @@ function ProcessLifecycle({ process }: { process: SemiPolishProcess }) {
 }
 
 export function SemiPolishDetailPage({ processId, onBack }: Props) {
+  const user = useAuthStore((state) => state.auth.user)
+  const canUpdate = hasPermission(
+    user,
+    PERMISSION_MODULE.SEMI_POLISH,
+    PERMISSION_ACTION.UPDATE
+  )
   const processQuery = useQuery({
     queryKey: semiPolishQueryKeys.detail(processId),
     queryFn: () => fetchSemiPolishById(processId),
@@ -225,7 +250,9 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
         <AppHeader fixed />
         <Main fixed fluid className='flex flex-1 items-center justify-center'>
           <div className='w-full max-w-lg rounded-xl border bg-background p-8 text-center'>
-            <h1 className='text-lg font-semibold'>Unable to load this 4P process</h1>
+            <h1 className='text-lg font-semibold'>
+              Unable to load this 4P process
+            </h1>
             <p className='mt-1 text-sm text-muted-foreground'>
               The record may be unavailable or the server could not be reached.
             </p>
@@ -248,10 +275,11 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
   const issuedBy = getRecord(process.issuedBy)
   const receivedBy = getRecord(process.receivedBy)
   const vendorMobile = getText(vendor, 'mobile')
-  const issuedByName = getText(issuedBy, 'name') || getText(issuedBy, 'username')
+  const issuedByName =
+    getText(issuedBy, 'name') || getText(issuedBy, 'username')
   const receivedByName =
     getText(receivedBy, 'name') || getText(receivedBy, 'username')
-  const isReturned = process.status === 'returned'
+  const isReturned = process.status === SEMI_POLISH_PROCESS_STATUS.RETURNED
 
   return (
     <>
@@ -287,15 +315,21 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
               </div>
             </div>
             <div className='flex flex-wrap items-center gap-2'>
-              <Button asChild>
-                <Link
-                  to='/semi-polish/planning-returns/$processId'
-                  params={{ processId: (process._id || process.id) as string }}
-                >
-                  <ClipboardCheck />
-                  {isReturned ? 'Packet return records' : 'Planning & returns'}
-                </Link>
-              </Button>
+              {canUpdate && (
+                <Button asChild>
+                  <Link
+                    to='/semi-polish/planning-returns/$processId'
+                    params={{
+                      processId: (process._id || process.id) as string,
+                    }}
+                  >
+                    <ClipboardCheck />
+                    {isReturned
+                      ? 'Packet return records'
+                      : 'Planning & returns'}
+                  </Link>
+                </Button>
+              )}
               <ProcessExcelButton
                 processId={(process._id || process.id) as string}
                 issueNo={process.issueNo}
@@ -304,7 +338,7 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
           </div>
 
           <section className='hidden border-b pb-4 print:block'>
-            <p className='text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+            <p className='text-xs font-semibold tracking-wider text-muted-foreground uppercase'>
               Raisoni Diamonds ERP · 4P Semi-Polish
             </p>
             <div className='mt-2 flex items-end justify-between gap-4'>
@@ -322,12 +356,17 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
             <aside className='space-y-3 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pe-1 print:overflow-visible print:pe-0'>
               <Card className='gap-0 py-0 shadow-none'>
                 <CardHeader className='grid-rows-1 place-items-center gap-0 border-b px-4 py-3!'>
-                  <CardTitle className='text-center text-base'>Material summary</CardTitle>
+                  <CardTitle className='text-center text-base'>
+                    Material summary
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className='grid grid-cols-2 gap-x-5 gap-y-3 p-4'>
                   <OverviewItem label='Lot / Kapan' value={process.kapanNo} />
                   <OverviewItem label='4P Vendor' value={process.vendorName} />
-                  <OverviewItem label='Issued pieces' value={`${process.issuedPieces} PCs`} />
+                  <OverviewItem
+                    label='Issued pieces'
+                    value={`${process.issuedPieces} PCs`}
+                  />
                   <OverviewItem
                     label='Issued weight'
                     value={`${formatCarat(process.issuedCarat)} CT`}
@@ -359,11 +398,20 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
 
               <Card className='gap-0 py-0 shadow-none'>
                 <CardHeader className='grid-rows-1 place-items-center gap-0 border-b px-4 py-3!'>
-                  <CardTitle className='text-center text-base'>Process overview</CardTitle>
+                  <CardTitle className='text-center text-base'>
+                    Process overview
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className='grid gap-x-5 gap-y-3 p-4 sm:grid-cols-2 xl:grid-cols-2'>
-                  <OverviewItem label='Issue / Jangad No' value={process.issueNo} mono />
-                  <OverviewItem label='Issue date' value={formatDate(process.issueDate)} />
+                  <OverviewItem
+                    label='Issue / Jangad No'
+                    value={process.issueNo}
+                    mono
+                  />
+                  <OverviewItem
+                    label='Issue date'
+                    value={formatDate(process.issueDate)}
+                  />
                   <OverviewItem
                     label='Expected return'
                     value={
@@ -381,9 +429,16 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                     <>
                       <OverviewItem
                         label='Return date'
-                        value={process.returnDate ? formatDate(process.returnDate) : '—'}
+                        value={
+                          process.returnDate
+                            ? formatDate(process.returnDate)
+                            : '—'
+                        }
                       />
-                      <OverviewItem label='Received by' value={receivedByName ?? '—'} />
+                      <OverviewItem
+                        label='Received by'
+                        value={receivedByName ?? '—'}
+                      />
                     </>
                   )}
                   <OverviewItem
@@ -398,58 +453,69 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
               </Card>
             </aside>
 
-          <Card className='min-h-[520px] gap-0 overflow-hidden py-0 shadow-none xl:h-full xl:min-h-0 print:mt-3 print:min-h-0 print:overflow-visible'>
-            <CardHeader className='grid-rows-1 place-items-center gap-0 border-b px-4 py-3!'>
-              <div className='relative flex w-full items-center justify-center'>
-                <CardTitle className='text-center text-base'>Packet handover manifest</CardTitle>
-                <Badge variant='secondary' className='absolute end-0'>
-                  {(process.packets || []).length} packets
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className='min-h-0 flex-1 overflow-auto p-0 print:overflow-visible [&_[data-slot=table-container]]:overflow-visible'>
-              <Table>
-                <TableHeader className='sticky top-0 z-10 bg-background'>
-                  <TableRow>
-                    <TableHead className='w-24 ps-5'>Sr No</TableHead>
-                    <TableHead>Packet No</TableHead>
-                    <TableHead className='w-40'>Grade</TableHead>
-                    <TableHead className='w-52 pe-5 text-right'>Carat</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(process.packets || []).length === 0 ? (
+            <Card className='min-h-[520px] gap-0 overflow-hidden py-0 shadow-none xl:h-full xl:min-h-0 print:mt-3 print:min-h-0 print:overflow-visible'>
+              <CardHeader className='grid-rows-1 place-items-center gap-0 border-b px-4 py-3!'>
+                <div className='relative flex w-full items-center justify-center'>
+                  <CardTitle className='text-center text-base'>
+                    Packet handover manifest
+                  </CardTitle>
+                  <Badge variant='secondary' className='absolute end-0'>
+                    {(process.packets || []).length} packets
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className='min-h-0 flex-1 overflow-auto p-0 print:overflow-visible [&_[data-slot=table-container]]:overflow-visible'>
+                <Table>
+                  <TableHeader className='sticky top-0 z-10 bg-background'>
                     <TableRow>
-                      <TableCell colSpan={4} className='py-8 text-center text-muted-foreground'>
-                        No packet snapshots recorded for this process.
-                      </TableCell>
+                      <TableHead className='w-24 ps-5'>Sr No</TableHead>
+                      <TableHead>Packet No</TableHead>
+                      <TableHead className='w-40'>Grade</TableHead>
+                      <TableHead className='w-52 pe-5 text-right'>
+                        Carat
+                      </TableHead>
                     </TableRow>
-                  ) : (
-                    (process.packets || []).map((packet, index) => (
-                      <TableRow key={packet.packetId || `${packet.name}-${index}`}>
-                        <TableCell className='ps-5 font-mono text-muted-foreground'>
-                          {packet.srNo}
-                        </TableCell>
-                        <TableCell className='font-semibold'>{packet.name}</TableCell>
-                        <TableCell>{packet.grade || 'A'}</TableCell>
-                        <TableCell className='pe-5 text-right font-mono font-semibold'>
-                          {formatCarat(packet.carat)} CT
+                  </TableHeader>
+                  <TableBody>
+                    {(process.packets || []).length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className='py-8 text-center text-muted-foreground'
+                        >
+                          No packet snapshots recorded for this process.
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-            <CardFooter className='sticky bottom-0 z-10 mt-auto flex items-center justify-between border-t bg-muted/80 px-5 pt-0! py-2.5! backdrop-blur-xs print:static print:bg-transparent'>
-              <span className='text-sm font-semibold'>
-                Total issued · {process.issuedPieces} PCs
-              </span>
-              <span className='font-mono text-sm font-bold text-primary'>
-                {formatCarat(process.issuedCarat)} CT
-              </span>
-            </CardFooter>
-          </Card>
+                    ) : (
+                      (process.packets || []).map((packet, index) => (
+                        <TableRow
+                          key={packet.packetId || `${packet.name}-${index}`}
+                        >
+                          <TableCell className='ps-5 font-mono text-muted-foreground'>
+                            {packet.srNo}
+                          </TableCell>
+                          <TableCell className='font-semibold'>
+                            {packet.name}
+                          </TableCell>
+                          <TableCell>{packet.grade || 'A'}</TableCell>
+                          <TableCell className='pe-5 text-right font-mono font-semibold'>
+                            {formatCarat(packet.carat)} CT
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+              <CardFooter className='sticky bottom-0 z-10 mt-auto flex items-center justify-between border-t bg-muted/80 px-5 py-2.5! pt-0! backdrop-blur-xs print:static print:bg-transparent'>
+                <span className='text-sm font-semibold'>
+                  Total issued · {process.issuedPieces} PCs
+                </span>
+                <span className='font-mono text-sm font-bold text-primary'>
+                  {formatCarat(process.issuedCarat)} CT
+                </span>
+              </CardFooter>
+            </Card>
           </div>
         </div>
       </Main>

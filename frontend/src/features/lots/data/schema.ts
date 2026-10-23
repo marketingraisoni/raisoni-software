@@ -1,6 +1,14 @@
 import { z } from 'zod'
 
-export const lotStatusSchema = z.enum(['active', 'closed'])
+export const LOT_STATUS = {
+  ACTIVE: 'active',
+  CLOSED: 'closed',
+} as const
+
+export const lotStatusSchema = z.enum([
+  LOT_STATUS.ACTIVE,
+  LOT_STATUS.CLOSED,
+])
 export type LotStatus = z.infer<typeof lotStatusSchema>
 
 export const lotSchema = z.object({

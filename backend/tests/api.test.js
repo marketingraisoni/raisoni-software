@@ -25,6 +25,7 @@ import userRoutes from '../src/routes/userRoutes.js';
 import permissionRoutes from '../src/routes/permissionRoutes.js';
 import { errorHandler } from '../src/middleware/errorHandler.js';
 import { USER_TYPE } from '../src/constants/user.js';
+import { PERMISSION_ACTION, PERMISSION_MODULE } from '../src/constants/permissions.js';
 import { getDefaultPermissions } from '../src/services/permissionService.js';
 
 let mongod;
@@ -428,4 +429,29 @@ test('16. Users - Administrator can create, list, update, and delete an account'
   });
   assert.equal(deleteRes.status, 200);
   assert.equal(await User.exists({ _id: userId }), null);
+});
+
+test('17. Permission Management - User lookup is independent from User Management', async () => {
+  await User.updateOne(
+    { username: 'teststaff' },
+    {
+      $set: {
+        permissions: [
+          {
+            module: PERMISSION_MODULE.PERMISSIONS,
+            actions: [PERMISSION_ACTION.READ],
+          },
+        ],
+      },
+    },
+  );
+
+  const regularUsers = await request('/api/users', { token: staffToken });
+  assert.equal(regularUsers.status, 403);
+
+  const permissionUsers = await request('/api/permissions/users', {
+    token: staffToken,
+  });
+  assert.equal(permissionUsers.status, 200);
+  assert.ok(Array.isArray(permissionUsers.body.data.users));
 });

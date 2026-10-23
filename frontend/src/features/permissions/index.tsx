@@ -1,17 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, RotateCcw, Save, Search as SearchIcon, ShieldCheck } from 'lucide-react'
-import { toast } from 'sonner'
-import { USER_TYPE, USER_TYPE_LABEL } from '@/constants/user-types'
-import {
-  PERMISSION_CATALOG,
-  getDefaultPermissions,
-  hasPermission,
-  type PermissionAction,
-  type PermissionGrant,
-  type PermissionModule,
-} from '@/constants/permissions'
-import { useAuthStore } from '@/stores/auth-store'
 import { getApiErrorMessage } from '@/services/auth-service'
 import {
   getPermissionCatalog,
@@ -20,25 +8,51 @@ import {
   updateUserPermissions,
   userPermissionsQueryKey,
 } from '@/services/permissions-service'
-import { getUsers, usersQueryKey } from '@/services/users-service'
-import { AppHeader } from '@/components/layout/app-header'
-import { Main } from '@/components/layout/main'
+import {
+  getPermissionManagementUsers,
+  usersQueryKey,
+} from '@/services/users-service'
+import {
+  Loader2,
+  RotateCcw,
+  Save,
+  Search as SearchIcon,
+  ShieldCheck,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth-store'
+import {
+  PERMISSION_CATALOG,
+  PERMISSION_ACTION,
+  PERMISSION_ACTIONS,
+  PERMISSION_MODULE,
+  getDefaultPermissions,
+  hasPermission,
+  type PermissionAction,
+  type PermissionGrant,
+  type PermissionModule,
+} from '@/constants/permissions'
+import { USER_TYPE, USER_TYPE_LABEL } from '@/constants/user-types'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { AppHeader } from '@/components/layout/app-header'
+import { Main } from '@/components/layout/main'
 
 export function Permissions() {
   const queryClient = useQueryClient()
   const currentUser = useAuthStore((state) => state.auth.user)
   const [selectedUserId, setSelectedUserId] = useState('')
   const [search, setSearch] = useState('')
-  const [permissions, setPermissions] = useState<PermissionGrant[]>([])
+  const [permissionDrafts, setPermissionDrafts] = useState<
+    Record<string, PermissionGrant[]>
+  >({})
 
   const usersQuery = useQuery({
     queryKey: [...usersQueryKey, 'permission-management'],
     queryFn: () =>
-      getUsers({
+      getPermissionManagementUsers({
         page: 1,
         pageSize: 100,
         sortBy: 'name',
@@ -65,37 +79,46 @@ export function Permissions() {
     )
   }, [currentUser?.userType, search, usersQuery.data?.users])
 
-  useEffect(() => {
-    if (!selectedUserId && manageableUsers.length > 0) {
-      setSelectedUserId(manageableUsers[0].id)
-    }
-  }, [manageableUsers, selectedUserId])
+  const activeUserId = selectedUserId || manageableUsers[0]?.id || ''
 
   const userPermissionsQuery = useQuery({
-    queryKey: userPermissionsQueryKey(selectedUserId),
-    queryFn: () => getUserPermissions(selectedUserId),
-    enabled: Boolean(selectedUserId),
+    queryKey: userPermissionsQueryKey(activeUserId),
+    queryFn: () => getUserPermissions(activeUserId),
+    enabled: Boolean(activeUserId),
   })
 
-  useEffect(() => {
-    if (userPermissionsQuery.data) {
-      setPermissions(userPermissionsQuery.data.permissions ?? [])
-    }
-  }, [userPermissionsQuery.data])
-
   const selectedUser = userPermissionsQuery.data
-  const canUpdate = hasPermission(currentUser, 'users', 'update')
+  const permissions =
+    permissionDrafts[activeUserId] ?? selectedUser?.permissions ?? []
+  const setPermissions = (
+    value:
+      | PermissionGrant[]
+      | ((current: PermissionGrant[]) => PermissionGrant[])
+  ) => {
+    if (!activeUserId) return
+    setPermissionDrafts((currentDrafts) => {
+      const current =
+        currentDrafts[activeUserId] ?? selectedUser?.permissions ?? []
+      const next = typeof value === 'function' ? value(current) : value
+      return { ...currentDrafts, [activeUserId]: next }
+    })
+  }
+  const canUpdate = hasPermission(
+    currentUser,
+    PERMISSION_MODULE.PERMISSIONS,
+    PERMISSION_ACTION.UPDATE
+  )
   const isSuperAdmin = selectedUser?.userType === USER_TYPE.SUPER_ADMIN
   const catalog = catalogQuery.data || PERMISSION_CATALOG
 
   const updateMutation = useMutation({
-    mutationFn: () => updateUserPermissions(selectedUserId, permissions),
+    mutationFn: () => updateUserPermissions(activeUserId, permissions),
     onSuccess: async (response) => {
       setPermissions(response.user.permissions ?? [])
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: usersQueryKey }),
         queryClient.invalidateQueries({
-          queryKey: userPermissionsQueryKey(selectedUserId),
+          queryKey: userPermissionsQueryKey(activeUserId),
         }),
       ])
       toast.success(response.message)
@@ -113,7 +136,9 @@ export function Permissions() {
         ...permission,
         actions: [...permission.actions],
       }))
-      const moduleIndex = next.findIndex((permission) => permission.module === module)
+      const moduleIndex = next.findIndex(
+        (permission) => permission.module === module
+      )
 
       if (moduleIndex === -1) {
         if (checked) next.push({ module, actions: [action] })
@@ -158,7 +183,8 @@ export function Permissions() {
               <div className='min-h-0 flex-1 overflow-y-auto p-2'>
                 {usersQuery.isLoading ? (
                   <div className='flex h-32 items-center justify-center text-sm text-muted-foreground'>
-                    <Loader2 className='me-2 size-4 animate-spin' /> Loading users...
+                    <Loader2 className='me-2 size-4 animate-spin' /> Loading
+                    users...
                   </div>
                 ) : manageableUsers.length === 0 ? (
                   <div className='flex h-32 items-center justify-center text-sm text-muted-foreground'>
@@ -171,14 +197,17 @@ export function Permissions() {
                       type='button'
                       onClick={() => setSelectedUserId(user.id)}
                       className={`mb-1 w-full rounded-md px-3 py-2 text-start transition-colors ${
-                        selectedUserId === user.id
+                        activeUserId === user.id
                           ? 'bg-primary text-primary-foreground'
                           : 'hover:bg-muted'
                       }`}
                     >
-                      <span className='block truncate text-sm font-medium'>{user.name}</span>
+                      <span className='block truncate text-sm font-medium'>
+                        {user.name}
+                      </span>
                       <span className='block truncate text-xs opacity-75'>
-                        {user.username} · {user.userTypeLabel || USER_TYPE_LABEL[user.userType]}
+                        {user.username} ·{' '}
+                        {user.userTypeLabel || USER_TYPE_LABEL[user.userType]}
                       </span>
                     </button>
                   ))
@@ -187,18 +216,22 @@ export function Permissions() {
             </aside>
 
             <section className='flex min-h-0 flex-col'>
-              {!selectedUserId ? (
+              {!activeUserId ? (
                 <div className='flex flex-1 items-center justify-center text-muted-foreground'>
                   Select a user to manage permissions.
                 </div>
               ) : userPermissionsQuery.isLoading ? (
                 <div className='flex flex-1 items-center justify-center text-muted-foreground'>
-                  <Loader2 className='me-2 size-5 animate-spin' /> Loading permissions...
+                  <Loader2 className='me-2 size-5 animate-spin' /> Loading
+                  permissions...
                 </div>
               ) : userPermissionsQuery.isError || !selectedUser ? (
                 <div className='flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground'>
                   <p>{getApiErrorMessage(userPermissionsQuery.error)}</p>
-                  <Button variant='outline' onClick={() => void userPermissionsQuery.refetch()}>
+                  <Button
+                    variant='outline'
+                    onClick={() => void userPermissionsQuery.refetch()}
+                  >
                     Try again
                   </Button>
                 </div>
@@ -212,7 +245,9 @@ export function Permissions() {
                       <div>
                         <h2 className='font-semibold'>{selectedUser.name}</h2>
                         <p className='text-sm text-muted-foreground'>
-                          {selectedUser.email} · {selectedUser.userTypeLabel || USER_TYPE_LABEL[selectedUser.userType]}
+                          {selectedUser.email} ·{' '}
+                          {selectedUser.userTypeLabel ||
+                            USER_TYPE_LABEL[selectedUser.userType]}
                         </p>
                       </div>
                     </div>
@@ -237,12 +272,17 @@ export function Permissions() {
                           key={permission.module}
                           className='grid grid-cols-[1fr_repeat(4,90px)] items-center gap-2 border-b px-4 py-3 last:border-b-0'
                         >
-                          <span className='font-medium'>{permission.label}</span>
-                          {(['read', 'create', 'update', 'delete'] as const).map((action) => {
-                            const supported = permission.actions.includes(action)
+                          <span className='font-medium'>
+                            {permission.label}
+                          </span>
+                          {PERMISSION_ACTIONS.map((action) => {
+                            const supported =
+                              permission.actions.includes(action)
                             const checked = Boolean(
                               permissions
-                                .find((item) => item.module === permission.module)
+                                .find(
+                                  (item) => item.module === permission.module
+                                )
                                 ?.actions.includes(action)
                             )
                             const canGrant = hasPermission(
@@ -255,7 +295,9 @@ export function Permissions() {
                                 {supported ? (
                                   <Checkbox
                                     checked={isSuperAdmin || checked}
-                                    disabled={isSuperAdmin || !canUpdate || !canGrant}
+                                    disabled={
+                                      isSuperAdmin || !canUpdate || !canGrant
+                                    }
                                     aria-label={`${permission.label} ${action}`}
                                     onCheckedChange={(value) =>
                                       togglePermission(
@@ -266,7 +308,9 @@ export function Permissions() {
                                     }
                                   />
                                 ) : (
-                                  <span className='text-muted-foreground'>-</span>
+                                  <span className='text-muted-foreground'>
+                                    -
+                                  </span>
                                 )}
                               </div>
                             )
@@ -281,7 +325,9 @@ export function Permissions() {
                       <Button
                         variant='outline'
                         onClick={() =>
-                          setPermissions(getDefaultPermissions(selectedUser.userType))
+                          setPermissions(
+                            getDefaultPermissions(selectedUser.userType)
+                          )
                         }
                         disabled={updateMutation.isPending}
                       >

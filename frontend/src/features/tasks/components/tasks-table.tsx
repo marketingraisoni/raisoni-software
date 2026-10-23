@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import {
   type SortingState,
-  flexRender,
   getCoreRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
@@ -11,25 +10,13 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { cn } from '@/lib/utils'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DataTablePagination,
-  DataTableSkeleton,
-  DataTableToolbar,
-} from '@/components/data-table'
+import { DataTable } from '@/components/data-table'
 import { priorities, statuses } from '../data/data'
 import { type Task } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 import { tasksColumns as columns } from './tasks-columns'
+import { TasksPrimaryButtons } from './tasks-primary-buttons'
 
 const route = getRouteApi('/_authenticated/tasks/')
 
@@ -106,97 +93,30 @@ export function TasksTable({ data, isLoading = false }: DataTableProps) {
   }, [pageCount, ensurePageInRange])
 
   return (
-    <div
-      className={cn(
-        'max-sm:has-[div[role="toolbar"]]:mb-16', // Add margin bottom to the table on mobile when the toolbar is visible
-        'flex flex-1 flex-col gap-4'
-      )}
-    >
-      <DataTableToolbar
+    <div className='flex min-h-0 flex-1 flex-col max-sm:mb-16'>
+      <DataTable
         table={table}
-        searchPlaceholder='Filter by title or ID...'
-        filters={[
-          {
-            columnId: 'status',
-            title: 'Status',
-            options: statuses,
-          },
-          {
-            columnId: 'priority',
-            title: 'Priority',
-            options: priorities,
-          },
-        ]}
+        title='Tasks'
+        description="Here's a list of your tasks for this month!"
+        actions={<TasksPrimaryButtons />}
+        toolbar={{
+          searchPlaceholder: 'Filter by title or ID...',
+          filters: [
+            {
+              columnId: 'status',
+              title: 'Status',
+              options: statuses,
+            },
+            {
+              columnId: 'priority',
+              title: 'Priority',
+              options: priorities,
+            },
+          ],
+        }}
+        asyncState={{ isLoading }}
+        tableClassName='min-w-xl'
       />
-      <div className='overflow-hidden rounded-md border'>
-        <Table className='min-w-xl'>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      className={cn(
-                        header.column.columnDef.meta?.className,
-                        header.column.columnDef.meta?.thClassName
-                      )}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <DataTableSkeleton
-                columnCount={table.getVisibleLeafColumns().length || columns.length}
-                rowCount={pagination.pageSize || 10}
-              />
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        cell.column.columnDef.meta?.className,
-                        cell.column.columnDef.meta?.tdClassName
-                      )}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className='h-24 text-center'
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <DataTablePagination table={table} className='mt-auto' />
       <DataTableBulkActions table={table} />
     </div>
   )

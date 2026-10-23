@@ -2,9 +2,14 @@ import { useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { type ColumnFiltersState, type PaginationState } from '@tanstack/react-table'
 import { getLots, lotsQueryKey } from '@/services/lots-service'
+import {
+  getArrayFilterValue,
+  getStringFilterValue,
+} from '@/components/data-table'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
 import { type LotStatus } from './data/schema'
+import { LOT_TABLE_COLUMN } from './data/data'
 import { LotsDialogs } from './components/lots-dialogs'
 import { LotsProvider } from './components/lots-provider'
 import { LotsTable } from './components/lots-table'
@@ -14,13 +19,14 @@ export function Lots() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   const search = useMemo(() => {
-    const value = columnFilters.find((filter) => filter.id === 'kapanNo')?.value
-    return typeof value === 'string' && value.trim() ? value.trim() : undefined
+    return getStringFilterValue(columnFilters, LOT_TABLE_COLUMN.KAPAN_NO)
   }, [columnFilters])
 
   const status = useMemo(() => {
-    const value = columnFilters.find((filter) => filter.id === 'status')?.value
-    return Array.isArray(value) && value.length ? (value as LotStatus[]) : undefined
+    return getArrayFilterValue<LotStatus>(
+      columnFilters,
+      LOT_TABLE_COLUMN.STATUS
+    )
   }, [columnFilters])
 
   const query = { page: pagination.pageIndex + 1, pageSize: pagination.pageSize, search, status }
@@ -49,9 +55,7 @@ export function Lots() {
           onPaginationChange={setPagination}
           columnFilters={columnFilters}
           onColumnFiltersChange={handleFiltersChange}
-          isLoading={lotsQuery.isLoading}
-          error={lotsQuery.isError ? lotsQuery.error : null}
-          onRetry={() => void lotsQuery.refetch()}
+          asyncState={lotsQuery}
         />
       </Main>
       <LotsDialogs />

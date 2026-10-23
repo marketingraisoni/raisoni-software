@@ -15,7 +15,7 @@ export const semiPolishQueryKeys = {
   list: (params: {
     page?: number
     limit?: number
-    status?: string
+    status?: SemiPolishProcess['status']
     search?: string
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
@@ -47,7 +47,7 @@ export type SemiPolishListResponse = {
 export async function fetchSemiPolishList(params: {
   page?: number
   limit?: number
-  status?: string
+  status?: SemiPolishProcess['status']
   search?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'

@@ -1,7 +1,13 @@
 import { create } from 'zustand'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+import {
+  PERMISSION_ACTION,
+  hasPermission,
+  type PermissionAction,
+  type PermissionGrant,
+  type PermissionModule,
+} from '@/constants/permissions'
 import { type UserType } from '@/constants/user-types'
-import { type PermissionGrant } from '@/constants/permissions'
 
 const ACCESS_TOKEN = 'raisoni_access_token'
 const AUTH_USER = 'raisoni_auth_user'
@@ -26,6 +32,7 @@ interface AuthState {
     setSession: (user: AuthUser, accessToken: string) => void
     resetAccessToken: () => void
     reset: () => void
+    canAccess: (module: PermissionModule, action?: PermissionAction) => boolean
   }
 }
 
@@ -93,7 +100,7 @@ function persistSession(user: AuthUser | null, accessToken?: string) {
   }
 }
 
-export const useAuthStore = create<AuthState>()((set) => {
+export const useAuthStore = create<AuthState>()((set, get) => {
   const initToken = getStoredToken()
   const initUser = getStoredUser()
 
@@ -129,6 +136,8 @@ export const useAuthStore = create<AuthState>()((set) => {
             auth: { ...state.auth, user: null, accessToken: '' },
           }
         }),
+      canAccess: (module, action = PERMISSION_ACTION.READ) =>
+        hasPermission(get().auth.user, module, action),
     },
   }
 })

@@ -1,6 +1,7 @@
-import { useLayout } from '@/context/layout-provider'
 import { useAuthStore } from '@/stores/auth-store'
-import { hasPermission } from '@/constants/permissions'
+import { PERMISSION_ACTION, hasPermission } from '@/constants/permissions'
+import { USER_TYPE_LABEL } from '@/constants/user-types'
+import { useLayout } from '@/context/layout-provider'
 import {
   Sidebar,
   SidebarContent,
@@ -8,25 +9,50 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { USER_TYPE_LABEL } from '@/constants/user-types'
-import { sidebarData } from './data/sidebar-data'
 import { AppTitle } from './app-title'
+import { sidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
+import type { NavItem } from './types'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const user = useAuthStore((state) => state.auth.user)
-  const navGroups = sidebarData.navGroups.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => {
-      if (item.title === 'Dashboard') return hasPermission(user, 'dashboard', 'read')
-      if (item.title === 'Users') return hasPermission(user, 'users', 'read')
-      if (item.title === 'Permissions') return hasPermission(user, 'users', 'read')
-      if (item.title === 'Settings') return hasPermission(user, 'settings', 'read')
-      return true
-    }),
-  }))
+  const filterNavItem = (item: NavItem): NavItem | null => {
+    if (
+      item.permission &&
+      !hasPermission(
+        user,
+        item.permission.module,
+        item.permission.action || PERMISSION_ACTION.READ
+      )
+    ) {
+      return null
+    }
+
+    if ('items' in item && item.items) {
+      const items = item.items.filter((child) => {
+        if (!child.permission) return true
+        return hasPermission(
+          user,
+          child.permission.module,
+          child.permission.action || PERMISSION_ACTION.READ
+        )
+      })
+      return items.length > 0 ? { ...item, items } : null
+    }
+
+    return item
+  }
+
+  const navGroups = sidebarData.navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items
+        .map(filterNavItem)
+        .filter((item): item is NavItem => item !== null),
+    }))
+    .filter((group) => group.items.length > 0)
 
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
@@ -44,7 +70,9 @@ export function AppSidebar() {
             name: user?.name || 'Raisoni User',
             email: user?.email || '',
             avatar: '',
-            userTypeLabel: user ? (USER_TYPE_LABEL[user.userType] || user.userTypeLabel) : undefined,
+            userTypeLabel: user
+              ? USER_TYPE_LABEL[user.userType] || user.userTypeLabel
+              : undefined,
           }}
         />
       </SidebarFooter>

@@ -98,12 +98,22 @@ import {
   DataTableToolbar,
 } from '@/components/data-table'
 import {
+  PACKET_RETURN_SOURCE,
+  PACKET_RETURN_STATUS,
+  PLANNING_MATCH_STATUS,
+  SEMI_POLISH_PROCESS_STATUS,
   type PlanningDifference,
   type SemiPolishPacketPlan,
   type SemiPolishPacketReturn,
   type SemiPolishPlanningImport,
   type SemiPolishProcess,
 } from '../data/schema'
+
+const PACKET_VIEW_STATUS = {
+  ...PACKET_RETURN_STATUS,
+  PENDING: 'pending',
+  DIFFERENCE: 'difference',
+} as const
 
 type Props = {
   process: SemiPolishProcess
@@ -123,7 +133,7 @@ type ReceivePacketInput = {
   issueDetails?: string
   receivedPieces: ReceivedDiamondInput[]
   notes?: string
-  source: 'manual' | 'barcode'
+  source: (typeof PACKET_RETURN_SOURCE)[keyof typeof PACKET_RETURN_SOURCE]
 }
 
 type ReceivedDiamondInput = {
@@ -340,7 +350,8 @@ export function PlanningReturnWorkspace({
       )
       setPacketExpansion((current) => ({
         ...current,
-        [input.plan.packetNumber]: result.packetReturn?.status !== 'verified',
+        [input.plan.packetNumber]:
+          result.packetReturn?.status !== PACKET_RETURN_STATUS.VERIFIED,
       }))
       setReceivedDiamondDrafts((current) => {
         const next = { ...current }
@@ -369,7 +380,8 @@ export function PlanningReturnWorkspace({
           returned.issue?.observedPieceCount ?? plan.plannedPieceCount,
       }),
     onSuccess: async (result, { plan }) => {
-      const isComplete = result.packetReturn?.status === 'verified'
+      const isComplete =
+        result.packetReturn?.status === PACKET_RETURN_STATUS.VERIFIED
       toast.success(
         isComplete
           ? `Packet ${plan.packetNumber} issue resolved and packet verified.`
@@ -432,7 +444,7 @@ export function PlanningReturnWorkspace({
     data.progress.expectedPackets > 0 &&
     data.progress.verifiedPackets === data.progress.expectedPackets &&
     data.progress.issuePackets === 0 &&
-    process.status === 'in_process'
+    process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
   )
 
   const columns = useMemo<ColumnDef<SemiPolishPacketPlan>[]>(
@@ -448,7 +460,7 @@ export function PlanningReturnWorkspace({
           const returned = returnedByPacket.get(row.original.packetNumber)
           const isExpanded =
             packetExpansion[row.original.packetNumber] ??
-            returned?.status !== 'verified'
+            returned?.status !== PACKET_RETURN_STATUS.VERIFIED
           return (
             <div className='flex items-center gap-2'>
               <ChevronDown
@@ -491,7 +503,7 @@ export function PlanningReturnWorkspace({
           const returned = returnedByPacket.get(row.original.packetNumber)
           return (
             <span className='font-semibold'>
-              {returned?.status === 'partial'
+              {returned?.status === PACKET_RETURN_STATUS.PARTIAL
                 ? `${returned.verifiedPieceCount} / ${row.original.plannedPieceCount}`
                 : row.original.plannedPieceCount}
             </span>
@@ -513,10 +525,15 @@ export function PlanningReturnWorkspace({
         id: 'status',
         accessorFn: (plan) => {
           const returned = returnedByPacket.get(plan.packetNumber)
-          if (returned?.status === 'verified') return 'verified'
-          if (returned?.status === 'partial') return 'partial'
-          if (returned?.status === 'issue') return 'issue'
-          return plan.matchStatus === 'matched' ? 'pending' : 'difference'
+          if (returned?.status === PACKET_RETURN_STATUS.VERIFIED)
+            return PACKET_VIEW_STATUS.VERIFIED
+          if (returned?.status === PACKET_RETURN_STATUS.PARTIAL)
+            return PACKET_VIEW_STATUS.PARTIAL
+          if (returned?.status === PACKET_RETURN_STATUS.ISSUE)
+            return PACKET_VIEW_STATUS.ISSUE
+          return plan.matchStatus === PLANNING_MATCH_STATUS.MATCHED
+            ? PACKET_VIEW_STATUS.PENDING
+            : PACKET_VIEW_STATUS.DIFFERENCE
         },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title='Status' />
@@ -525,22 +542,24 @@ export function PlanningReturnWorkspace({
           const returned = returnedByPacket.get(row.original.packetNumber)
           const status =
             returned?.status ??
-            (row.original.matchStatus === 'matched' ? 'pending' : 'difference')
-          if (status === 'verified') {
+            (row.original.matchStatus === PLANNING_MATCH_STATUS.MATCHED
+              ? PACKET_VIEW_STATUS.PENDING
+              : PACKET_VIEW_STATUS.DIFFERENCE)
+          if (status === PACKET_VIEW_STATUS.VERIFIED) {
             return (
               <Badge className='bg-emerald-600'>
                 <CheckCircle2 /> Verified
               </Badge>
             )
           }
-          if (status === 'issue') {
+          if (status === PACKET_VIEW_STATUS.ISSUE) {
             return (
               <Badge variant='destructive'>
                 <AlertTriangle /> Issue
               </Badge>
             )
           }
-          if (status === 'partial') {
+          if (status === PACKET_VIEW_STATUS.PARTIAL) {
             return (
               <Badge
                 variant='outline'
@@ -551,7 +570,7 @@ export function PlanningReturnWorkspace({
               </Badge>
             )
           }
-          if (status === 'pending') {
+          if (status === PACKET_VIEW_STATUS.PENDING) {
             return (
               <Badge variant='secondary'>
                 <Clock3 /> Pending
@@ -665,7 +684,11 @@ export function PlanningReturnWorkspace({
   )
 
   useEffect(() => {
-    if (process.status !== 'in_process' || !data?.planningImport) return
+    if (
+      process.status !== SEMI_POLISH_PROCESS_STATUS.IN_PROCESS ||
+      !data?.planningImport
+    )
+      return
 
     const flushScannerBuffer = () => {
       const scannedValue = scannerBufferRef.current.trim()
@@ -853,15 +876,19 @@ export function PlanningReturnWorkspace({
       ])
     )
     const receivedPieceCount = returned?.verifiedPieceCount ?? 0
+    const returnStatus = returned?.status
+    const isPartial = returnStatus === PACKET_RETURN_STATUS.PARTIAL
+    const isVerified = returnStatus === PACKET_RETURN_STATUS.VERIFIED
+    const hasIssue = returnStatus === PACKET_RETURN_STATUS.ISSUE
+    const processIsActive =
+      process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
     const canEdit =
-      process.status === 'in_process' &&
-      returned?.status !== 'verified' &&
-      returned?.status !== 'issue'
+      processIsActive && !isVerified && !hasIssue
     const summaryCells = [
       {
         label: 'Total pieces',
         value:
-          returned?.status === 'partial'
+          isPartial
             ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
             : String(plan.plannedPieceCount),
       },
@@ -1082,33 +1109,43 @@ export function PlanningReturnWorkspace({
       resolveMutation.isPending &&
       resolveMutation.variables?.plan.packetNumber === plan.packetNumber
     const fieldPrefix = `${mode}-${plan.packetNumber}`
+    const receiptSource =
+      mode === 'dialog'
+        ? PACKET_RETURN_SOURCE.BARCODE
+        : PACKET_RETURN_SOURCE.MANUAL
     const receivedPieceCount = returned?.verifiedPieceCount ?? 0
     const remainingPieceCount = Math.max(
       plan.plannedPieceCount - receivedPieceCount,
       0
     )
     const receiptSelection = getReceivedDiamondSelection(plan, returned)
+    const returnStatus = returned?.status
+    const isVerified = returnStatus === PACKET_RETURN_STATUS.VERIFIED
+    const isPartial = returnStatus === PACKET_RETURN_STATUS.PARTIAL
+    const hasIssue = returnStatus === PACKET_RETURN_STATUS.ISSUE
+    const processIsActive =
+      process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
 
     return (
       <div
         className={cn(
           'overflow-hidden rounded-lg border border-primary/20 bg-background shadow-sm',
           mode === 'row' && 'm-4',
-          returned?.status === 'verified' &&
+          isVerified &&
             'border-emerald-500/35 bg-emerald-500/[0.025]'
         )}
       >
         <div
           className={cn(
             'border-b bg-primary/[0.055] px-4 py-3',
-            returned?.status === 'verified' &&
+            isVerified &&
               'border-emerald-500/25 bg-emerald-500/10'
           )}
         >
           <p
             className={cn(
               'text-sm font-semibold tracking-wide text-primary/80 uppercase',
-              returned?.status === 'verified' &&
+              isVerified &&
                 'text-emerald-700 dark:text-emerald-400'
             )}
           >
@@ -1122,7 +1159,7 @@ export function PlanningReturnWorkspace({
           <div
             className={cn(
               'grid min-w-[1210px] grid-cols-11 text-sm [&>div]:border-t [&>div]:border-r [&>div]:border-border/70 [&>div]:px-3 [&>div]:py-1.5',
-              returned?.status === 'verified' && '[&>div]:border-emerald-500/20'
+              isVerified && '[&>div]:border-emerald-500/20'
             )}
           >
             <div className='border-t-0! bg-muted/40 font-medium'>Piece</div>
@@ -1155,7 +1192,7 @@ export function PlanningReturnWorkspace({
               {
                 key: 'pieces',
                 value:
-                  returned?.status === 'partial'
+                  isPartial
                     ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
                     : plan.plannedPieceCount,
                 mono: false,
@@ -1233,11 +1270,9 @@ export function PlanningReturnWorkspace({
           </div>
         )}
 
-        {(returned?.status === 'issue' ||
-          ((!returned || returned.status === 'partial') &&
-            process.status === 'in_process')) && (
+        {(hasIssue || ((!returned || isPartial) && processIsActive)) && (
           <div className='border-t p-3'>
-            {returned?.status === 'issue' ? (
+            {hasIssue ? (
               <div className='space-y-3'>
                 <Alert variant='destructive'>
                   <AlertTriangle />
@@ -1256,7 +1291,7 @@ export function PlanningReturnWorkspace({
                   </AlertDescription>
                 </Alert>
 
-                {process.status === 'in_process' &&
+                {processIsActive &&
                   (resolutionActive ? (
                     <div className='flex flex-col gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 lg:flex-row lg:items-end'>
                       <div className='min-w-0 flex-1 space-y-1.5'>
@@ -1357,7 +1392,7 @@ export function PlanningReturnWorkspace({
                         issueDetails,
                         receivedPieces: receiptSelection.receivedPieces,
                         notes: returnNotes,
-                        source: mode === 'dialog' ? 'barcode' : 'manual',
+                        source: receiptSource,
                       })
                     }
                   >
@@ -1371,7 +1406,7 @@ export function PlanningReturnWorkspace({
             ) : (
               <div className='flex flex-wrap items-end justify-between gap-3'>
                 <div className='space-y-1.5'>
-                  {returned?.status === 'partial' && (
+                  {isPartial && (
                     <p className='text-sm text-muted-foreground'>
                       {receivedPieceCount} received · {remainingPieceCount}{' '}
                       remaining
@@ -1396,7 +1431,7 @@ export function PlanningReturnWorkspace({
                         plan,
                         hasDifference: false,
                         receivedPieces: receiptSelection.receivedPieces,
-                        source: mode === 'dialog' ? 'barcode' : 'manual',
+                        source: receiptSource,
                       })
                     }
                   >
@@ -1449,6 +1484,15 @@ export function PlanningReturnWorkspace({
   const scannedPacketReturn = scannedPacketPlan
     ? (returnedByPacket.get(scannedPacketPlan.packetNumber) ?? null)
     : null
+  const scannedPacketStatus = scannedPacketReturn?.status
+  const scannedPacketIsVerified =
+    scannedPacketStatus === PACKET_RETURN_STATUS.VERIFIED
+  const scannedPacketHasIssue =
+    scannedPacketStatus === PACKET_RETURN_STATUS.ISSUE
+  const scannedPacketIsPartial =
+    scannedPacketStatus === PACKET_RETURN_STATUS.PARTIAL
+  const processIsActive =
+    process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
 
   return (
     <>
@@ -1604,7 +1648,7 @@ export function PlanningReturnWorkspace({
               <Button
                 className='mt-5'
                 disabled={
-                  uploadMutation.isPending || process.status !== 'in_process'
+                  uploadMutation.isPending || !processIsActive
                 }
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -1660,12 +1704,12 @@ export function PlanningReturnWorkspace({
                             )
                           }
                         }}
-                        disabled={process.status !== 'in_process'}
+                        disabled={!processIsActive}
                       />
                       <Button
                         size='sm'
                         onClick={() => handlePacketLookup()}
-                        disabled={process.status !== 'in_process'}
+                        disabled={!processIsActive}
                       >
                         <Search /> Open packet
                       </Button>
@@ -1701,9 +1745,19 @@ export function PlanningReturnWorkspace({
                         const returned =
                           returnedByPacket.get(plan.packetNumber) ?? null
                         const pieces = returned?.pieces ?? plan.pieces
+                        const returnStatus = returned?.status
+                        const isVerified =
+                          returnStatus === PACKET_RETURN_STATUS.VERIFIED
+                        const isPartial =
+                          returnStatus === PACKET_RETURN_STATUS.PARTIAL
+                        const hasIssue =
+                          returnStatus === PACKET_RETURN_STATUS.ISSUE
+                        const processIsActive =
+                          process.status ===
+                          SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
                         const isExpanded =
                           packetExpansion[plan.packetNumber] ??
-                          returned?.status !== 'verified'
+                          !isVerified
                         const differenceActive =
                           differencePacketNumber === plan.packetNumber
                         const resolutionActive =
@@ -1802,21 +1856,21 @@ export function PlanningReturnWorkspace({
                                     <div
                                       className={cn(
                                         'm-4 overflow-hidden rounded-lg border border-primary/20 bg-background shadow-sm',
-                                        returned?.status === 'verified' &&
+                                        isVerified &&
                                           'border-emerald-500/35 bg-emerald-500/[0.025]'
                                       )}
                                     >
                                       <div
                                         className={cn(
                                           'border-b bg-primary/[0.055] px-4 py-3',
-                                          returned?.status === 'verified' &&
+                                          isVerified &&
                                             'border-emerald-500/25 bg-emerald-500/10'
                                         )}
                                       >
                                         <p
                                           className={cn(
                                             'text-sm font-semibold tracking-wide text-primary/80 uppercase',
-                                            returned?.status === 'verified' &&
+                                            isVerified &&
                                               'text-emerald-700 dark:text-emerald-400'
                                           )}
                                         >
@@ -1835,7 +1889,7 @@ export function PlanningReturnWorkspace({
                                         <div
                                           className={cn(
                                             'grid min-w-[1210px] grid-cols-11 text-sm [&>div]:border-t [&>div]:border-r [&>div]:border-border/70 [&>div]:px-3 [&>div]:py-1.5',
-                                            returned?.status === 'verified' &&
+                                            isVerified &&
                                               '[&>div]:border-emerald-500/20'
                                           )}
                                         >
@@ -1880,7 +1934,7 @@ export function PlanningReturnWorkspace({
                                             {
                                               key: 'pieces',
                                               value:
-                                                returned?.status === 'partial'
+                                                isPartial
                                                   ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
                                                   : plan.plannedPieceCount,
                                               mono: false,
@@ -1984,12 +2038,11 @@ export function PlanningReturnWorkspace({
                                         </div>
                                       )}
 
-                                      {(returned?.status === 'issue' ||
-                                        ((!returned ||
-                                          returned.status === 'partial') &&
-                                          process.status === 'in_process')) && (
+                                      {(hasIssue ||
+                                        ((!returned || isPartial) &&
+                                          processIsActive)) && (
                                         <div className='border-t p-2'>
-                                          {returned?.status === 'issue' ? (
+                                          {hasIssue ? (
                                             <div className='space-y-3'>
                                               <Alert variant='destructive'>
                                                 <AlertTriangle />
@@ -2023,8 +2076,7 @@ export function PlanningReturnWorkspace({
                                                 </AlertDescription>
                                               </Alert>
 
-                                              {process.status ===
-                                                'in_process' &&
+                                              {processIsActive &&
                                                 (resolutionActive ? (
                                                   <div className='flex flex-col gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 lg:flex-row lg:items-end'>
                                                     <div className='min-w-0 flex-1 space-y-1.5'>
@@ -2303,15 +2355,15 @@ export function PlanningReturnWorkspace({
                 Packet #{scannedPacketPlan?.packetNumber} ·{' '}
                 {scannedPacketPlan?.rawPacketLabel}
               </DialogTitle>
-              {scannedPacketReturn?.status === 'verified' ? (
+              {scannedPacketIsVerified ? (
                 <Badge className='bg-emerald-600'>
                   <CheckCircle2 /> Verified
                 </Badge>
-              ) : scannedPacketReturn?.status === 'issue' ? (
+              ) : scannedPacketHasIssue ? (
                 <Badge variant='destructive'>
                   <AlertTriangle /> Issue
                 </Badge>
-              ) : scannedPacketReturn?.status === 'partial' ? (
+              ) : scannedPacketIsPartial ? (
                 <Badge
                   variant='outline'
                   className='border-amber-500/50 text-amber-700 dark:text-amber-400'
@@ -2408,7 +2460,7 @@ export function PlanningReturnWorkspace({
               >
                 <Download /> Original Excel
               </Button>
-              {process.status === 'in_process' && (
+              {processIsActive && (
                 <Button
                   onClick={() => {
                     setPlanningDetailsOpen(false)

@@ -23,7 +23,7 @@ export function DataTableSkeleton({
               key={`skeleton-col-${rowIndex}-${colIndex}`}
               className={cellClassName}
             >
-              <Skeleton className='h-5 w-full' />
+              <Skeleton className='h-7.5 w-full' />
             </TableCell>
           ))}
         </TableRow>

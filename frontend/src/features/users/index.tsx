@@ -6,11 +6,19 @@ import type {
   SortingState,
 } from '@tanstack/react-table'
 import { getUsers, usersQueryKey, type UsersQuery } from '@/services/users-service'
+import {
+  getArrayFilterValue,
+  getNumberArrayFilterValue,
+  getSortQuery,
+  getStringFilterValue,
+} from '@/components/data-table'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
 import { UsersDialogs } from './components/users-dialogs'
 import { UsersProvider } from './components/users-provider'
 import { UsersTable } from './components/users-table'
+import { USER_TABLE_COLUMN } from './data/data'
+import { type UserStatus } from './data/schema'
 
 export function Users() {
   const [pagination, setPagination] = useState<PaginationState>({
@@ -21,35 +29,31 @@ export function Users() {
   const [sorting, setSorting] = useState<SortingState>([])
 
   const searchUsername = useMemo(() => {
-    const filter = columnFilters.find((f) => f.id === 'username')
-    return typeof filter?.value === 'string' && filter.value.trim()
-      ? filter.value.trim()
-      : undefined
+    return getStringFilterValue(columnFilters, USER_TABLE_COLUMN.USERNAME)
   }, [columnFilters])
 
   const statusFilter = useMemo(() => {
-    const filter = columnFilters.find((f) => f.id === 'status')
-    return Array.isArray(filter?.value) && filter.value.length
-      ? (filter.value as ('active' | 'inactive')[])
-      : undefined
+    return getArrayFilterValue<UserStatus>(
+      columnFilters,
+      USER_TABLE_COLUMN.STATUS
+    )
   }, [columnFilters])
 
   const userTypeFilter = useMemo(() => {
-    const filter = columnFilters.find((f) => f.id === 'userType')
-    return Array.isArray(filter?.value) && filter.value.length
-      ? (filter.value as (string | number)[]).map(Number)
-      : undefined
+    return getNumberArrayFilterValue(
+      columnFilters,
+      USER_TABLE_COLUMN.USER_TYPE
+    )
   }, [columnFilters])
 
-  const sort = sorting[0]
+  const sortQuery = getSortQuery<NonNullable<UsersQuery['sortBy']>>(sorting)
   const usersQueryParams: UsersQuery = {
     page: pagination.pageIndex + 1,
     pageSize: pagination.pageSize,
     search: searchUsername,
     status: statusFilter,
     userType: userTypeFilter as UsersQuery['userType'],
-    sortBy: sort?.id as UsersQuery['sortBy'],
-    sortOrder: sort ? (sort.desc ? ('desc' as const) : ('asc' as const)) : undefined,
+    ...sortQuery,
   }
 
   const usersQuery = useQuery({
@@ -90,9 +94,7 @@ export function Users() {
           onColumnFiltersChange={handleColumnFiltersChange}
           sorting={sorting}
           onSortingChange={handleSortingChange}
-          isLoading={usersQuery.isLoading}
-          error={usersQuery.isError ? usersQuery.error : null}
-          onRetry={() => void usersQuery.refetch()}
+          asyncState={usersQuery}
         />
       </Main>
 

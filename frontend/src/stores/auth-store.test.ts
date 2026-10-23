@@ -1,5 +1,6 @@
 import { clearCookies } from '@/test-utils/cookies'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { PERMISSION_ACTION, PERMISSION_MODULE } from '@/constants/permissions'
 
 async function importAuthStore() {
   const { useAuthStore } = await import('./auth-store')
@@ -68,6 +69,31 @@ describe('useAuthStore', () => {
 
     expect(useAuthStore.getState().auth.user).toEqual(sampleUser)
     expect(useAuthStore.getState().auth.accessToken).toBe('session-token')
+  })
+
+  it('checks the current user permissions from the Zustand state', async () => {
+    const useAuthStore = await importAuthStore()
+    useAuthStore.getState().auth.setUser({
+      ...sampleUser,
+      permissions: [
+        {
+          module: PERMISSION_MODULE.DASHBOARD,
+          actions: [PERMISSION_ACTION.READ],
+        },
+      ],
+    })
+
+    expect(
+      useAuthStore.getState().auth.canAccess(PERMISSION_MODULE.DASHBOARD)
+    ).toBe(true)
+    expect(
+      useAuthStore
+        .getState()
+        .auth.canAccess(PERMISSION_MODULE.DASHBOARD, PERMISSION_ACTION.UPDATE)
+    ).toBe(false)
+    expect(
+      useAuthStore.getState().auth.canAccess(PERMISSION_MODULE.USERS)
+    ).toBe(false)
   })
 
   it('reset clears user and access token and drops persistence', async () => {

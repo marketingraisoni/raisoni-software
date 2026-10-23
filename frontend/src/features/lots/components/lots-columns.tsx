@@ -1,47 +1,63 @@
-import { formatDate } from '@/lib/format-date'
-import { type ColumnDef } from '@tanstack/react-table'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { hasPermission } from '@/constants/permissions'
-import { formatCarat } from '@/lib/format-carat'
+import { type ColumnDef } from '@tanstack/react-table'
 import { getApiErrorMessage } from '@/services/auth-service'
 import { lotsQueryKey, updateLotStatus } from '@/services/lots-service'
+import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
+import { formatCarat } from '@/lib/format-carat'
+import { formatDate } from '@/lib/format-date'
+import {
+  PERMISSION_ACTION,
+  PERMISSION_MODULE,
+  hasPermission,
+} from '@/constants/permissions'
 import { Switch } from '@/components/ui/switch'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
-import { type Lot } from '../data/schema'
+import { LOT_STATUS, type Lot } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
 
 export const lotsColumns: ColumnDef<Lot>[] = [
   {
     accessorKey: 'kapanNo',
-    header: ({ column }) => <DataTableColumnHeader column={column} title='Kapan No' />,
-    cell: ({ row }) => <LongText className='font-medium'>{row.original.kapanNo}</LongText>,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Kapan No' />
+    ),
+    cell: ({ row }) => (
+      <LongText className='font-medium'>{row.original.kapanNo}</LongText>
+    ),
     meta: { className: 'ps-4' },
     enableSorting: false,
   },
   {
     accessorKey: 'totalCarat',
-    header: ({ column }) => <DataTableColumnHeader column={column} title='Total Carat' />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Total Carat' />
+    ),
     cell: ({ row }) => <span>{formatCarat(row.original.totalCarat)} CT</span>,
     enableSorting: false,
   },
   {
     accessorKey: 'totalPcs',
-    header: ({ column }) => <DataTableColumnHeader column={column} title='Total PCs' />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Total PCs' />
+    ),
     cell: ({ row }) => <span>{row.original.totalPcs.toLocaleString()}</span>,
     enableSorting: false,
   },
   {
     accessorKey: 'entryDate',
-    header: ({ column }) => <DataTableColumnHeader column={column} title='Entry Date' />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Entry Date' />
+    ),
     cell: ({ row }) => <span>{formatDate(row.original.entryDate)}</span>,
     enableSorting: false,
   },
   {
     accessorKey: 'status',
-    header: ({ column }) => <DataTableColumnHeader column={column} title='Status' />,
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Status' />
+    ),
     cell: ({ row }) => <LotStatusSwitch lot={row.original} />,
     enableSorting: false,
   },
@@ -55,9 +71,19 @@ export const lotsColumns: ColumnDef<Lot>[] = [
 function LotStatusSwitch({ lot }: { lot: Lot }) {
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.auth.user)
-  const canUpdate = hasPermission(user, 'lots', 'update')
+  const canUpdate = hasPermission(
+    user,
+    PERMISSION_MODULE.LOTS,
+    PERMISSION_ACTION.UPDATE
+  )
+  const isActive = lot.status === LOT_STATUS.ACTIVE
+  const nextStatus = isActive ? LOT_STATUS.CLOSED : LOT_STATUS.ACTIVE
   const mutation = useMutation({
-    mutationFn: (active: boolean) => updateLotStatus(lot.id, active ? 'active' : 'closed'),
+    mutationFn: (active: boolean) =>
+      updateLotStatus(
+        lot.id,
+        active ? LOT_STATUS.ACTIVE : LOT_STATUS.CLOSED
+      ),
     onSuccess: async (response) => {
       await queryClient.invalidateQueries({ queryKey: lotsQueryKey })
       toast.success(response.message)
@@ -68,10 +94,10 @@ function LotStatusSwitch({ lot }: { lot: Lot }) {
   return (
     <div className='flex items-center gap-2'>
       <Switch
-        checked={lot.status === 'active'}
+        checked={isActive}
         disabled={!canUpdate || mutation.isPending}
         onCheckedChange={(checked) => mutation.mutate(checked)}
-        aria-label={`Mark ${lot.kapanNo} as ${lot.status === 'active' ? 'closed' : 'active'}`}
+        aria-label={`Mark ${lot.kapanNo} as ${nextStatus}`}
       />
       <span className='text-sm capitalize'>{lot.status}</span>
     </div>

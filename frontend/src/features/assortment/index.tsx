@@ -4,35 +4,28 @@ import {
   type ColumnDef,
   type ColumnFiltersState,
   type PaginationState,
-  flexRender,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowRight, Layers3, RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { formatCarat } from '@/lib/format-carat'
 import { getLots, lotsQueryKey } from '@/services/lots-service'
+import { ArrowRight, Layers3 } from 'lucide-react'
+import { formatCarat } from '@/lib/format-carat'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  DataTable,
+  DataTableColumnHeader,
+  getArrayFilterValue,
+  getStringFilterValue,
+} from '@/components/data-table'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
+import { LOT_TABLE_COLUMN, lotStatuses } from '@/features/lots/data/data'
 import {
-  DataTableColumnHeader,
-  DataTableLayout,
-  DataTablePagination,
-  DataTableSkeleton,
-  DataTableToolbar,
-} from '@/components/data-table'
-import { lotStatuses } from '@/features/lots/data/data'
-import { type Lot, type LotStatus } from '@/features/lots/data/schema'
+  LOT_STATUS,
+  type Lot,
+  type LotStatus,
+} from '@/features/lots/data/schema'
 import { AssortmentExcelButton } from './components/assortment-excel-button'
 
 type Props = {
@@ -47,17 +40,14 @@ export function AssortmentLots({ onAssort }: Props) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   const searchKapanNo = useMemo(() => {
-    const filter = columnFilters.find((f) => f.id === 'kapanNo')
-    return typeof filter?.value === 'string' && filter.value.trim()
-      ? filter.value.trim()
-      : undefined
+    return getStringFilterValue(columnFilters, LOT_TABLE_COLUMN.KAPAN_NO)
   }, [columnFilters])
 
   const statusFilter = useMemo(() => {
-    const filter = columnFilters.find((f) => f.id === 'status')
-    return Array.isArray(filter?.value) && filter.value.length
-      ? (filter.value as LotStatus[])
-      : undefined
+    return getArrayFilterValue<LotStatus>(
+      columnFilters,
+      LOT_TABLE_COLUMN.STATUS
+    )
   }, [columnFilters])
 
   const queryParams = {
@@ -74,7 +64,9 @@ export function AssortmentLots({ onAssort }: Props) {
   })
 
   const handleColumnFiltersChange = (
-    updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)
+    updater:
+      | ColumnFiltersState
+      | ((prev: ColumnFiltersState) => ColumnFiltersState)
   ) => {
     setColumnFilters(updater)
     setPagination((prev) => ({ ...prev, pageIndex: 0 }))
@@ -112,7 +104,9 @@ export function AssortmentLots({ onAssort }: Props) {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title='Total Carat' />
         ),
-        cell: ({ row }) => <span>{formatCarat(row.original.totalCarat)} CT</span>,
+        cell: ({ row }) => (
+          <span>{formatCarat(row.original.totalCarat)} CT</span>
+        ),
         enableSorting: false,
       },
       {
@@ -122,7 +116,11 @@ export function AssortmentLots({ onAssort }: Props) {
         ),
         cell: ({ row }) => (
           <Badge
-            variant={row.original.status === 'active' ? 'default' : 'secondary'}
+            variant={
+              row.original.status === LOT_STATUS.ACTIVE
+                ? 'default'
+                : 'secondary'
+            }
             className='capitalize'
           >
             {row.original.status}
@@ -135,6 +133,7 @@ export function AssortmentLots({ onAssort }: Props) {
         header: () => <span className='block pe-4 text-end'>Action</span>,
         cell: ({ row }) => {
           const lot = row.original
+          const isActive = lot.status === LOT_STATUS.ACTIVE
           return (
             <div className='flex items-center justify-end gap-2 pe-4'>
               {lot.assortmentComplete && (
@@ -146,11 +145,11 @@ export function AssortmentLots({ onAssort }: Props) {
               )}
               <Button
                 size='sm'
-                variant={lot.status === 'active' ? 'default' : 'outline'}
+                variant={isActive ? 'default' : 'outline'}
                 onClick={() => onAssort(lot.id)}
               >
-                <Layers3 /> {lot.status === 'active' ? 'Assort' : 'View'}{' '}
-                <ArrowRight />
+                <Layers3 />
+                {isActive ? 'Assort' : 'View'} <ArrowRight />
               </Button>
             </div>
           )
@@ -178,129 +177,34 @@ export function AssortmentLots({ onAssort }: Props) {
     getCoreRowModel: getCoreRowModel(),
   })
 
-  const hasRows = table.getRowModel().rows.length > 0
-  const hasEmptyOrErrorState =
-    Boolean(lotsQuery.isError) || (!lotsQuery.isLoading && !hasRows)
-
   return (
     <>
       <AppHeader fixed />
       <Main fixed fluid className='flex flex-1 flex-col'>
         <div className='flex min-h-0 flex-1 flex-col max-sm:mb-16'>
-          <DataTableLayout
+          <DataTable
+            table={table}
             title='Packet Creation'
-            // description='Choose a Lot to begin or continue its assortment workflow.'
-            toolbar={
-              <DataTableToolbar
-                table={table}
-                searchPlaceholder='Filter by Kapan No...'
-                searchKey='kapanNo'
-                searchDebounceMs={400}
-                showFilterCounts={false}
-                filters={[
-                  {
-                    columnId: 'status',
-                    title: 'Status',
-                    options: [...lotStatuses],
-                  },
-                ]}
-              />
-            }
-            pagination={
-              <DataTablePagination
-                table={table}
-                className='px-0'
-                totalRows={totalRows}
-              />
-            }
-            contentClassName='[&_[data-slot=table-container]]:h-full'
-          >
-            <Table className={cn(hasEmptyOrErrorState && 'h-full')}>
-              <TableHeader className='sticky top-0 z-10 bg-background'>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className='group/row'>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        colSpan={header.colSpan}
-                        className={cn(
-                          'bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted',
-                          header.column.columnDef.meta?.className,
-                          header.column.columnDef.meta?.thClassName
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody className={cn(hasEmptyOrErrorState && 'h-full')}>
-                {lotsQuery.isLoading ? (
-                  <DataTableSkeleton
-                    columnCount={columns.length}
-                    rowCount={pagination.pageSize || 10}
-                  />
-                ) : lotsQuery.isError ? (
-                  <TableRow className='h-full'>
-                    <TableCell
-                      colSpan={columns.length}
-                      className='h-full text-center'
-                    >
-                      <div className='flex flex-col items-center gap-3'>
-                        <div>
-                          <p className='font-medium'>Unable to load lots.</p>
-                          <p className='text-sm text-muted-foreground'>
-                            Check the backend connection and try again.
-                          </p>
-                        </div>
-                        <Button
-                          variant='outline'
-                          onClick={() => void lotsQuery.refetch()}
-                        >
-                          <RefreshCw /> Try again
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : hasRows ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className='group/row'>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className={cn(
-                            'bg-background group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted',
-                            cell.column.columnDef.meta?.className,
-                            cell.column.columnDef.meta?.tdClassName
-                          )}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow className='h-full'>
-                    <TableCell
-                      colSpan={columns.length}
-                      className='h-full text-center'
-                    >
-                      No lots found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </DataTableLayout>
+            toolbar={{
+              searchPlaceholder: 'Filter by Kapan No...',
+              searchKey: LOT_TABLE_COLUMN.KAPAN_NO,
+              searchDebounceMs: 400,
+              showFilterCounts: false,
+              filters: [
+                {
+                  columnId: LOT_TABLE_COLUMN.STATUS,
+                  title: 'Status',
+                  options: [...lotStatuses],
+                },
+              ],
+            }}
+            pagination={{ totalRows }}
+            asyncState={lotsQuery}
+            messages={{
+              errorTitle: 'Unable to load lots.',
+              empty: 'No lots found.',
+            }}
+          />
         </div>
       </Main>
     </>

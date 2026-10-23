@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Cross2Icon } from '@radix-ui/react-icons'
 import { type Table } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DataTableFacetedFilter } from './faceted-filter'
 
-type DataTableToolbarProps<TData> = {
+export type DataTableToolbarProps<TData> = {
   table: Table<TData>
   searchPlaceholder?: string
   searchKey?: string
@@ -24,6 +24,38 @@ type DataTableToolbarProps<TData> = {
   children?: React.ReactNode
 }
 
+type DebouncedSearchInputProps = {
+  initialValue: string
+  placeholder: string
+  debounceMs: number
+  onValueChange: (value: string) => void
+}
+
+function DebouncedSearchInput({
+  initialValue,
+  placeholder,
+  debounceMs,
+  onValueChange,
+}: DebouncedSearchInputProps) {
+  const [value, setValue] = useState(initialValue)
+
+  useEffect(() => {
+    if (value === initialValue) return
+
+    const timer = window.setTimeout(() => onValueChange(value), debounceMs)
+    return () => window.clearTimeout(timer)
+  }, [debounceMs, initialValue, onValueChange, value])
+
+  return (
+    <Input
+      placeholder={placeholder}
+      value={value}
+      onChange={(event) => setValue(event.target.value)}
+      className='h-8 w-37.5 lg:w-62.5'
+    />
+  )
+}
+
 export function DataTableToolbar<TData>({
   table,
   searchPlaceholder = 'Filter...',
@@ -37,32 +69,14 @@ export function DataTableToolbar<TData>({
   const appliedSearchValue = searchKey
     ? ((table.getColumn(searchKey)?.getFilterValue() as string) ?? '')
     : (table.getState().globalFilter ?? '')
-  const [searchValue, setSearchValue] = useState(appliedSearchValue)
 
-  useEffect(() => {
-    setSearchValue(appliedSearchValue)
-  }, [appliedSearchValue])
-
-  useEffect(() => {
-    if (searchDebounceMs <= 0 || searchValue === appliedSearchValue) return
-
-    const timer = window.setTimeout(() => {
-      if (searchKey) {
-        table.getColumn(searchKey)?.setFilterValue(searchValue)
-      } else {
-        table.setGlobalFilter(searchValue)
-      }
-    }, searchDebounceMs)
-
-    return () => window.clearTimeout(timer)
-  }, [appliedSearchValue, searchDebounceMs, searchKey, searchValue, table])
-
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value)
-    if (searchDebounceMs > 0) return
-    if (searchKey) table.getColumn(searchKey)?.setFilterValue(value)
-    else table.setGlobalFilter(value)
-  }
+  const applySearchValue = useCallback(
+    (value: string) => {
+      if (searchKey) table.getColumn(searchKey)?.setFilterValue(value)
+      else table.setGlobalFilter(value)
+    },
+    [searchKey, table]
+  )
 
   const isFiltered =
     table.getState().columnFilters.length > 0 || table.getState().globalFilter
@@ -70,18 +84,19 @@ export function DataTableToolbar<TData>({
   return (
     <div className='flex items-center justify-between'>
       <div className='flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2'>
-        {searchKey ? (
-          <Input
+        {searchDebounceMs > 0 ? (
+          <DebouncedSearchInput
+            key={`${searchKey ?? 'global'}:${appliedSearchValue}`}
+            initialValue={appliedSearchValue}
             placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={(event) => handleSearchChange(event.target.value)}
-            className='h-8 w-37.5 lg:w-62.5'
+            debounceMs={searchDebounceMs}
+            onValueChange={applySearchValue}
           />
         ) : (
           <Input
             placeholder={searchPlaceholder}
-            value={searchValue}
-            onChange={(event) => handleSearchChange(event.target.value)}
+            value={appliedSearchValue}
+            onChange={(event) => applySearchValue(event.target.value)}
             className='h-8 w-37.5 lg:w-62.5'
           />
         )}

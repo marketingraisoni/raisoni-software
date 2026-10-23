@@ -1,5 +1,28 @@
 import { z } from 'zod'
 
+export const SEMI_POLISH_PROCESS_STATUS = {
+  IN_PROCESS: 'in_process',
+  RETURNED: 'returned',
+  CANCELLED: 'cancelled',
+} as const
+
+export const PLANNING_MATCH_STATUS = {
+  MATCHED: 'matched',
+  WEIGHT_MISMATCH: 'weight_mismatch',
+  UNMATCHED: 'unmatched',
+} as const
+
+export const PACKET_RETURN_STATUS = {
+  PARTIAL: 'partial',
+  VERIFIED: 'verified',
+  ISSUE: 'issue',
+} as const
+
+export const PACKET_RETURN_SOURCE = {
+  MANUAL: 'manual',
+  BARCODE: 'barcode',
+} as const
+
 export const vendorSchema = z.object({
   _id: z.string().optional(),
   id: z.string().optional(),
@@ -32,7 +55,11 @@ export const semiPolishProcessSchema = z.object({
   issueNo: z.string(),
   vendor: z.any(),
   vendorName: z.string(),
-  status: z.enum(['in_process', 'returned', 'cancelled']),
+  status: z.enum([
+    SEMI_POLISH_PROCESS_STATUS.IN_PROCESS,
+    SEMI_POLISH_PROCESS_STATUS.RETURNED,
+    SEMI_POLISH_PROCESS_STATUS.CANCELLED,
+  ]),
   issueDate: z.coerce.date(),
   expectedReturnDate: z.coerce.date().nullable().optional(),
   issuedPieces: z.number().int(),
@@ -90,7 +117,8 @@ export type SemiPolishPacketPlan = {
   id?: string
   planningImport: string
   matchedPacket?: string | null
-  matchStatus: 'matched' | 'weight_mismatch' | 'unmatched'
+  matchStatus:
+    (typeof PLANNING_MATCH_STATUS)[keyof typeof PLANNING_MATCH_STATUS]
   packetNumber: number
   rawPacketLabel: string
   planningGrade: string
@@ -137,8 +165,8 @@ export type SemiPolishPacketReturn = {
   packetPlan: string
   packet: string
   packetNumber: number
-  status: 'partial' | 'verified' | 'issue'
-  source: 'manual' | 'barcode'
+  status: (typeof PACKET_RETURN_STATUS)[keyof typeof PACKET_RETURN_STATUS]
+  source: (typeof PACKET_RETURN_SOURCE)[keyof typeof PACKET_RETURN_SOURCE]
   plannedPieceCount: number
   verifiedPieceCount: number
   receivedPieceNumbers?: number[]
@@ -162,7 +190,7 @@ export type SemiPolishPacketReturn = {
     id?: string
     pieceNumbers: number[]
     pieceCount: number
-    source: 'manual' | 'barcode'
+    source: (typeof PACKET_RETURN_SOURCE)[keyof typeof PACKET_RETURN_SOURCE]
     notes?: string
     receivedAt: Date | string
     receivedBy?: unknown

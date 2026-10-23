@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-type DataTablePaginationProps<TData> = {
+export type DataTablePaginationProps<TData> = {
   table: Table<TData>
   className?: string
   totalRows?: number

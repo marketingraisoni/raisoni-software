@@ -42,7 +42,13 @@ import {
 } from '@/components/ui/table'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
-import type { PlannedPiece, SemiPolishPacketLookup } from './data/schema'
+import {
+  PACKET_RETURN_STATUS,
+  PLANNING_MATCH_STATUS,
+  SEMI_POLISH_PROCESS_STATUS,
+  type PlannedPiece,
+  type SemiPolishPacketLookup,
+} from './data/schema'
 
 type DiamondDraft = {
   selected: boolean
@@ -288,12 +294,19 @@ export function SemiPolishPacketReturnScannerPage() {
     }) &&
     new Set(selectedBarcodes).size === selectedBarcodes.length
 
+  const processIsActive =
+    lookupResult?.process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
+  const planIsMatched =
+    packetPlan?.matchStatus === PLANNING_MATCH_STATUS.MATCHED
+  const packetStatus = packetReturn?.status
+  const packetIsVerified = packetStatus === PACKET_RETURN_STATUS.VERIFIED
+  const packetIsPartial = packetStatus === PACKET_RETURN_STATUS.PARTIAL
+  const packetHasIssue = packetStatus === PACKET_RETURN_STATUS.ISSUE
   const canReceive = Boolean(
-    lookupResult &&
-    lookupResult.process.status === 'in_process' &&
-    packetPlan?.matchStatus === 'matched' &&
-    packetReturn?.status !== 'verified' &&
-    packetReturn?.status !== 'issue'
+    processIsActive &&
+    planIsMatched &&
+    !packetIsVerified &&
+    !packetHasIssue
   )
 
   const updateDraft = (piece: PlannedPiece, patch: Partial<DiamondDraft>) => {
@@ -471,16 +484,16 @@ export function SemiPolishPacketReturnScannerPage() {
                     Packet #{packetPlan.packetNumber} ·{' '}
                     {packetPlan.rawPacketLabel}
                   </DialogTitle>
-                  {packetReturn?.status === 'verified' ? (
+                  {packetIsVerified ? (
                     <Badge className='bg-emerald-600'>
                       <CheckCircle2 /> Verified
                     </Badge>
-                  ) : packetReturn?.status === 'partial' ? (
+                  ) : packetIsPartial ? (
                     <Badge variant='outline'>
                       {packetReturn.verifiedPieceCount}/
                       {packetPlan.plannedPieceCount} received
                     </Badge>
-                  ) : packetReturn?.status === 'issue' ? (
+                  ) : packetHasIssue ? (
                     <Badge variant='destructive'>
                       <AlertTriangle /> Issue
                     </Badge>
@@ -496,7 +509,7 @@ export function SemiPolishPacketReturnScannerPage() {
               </DialogHeader>
 
               <div className='min-h-0 overflow-y-auto p-4 sm:p-6'>
-                {packetPlan.matchStatus !== 'matched' && (
+                {!planIsMatched && (
                   <Alert variant='destructive' className='mb-4'>
                     <AlertTriangle />
                     <AlertTitle>Planning packet is not matched</AlertTitle>
@@ -506,7 +519,7 @@ export function SemiPolishPacketReturnScannerPage() {
                     </AlertDescription>
                   </Alert>
                 )}
-                {packetReturn?.status === 'issue' && (
+                {packetHasIssue && (
                   <Alert variant='destructive' className='mb-4'>
                     <AlertTriangle />
                     <AlertTitle>Packet has an unresolved issue</AlertTitle>
