@@ -18,6 +18,8 @@ router.get('/', asyncHandler(async (_req, res) => {
       status: 'ok',
       appName: config.appName,
       version: config.appVersion,
+      environment: config.env,
+      databaseName: config.databaseName,
       timestamp: new Date().toISOString(),
       primaryLanIp,
       lanAddresses: getLocalIpAddresses(),

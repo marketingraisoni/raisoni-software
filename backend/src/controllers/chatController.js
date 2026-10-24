@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { fileURLToPath } from 'url';
+import { config } from '../config/env.js';
 import { HTTP_STATUS } from '../constants/httpStatus.js';
 import { USER_STATUS, USER_TYPE_LABEL } from '../constants/user.js';
 import { ApiError } from '../errors/ApiError.js';
@@ -11,9 +11,7 @@ import { emitToUser, isUserOnline, getOnlineUserIds } from '../sockets/socketMan
 import { sendSuccess } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const chatUploadsDir = path.resolve(__dirname, '../../../data/uploads/chat');
+const chatUploadsDir = path.resolve(config.dataDir, 'uploads/chat');
 
 if (!fs.existsSync(chatUploadsDir)) {
   fs.mkdirSync(chatUploadsDir, { recursive: true });

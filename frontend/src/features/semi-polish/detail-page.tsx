@@ -375,7 +375,7 @@ export function SemiPolishDetailPage({ processId }: Props) {
 
           <section className='hidden border-b pb-4 print:block'>
             <p className='text-xs font-semibold tracking-wider text-muted-foreground uppercase'>
-              Raisoni Diamonds ERP · 4P Semi-Polish
+              Raisoni ERP · 4P Semi-Polish
             </p>
             <div className='mt-2 flex items-end justify-between gap-4'>
               <div>

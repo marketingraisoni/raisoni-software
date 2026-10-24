@@ -1,45 +1,68 @@
-# ==============================================================================
-# Raisoni Software Demo - Database Backup Utility
-# Creates timestamped database archives into the data/backups/ folder
-# without ever deleting or overwriting past backups.
-# ==============================================================================
+param (
+    [ValidateSet("development", "staging", "production")]
+    [string]$Environment = "production"
+)
 
 $ErrorActionPreference = "Stop"
-
 $rootDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $rootDir
 
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " Raisoni Software Demo -- Database Backup Manager" -ForegroundColor White
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host ""
-
-$backupDir = Join-Path $rootDir "data\backups"
-if (-not (Test-Path $backupDir)) {
-    New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+$ports = @{
+    development = 3001
+    staging = 3002
+    production = 3000
 }
 
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$archiveFile = Join-Path $backupDir "raisoni_backup_$timestamp.archive"
+$env:APP_ENV = $Environment
+$env:NODE_ENV = if ($Environment -eq "development") { "development" } else { "production" }
 
-Write-Host "Checking for native MongoDB mongodump binary..." -ForegroundColor Yellow
-$mongodumpCmd = Get-Command "mongodump" -ErrorAction SilentlyContinue
+# When the backend is already running with bundled MongoDB, connect through its
+# reported loopback port. This avoids opening or copying locked WiredTiger files.
+try {
+    $health = Invoke-RestMethod `
+        -Uri "http://127.0.0.1:$($ports[$Environment])/api/health" `
+        -TimeoutSec 3
 
-if ($mongodumpCmd) {
-    Write-Host "Found mongodump: $($mongodumpCmd.Source)" -ForegroundColor Green
-    Write-Host "Creating mongodump archive at: $archiveFile" -ForegroundColor Cyan
-    & mongodump --uri="mongodb://127.0.0.1:27017/raisoni_software_demo" --archive="$archiveFile" --gzip
-    if ($LASTEXITCODE -eq 0 -and (Test-Path $archiveFile)) {
-        $fileSize = (Get-Item $archiveFile).Length
-        Write-Host "Backup Completed Successfully!" -ForegroundColor Green
-        Write-Host "Location:  $archiveFile" -ForegroundColor White
-        Write-Host "File Size: $([math]::Round($fileSize / 1KB, 2)) KB" -ForegroundColor White
+    if ($health.data.database.connected) {
+        $databaseName = [string]$health.data.database.database
+        $databasePort = [int]$health.data.database.port
+        $env:DATABASE_NAME = $databaseName
+        $env:MONGODB_URI = "mongodb://127.0.0.1:$databasePort/$databaseName"
+        $env:USE_EMBEDDED_MONGODB = "false"
+        $env:USE_EMBEDDED_MONGODB_FALLBACK = "false"
+
+        if ($health.data.database.isEmbedded) {
+            $databasePath = [string]$health.data.database.storagePath
+            $env:RAISONI_DATA_DIR = Split-Path -Parent $databasePath
+        }
     }
-} else {
-    Write-Host "Notice: 'mongodump' not in PATH. Running snapshot export via backend service..." -ForegroundColor Cyan
-    node backend/scripts/backup.js
+} catch {
+    Write-Host "Backend health endpoint is not running; using $Environment environment configuration." -ForegroundColor Yellow
 }
 
-Write-Host ""
-Write-Host "Backups in data/backups/ are safely preserved." -ForegroundColor Gray
-Write-Host ""
+$nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+if ($nodeCommand) {
+    & $nodeCommand.Source "backend/scripts/backup.js"
+    $backupExitCode = $LASTEXITCODE
+} else {
+    $electronNode = Join-Path $rootDir "node_modules\electron\dist\electron.exe"
+    if (-not (Test-Path -LiteralPath $electronNode)) {
+        throw "Neither Node.js nor the project Electron runtime is available."
+    }
+
+    $env:ELECTRON_RUN_AS_NODE = "1"
+    $backupProcess = Start-Process `
+        -FilePath $electronNode `
+        -ArgumentList "backend/scripts/backup.js" `
+        -WorkingDirectory $rootDir `
+        -NoNewWindow `
+        -Wait `
+        -PassThru
+    $backupExitCode = $backupProcess.ExitCode
+}
+
+if ($backupExitCode -ne 0) {
+    throw "The $Environment database backup failed with exit code $backupExitCode."
+}
+
+Write-Host "$Environment database backup completed and verified." -ForegroundColor Green

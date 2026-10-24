@@ -31,11 +31,9 @@ export async function seedDatabase(options = { reset: false }) {
     await connectDB();
     logger.info('Starting database seeding...');
 
-    // Always purge dummy seeder data
-    await cleanupDummyData();
-
     if (options.reset) {
-      logger.warn('Reset flag enabled: cleaning users and settings...');
+      logger.warn('Reset flag enabled: cleaning business data, users, and settings...');
+      await cleanupDummyData();
       await User.deleteMany({});
       await Setting.deleteMany({});
     }
@@ -46,7 +44,7 @@ export async function seedDatabase(options = { reset: false }) {
         name: 'Raisoni Jauharis',
         username: 'raisonijauharis',
         email: 'raisonijauharis@gmail.com',
-        password: 'password',
+        password: 'Raisoni@1999',
         userType: USER_TYPE.SUPER_ADMIN,
         status: USER_STATUS.ACTIVE,
       },
@@ -54,7 +52,7 @@ export async function seedDatabase(options = { reset: false }) {
         name: 'Marketing Raisoni',
         username: 'marketing.raisoni',
         email: 'marketing.raisoni@gmail.com',
-        password: 'password',
+        password: 'MRaisoni@1999',
         userType: USER_TYPE.MANAGER,
         status: USER_STATUS.ACTIVE,
       },
@@ -62,23 +60,23 @@ export async function seedDatabase(options = { reset: false }) {
         name: 'Divyesh Raisoni',
         username: 'divyesh.raisoni',
         email: 'divyesh.raisoni@gmail.com',
-        password: 'password',
+        password: 'DRaisoni@1999',
         userType: USER_TYPE.ADMIN,
         status: USER_STATUS.ACTIVE,
       },
       {
-        name: 'System Administrator',
-        username: 'admin',
-        email: 'admin@raisoni-demo.local',
-        password: 'password',
+        name: 'Accounts Raisoni',
+        username: 'accounts.raisoni',
+        email: 'accounts.raisoni@gmail.com',
+        password: 'ARaisoni@1999',
         userType: USER_TYPE.ADMIN,
         status: USER_STATUS.ACTIVE,
       },
       {
-        name: 'Staff Operator',
-        username: 'staff',
-        email: 'staff@raisoni-demo.local',
-        password: 'password',
+        name: 'Staff Raisoni',
+        username: 'staff.raisoni',
+        email: 'staff.raisoni@gmail.com',
+        password: 'SRaisoni@1999',
         userType: USER_TYPE.STAFF,
         status: USER_STATUS.ACTIVE,
       },
@@ -115,7 +113,7 @@ export async function seedDatabase(options = { reset: false }) {
     const defaultSettings = [
       {
         key: 'appName',
-        value: 'Raisoni Software Demo',
+        value: 'Raisoni ERP',
         category: 'general',
         description: 'Application display name',
       },

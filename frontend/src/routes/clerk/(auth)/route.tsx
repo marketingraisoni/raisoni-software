@@ -18,7 +18,7 @@ function ClerkAuthLayout() {
           className='relative z-20 flex items-center text-lg font-medium'
         >
           <Logo className='me-2' />
-          Raisoni Software
+          Raisoni ERP
         </Link>
 
         <ClerkFullLogo className='relative m-auto size-96' />

@@ -12,6 +12,8 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.*.example
+ENVFILES
 *.env
 
 # Build & Compilation Outputs
@@ -25,6 +27,7 @@ release/
 .cache/
 .tanstack/
 output/
+resources/mongodb/*.exe
 
 # Database & Runtime Data
 data/*

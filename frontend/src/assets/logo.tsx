@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 export function Logo({
   className,
-  alt = 'Raisoni Software',
+  alt = 'Raisoni ERP',
   ...props
 }: ImgHTMLAttributes<HTMLImageElement>) {
   return (

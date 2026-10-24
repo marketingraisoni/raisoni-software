@@ -12,7 +12,7 @@ export function SignIn2() {
         <div className='mx-auto flex w-full flex-col justify-center space-y-2 py-8'>
           <div className='mb-4 flex flex-col items-center justify-center gap-2'>
             <Logo width={128} height={128} />
-            <h1 className='text-xl font-medium'>Raisoni Software</h1>
+            <h1 className='text-xl font-medium'>Raisoni ERP</h1>
           </div>
         </div>
         <div className='mx-auto flex w-full flex-col justify-center space-y-2'>
@@ -36,7 +36,7 @@ export function SignIn2() {
           src={DashboardImg}
           width={800}
           height={800}
-          alt='Raisoni Software dashboard'
+          alt='Raisoni ERP dashboard'
         />
       </div>
     </div>

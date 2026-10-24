@@ -1,52 +1,56 @@
-# ==============================================================================
-# Raisoni Software Demo - Server Launch Script
-# Starts the backend REST API & Socket.IO server on the local machine
-# and reports local and Wi-Fi LAN IP endpoints for client PC connections.
-# ==============================================================================
+param (
+    [ValidateSet("development", "staging", "production")]
+    [string]$Environment = "production"
+)
 
 $ErrorActionPreference = "Stop"
-
 $rootDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $rootDir
 
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " Raisoni Software Demo -- Central Server Startup" -ForegroundColor White
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host ""
+$ports = @{
+    development = 3001
+    staging = 3002
+    production = 3000
+}
+$port = $ports[$Environment]
 
-# Verify node exists
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host " Raisoni ERP -- $Environment LAN Server" -ForegroundColor White
+Write-Host "==========================================================" -ForegroundColor Cyan
+
 try {
-    $nodeVer = (node -v).Trim()
+    $null = (node -v).Trim()
 } catch {
-    Write-Error "Node.js not found. Please run ./scripts/setup.ps1 first."
+    Write-Error "Node.js not found. Please run scripts/setup.ps1 first."
     exit 1
 }
 
-# Check .env existence
-$envPath = Join-Path $rootDir ".env"
-if (-not (Test-Path $envPath)) {
-    Write-Warning "Configuration file .env was not found. Copying from .env.example..."
-    Copy-Item (Join-Path $rootDir ".env.example") $envPath
+$environmentFile = Join-Path $rootDir ".env.$Environment"
+$environmentExample = Join-Path $rootDir ".env.$Environment.example"
+if (-not (Test-Path $environmentFile)) {
+    Write-Warning "$environmentFile was not found; creating it from the example. Replace its JWT_SECRET before shared use."
+    Copy-Item -LiteralPath $environmentExample -Destination $environmentFile
 }
 
-# Determine host IPv4 addresses on local network
-Write-Host "Detecting local network interfaces..." -ForegroundColor Yellow
+Write-Host "Environment: $Environment" -ForegroundColor Yellow
+Write-Host "Static port: $port" -ForegroundColor Yellow
+Write-Host "Database: raisoni_software_$Environment" -ForegroundColor Yellow
+
 $localIps = Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias "Wi-Fi*", "Ethernet*", "Local*" -ErrorAction SilentlyContinue |
     Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" }
 
+Write-Host ""
 if ($localIps) {
-    Write-Host ""
-    Write-Host "  Designated Server LAN Addresses for Client PCs:" -ForegroundColor Green
+    Write-Host "Open the following address on any PC connected to this LAN:" -ForegroundColor Green
     foreach ($ip in $localIps) {
-        Write-Host "    -> http://$($ip.IPAddress):3000/api  ($($ip.InterfaceAlias))" -ForegroundColor White
+        Write-Host "  http://$($ip.IPAddress):$port" -ForegroundColor White
     }
 } else {
-    Write-Host "  -> Local Loopback: http://127.0.0.1:3000/api" -ForegroundColor Yellow
+    Write-Host "Local address: http://127.0.0.1:$port" -ForegroundColor Yellow
 }
 
 Write-Host ""
-Write-Host "Starting Node.js Backend Server..." -ForegroundColor Cyan
-Write-Host "Press Ctrl+C to stop the server at any time." -ForegroundColor Gray
-Write-Host ""
-
+Write-Host "Press Ctrl+C to stop the server." -ForegroundColor Gray
+$env:APP_ENV = $Environment
+$env:NODE_ENV = if ($Environment -eq "development") { "development" } else { "production" }
 node backend/server.js

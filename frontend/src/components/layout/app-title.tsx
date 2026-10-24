@@ -14,7 +14,7 @@ export function AppTitle() {
       <SidebarMenuItem>
         <SidebarMenuButton
           size='lg'
-          tooltip='Raisoni Software'
+          tooltip='Raisoni ERP'
           className='gap-2 py-0 border-0 border-transparent hover:border-transparent hover:bg-transparent active:bg-transparent focus:ring-0 focus-visible:ring-0 focus-visible:border-transparent outline-none ring-0'
           asChild
         >
@@ -27,7 +27,7 @@ export function AppTitle() {
               <Logo className='size-6.5 object-contain' />
             </div>
             <div className='grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden'>
-              <span className='truncate font-bold'>Raisoni Software</span>
+              <span className='truncate font-bold'>Raisoni ERP</span>
               <span className='truncate text-xs text-muted-foreground'>Admin Panel</span>
             </div>
           </Link>
@@ -36,4 +36,3 @@ export function AppTitle() {
     </SidebarMenu>
   )
 }
-

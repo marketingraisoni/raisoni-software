@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { config } from "../config/env.js";
 import { ApiError } from "../errors/ApiError.js";
 import { SemiPolishProcess } from "../models/SemiPolishProcess.js";
 import { SemiPolishPlanningImport } from "../models/SemiPolishPlanningImport.js";
@@ -16,12 +16,7 @@ import { broadcastEvent } from "../sockets/socketManager.js";
 import { sendSuccess } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const planningFilesRoot = path.resolve(
-  __dirname,
-  "../../../data/planning-files",
-);
+const planningFilesRoot = path.resolve(config.dataDir, "planning-files");
 const CARAT_TOLERANCE = 0.001;
 
 function roundCarat(value) {
@@ -277,10 +272,7 @@ export const importPlanningWorkbook = asyncHandler(async (req, res) => {
   const processDirectory = path.join(planningFilesRoot, String(process._id));
   const storedFileName = `v${version}-${String(importId)}-${originalFileName}`;
   const absoluteFilePath = path.join(processDirectory, storedFileName);
-  const relativeFilePath = path.relative(
-    path.resolve(__dirname, "../../.."),
-    absoluteFilePath,
-  );
+  const relativeFilePath = path.relative(config.dataDir, absoluteFilePath);
 
   await fs.mkdir(processDirectory, { recursive: true });
   await fs.writeFile(absoluteFilePath, req.body);
@@ -589,11 +581,7 @@ export const downloadPlanningWorkbook = asyncHandler(async (req, res) => {
   ).lean();
   if (!planningImport) throw ApiError.notFound("Planning import not found");
 
-  const projectRoot = path.resolve(__dirname, "../../..");
-  const absoluteFilePath = path.resolve(
-    projectRoot,
-    planningImport.relativeFilePath,
-  );
+  const absoluteFilePath = path.resolve(config.dataDir, planningImport.relativeFilePath);
   if (!absoluteFilePath.startsWith(`${planningFilesRoot}${path.sep}`)) {
     throw ApiError.badRequest("Stored planning file path is invalid.");
   }

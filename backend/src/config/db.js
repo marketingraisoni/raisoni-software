@@ -1,13 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import { config } from './env.js';
 import { logger } from '../utils/logger.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-export const persistentDbDir = path.resolve(__dirname, '../../../data/db');
+export const persistentDbDir = path.resolve(config.dataDir, 'db');
 
 let embeddedMongoServer = null;
 let isUsingEmbedded = false;
@@ -17,12 +14,17 @@ export async function connectDB() {
     return mongoose.connection;
   }
 
+  if (config.useEmbedded) {
+    return connectEmbeddedDatabase();
+  }
+
   const uri = config.mongoUri;
   
   try {
     logger.info(`Attempting connection to MongoDB at: ${sanitizeMongoUri(uri)}`);
     // Connect with a 4s timeout for fast failover to embedded fallback if local service isn't running
     await mongoose.connect(uri, {
+      dbName: config.databaseName,
       serverSelectionTimeoutMS: 4000,
       connectTimeoutMS: 4000
     });
@@ -34,32 +36,35 @@ export async function connectDB() {
     logger.warn(`Could not connect to external MongoDB: ${err.message}`);
 
     if (config.useEmbeddedFallback) {
-      logger.info('Starting embedded MongoDB instance fallback with persistent disk storage...');
-      try {
-        if (!fs.existsSync(persistentDbDir)) {
-          fs.mkdirSync(persistentDbDir, { recursive: true });
-        }
-
-        const { MongoMemoryServer } = await import('mongodb-memory-server');
-        embeddedMongoServer = await MongoMemoryServer.create({
-          instance: {
-            dbName: 'raisoni_software_demo',
-            dbPath: persistentDbDir,
-            storageEngine: 'wiredTiger'
-          }
-        });
-        const embeddedUri = embeddedMongoServer.getUri();
-        await mongoose.connect(embeddedUri);
-        isUsingEmbedded = true;
-        logger.success(`Embedded MongoDB running at: ${sanitizeMongoUri(embeddedUri)} (Persistent disk path: ${persistentDbDir})`);
-        return mongoose.connection;
-      } catch (fallbackErr) {
-        logger.error(`Embedded MongoDB failed to start: ${fallbackErr.message}`);
-        throw fallbackErr;
-      }
+      return connectEmbeddedDatabase();
     } else {
       throw err;
     }
+  }
+}
+
+async function connectEmbeddedDatabase() {
+  logger.info('Starting the bundled MongoDB instance with persistent disk storage...');
+
+  try {
+    fs.mkdirSync(persistentDbDir, { recursive: true });
+
+    const { MongoMemoryServer } = await import('mongodb-memory-server');
+    embeddedMongoServer = await MongoMemoryServer.create({
+      instance: {
+        dbName: config.databaseName,
+        dbPath: persistentDbDir,
+        storageEngine: 'wiredTiger'
+      }
+    });
+    const embeddedUri = embeddedMongoServer.getUri();
+    await mongoose.connect(embeddedUri, { dbName: config.databaseName });
+    isUsingEmbedded = true;
+    logger.success(`Bundled MongoDB running at: ${sanitizeMongoUri(embeddedUri)} (Persistent disk path: ${persistentDbDir})`);
+    return mongoose.connection;
+  } catch (err) {
+    logger.error(`Bundled MongoDB failed to start: ${err.message}`);
+    throw err;
   }
 }
 
@@ -116,7 +121,8 @@ export async function getDatabaseHealth() {
   return {
     status,
     connected: readyState === 1,
-    database: mongoose.connection.name || 'unknown',
+    database: mongoose.connection.name || config.databaseName,
+    environment: config.env,
     host: mongoose.connection.host || 'local',
     port: mongoose.connection.port || 27017,
     isEmbedded: isUsingEmbedded,

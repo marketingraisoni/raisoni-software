@@ -192,7 +192,7 @@ export function UsersActionDialog({
           <DialogDescription className='sr-only'>
             {isEdit
               ? 'Update this account, user type, and status.'
-              : 'Create a user who can sign in to Raisoni Software.'}
+              : 'Create a user who can sign in to Raisoni ERP.'}
           </DialogDescription>
         </DialogHeader>
         <div className='max-h-[65vh] w-[calc(100%+0.75rem)] overflow-y-auto py-1 pe-3'>

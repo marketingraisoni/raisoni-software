@@ -20,8 +20,13 @@ const frontendDistPath = path.resolve(__dirname, '../frontend/dist');
 
 import { User } from './src/models/User.js';
 import { Lot } from './src/models/Lot.js';
-import { seedDatabase, cleanupDummyData } from './scripts/seed.js';
+import { Setting } from './src/models/Setting.js';
+import { seedDatabase } from './scripts/seed.js';
 import { migrateLegacyUserTypes } from './src/services/userMigrationService.js';
+import {
+  startDatabaseBackupScheduler,
+  stopDatabaseBackupScheduler,
+} from './src/services/databaseBackupService.js';
 
 // Route imports
 import healthRoutes from './src/routes/healthRoutes.js';
@@ -78,7 +83,7 @@ app.use('/api/semi-polish', semiPolishRoutes);
 app.use('/api/chats', chatRoutes);
 
 // 5b. Uploads static directory
-const uploadsDir = path.resolve(__dirname, '../data/uploads');
+const uploadsDir = path.resolve(config.dataDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -118,7 +123,10 @@ export async function startServer(port = config.port) {
     // index required by soft deletion and Kapan reuse.
     await Lot.syncIndexes();
     await migrateLegacyUserTypes();
-    await cleanupDummyData();
+    await Setting.updateOne(
+      { key: 'appName', value: 'Raisoni Software Demo' },
+      { $set: { value: 'Raisoni ERP' } }
+    );
 
     // Auto-seed initial accounts if database is empty
     try {
@@ -131,26 +139,40 @@ export async function startServer(port = config.port) {
       logger.warn(`Auto-seeding check skipped: ${seedErr.message}`);
     }
 
-    return new Promise((resolve) => {
-      httpServer.listen(port, config.host, () => {
+    return new Promise((resolve, reject) => {
+      const handleStartupError = (error) => {
+        httpServer.off('listening', handleListening);
+        reject(error);
+      };
+      const handleListening = () => {
+        httpServer.off('error', handleStartupError);
+        startDatabaseBackupScheduler();
         const primaryLanIp = getPrimaryLanIp();
         const lanIps = getLocalIpAddresses();
 
         logger.success('====================================================');
         logger.success(` ${config.appName} Backend API Started`);
-        logger.success(` Local URL:    http://127.0.0.1:${port}/api`);
-        logger.success(` LAN URL:      http://${primaryLanIp}:${port}/api`);
+        logger.success(` Environment:  ${config.env}`);
+        logger.success(` Database:     ${config.databaseName}`);
+        const address = httpServer.address();
+        const actualPort = typeof address === 'object' && address ? address.port : port;
+        logger.success(` Local URL:    http://127.0.0.1:${actualPort}/api`);
+        logger.success(` LAN URL:      http://${primaryLanIp}:${actualPort}/api`);
         logger.success(' Available network interfaces:');
         lanIps.forEach(net => {
-          logger.info(`   - [${net.interface}]: http://${net.address}:${port}/api`);
+          logger.info(`   - [${net.interface}]: http://${net.address}:${actualPort}/api`);
         });
         logger.success('====================================================');
-        resolve({ app, httpServer, port, primaryLanIp });
-      });
+        resolve({ app, httpServer, port: actualPort, primaryLanIp });
+      };
+
+      httpServer.once('error', handleStartupError);
+      httpServer.once('listening', handleListening);
+      httpServer.listen(port, config.host);
     });
   } catch (err) {
     logger.error(`Server startup failed: ${err.message}`);
-    process.exit(1);
+    throw err;
   }
 }
 
@@ -159,6 +181,7 @@ export async function startServer(port = config.port) {
  */
 export async function stopServer() {
   logger.info('Shutting down server gracefully...');
+  await stopDatabaseBackupScheduler();
   return new Promise((resolve) => {
     httpServer.close(async () => {
       await disconnectDB();
@@ -169,8 +192,12 @@ export async function stopServer() {
 }
 
 // Auto-run if executed directly
-if (process.argv[1] && process.argv[1].endsWith('server.js')) {
-  startServer();
+const isDirectExecution = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+
+if (isDirectExecution) {
+  startServer().catch(() => {
+    process.exitCode = 1;
+  });
 }
 
 process.on('SIGINT', async () => {
