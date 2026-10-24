@@ -30,6 +30,10 @@ test('permission catalog includes independently assignable workflow modules', ()
     PERMISSION_ACTION.UPDATE,
     PERMISSION_ACTION.DELETE,
   ]);
+  assert.equal(catalog.has(PERMISSION_MODULE.CUSTOMERS), false);
+  assert.equal(catalog.has(PERMISSION_MODULE.PRODUCTS), false);
+  assert.equal(catalog.has(PERMISSION_MODULE.ORDERS), false);
+  assert.equal(catalog.has(PERMISSION_MODULE.INVENTORY), false);
 });
 
 test('default permissions are generated from module definitions', () => {

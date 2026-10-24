@@ -4,6 +4,9 @@ import { Lot } from '../models/Lot.js';
 import { AssortmentPacket } from '../models/AssortmentPacket.js';
 import { Vendor } from '../models/Vendor.js';
 import { SemiPolishProcess } from '../models/SemiPolishProcess.js';
+import { SemiPolishPlanningImport } from '../models/SemiPolishPlanningImport.js';
+import { SemiPolishPacketPlan } from '../models/SemiPolishPacketPlan.js';
+import { SemiPolishPacketReturn } from '../models/SemiPolishPacketReturn.js';
 import { logAudit } from '../services/auditService.js';
 import { buildSemiPolishExcel } from '../services/semiPolishExcelService.js';
 import { broadcastEvent } from '../sockets/socketManager.js';
@@ -32,6 +35,10 @@ export const createVendor = asyncHandler(async (req, res) => {
   const { name, mobile, address, gstin } = req.body;
   if (!name || !name.trim()) {
     throw ApiError.badRequest('Vendor name is required');
+  }
+
+  if (mobile && mobile.trim() && !/^[0-9]{10,12}$/.test(mobile.trim())) {
+    throw ApiError.badRequest('Mobile number must be between 10 and 12 digits');
   }
 
   const escapedName = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -249,7 +256,29 @@ export const exportSemiPolishRecord = asyncHandler(async (req, res) => {
     throw ApiError.notFound('4P Semi-Polish record not found');
   }
 
-  const workbook = buildSemiPolishExcel(process);
+  let planningImport = null;
+  let packetPlans = [];
+  let packetReturns = [];
+
+  if (process.activePlanningImport) {
+    [planningImport, packetPlans, packetReturns] = await Promise.all([
+      SemiPolishPlanningImport.findById(process.activePlanningImport).lean(),
+      SemiPolishPacketPlan.find({
+        planningImport: process.activePlanningImport,
+      })
+        .sort({ packetNumber: 1 })
+        .lean(),
+      SemiPolishPacketReturn.find({ process: process._id })
+        .sort({ packetNumber: 1 })
+        .lean(),
+    ]);
+  }
+
+  const workbook = buildSemiPolishExcel(process, {
+    planningImport,
+    packetPlans,
+    packetReturns,
+  });
   const safeIssueNo = process.issueNo.replace(/[^A-Z0-9_-]/gi, '-');
   const fileName = `${safeIssueNo}-process-record.xlsx`;
 

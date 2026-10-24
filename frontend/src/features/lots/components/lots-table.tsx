@@ -61,7 +61,7 @@ export function LotsTable({
           filters: [
             {
               columnId: LOT_TABLE_COLUMN.STATUS,
-              title: 'Status',
+              title: 'Lot State',
               options: [...lotStatuses],
             },
           ],

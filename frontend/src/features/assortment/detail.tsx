@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { getApiErrorMessage } from '@/services/auth-service'
 import {
   createLotPacket,
@@ -14,8 +15,9 @@ import {
   updateLotPacket,
 } from '@/services/lots-service'
 import {
-  ArrowLeft,
+  ArrowRight,
   CheckCircle2,
+  FileCheck,
   Gem,
   Loader2,
   LockKeyhole,
@@ -48,6 +50,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { BackButton } from '@/components/back-button'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
 import { NumberStepperInput } from '@/components/number-stepper-input'
@@ -70,10 +73,9 @@ type PacketQueryData = Awaited<ReturnType<typeof getLotPackets>>
 
 type Props = {
   lotId: string
-  onBack: () => void
 }
 
-export function AssortmentDetail({ lotId, onBack }: Props) {
+export function AssortmentDetail({ lotId }: Props) {
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.auth.user)
   const canCreate = hasPermission(
@@ -157,14 +159,7 @@ export function AssortmentDetail({ lotId, onBack }: Props) {
       >
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <div className='flex items-center gap-3'>
-            <Button
-              variant='outline'
-              size='icon'
-              onClick={onBack}
-              aria-label='Back to Packet Creation'
-            >
-              <ArrowLeft />
-            </Button>
+            <BackButton fallback={{ to: '/packets' }} />
             <h1 className='text-xl font-bold tracking-tight'>
               Packet Assortment
             </h1>
@@ -257,10 +252,22 @@ export function AssortmentDetail({ lotId, onBack }: Props) {
                       </div>
                       <div className='flex items-center gap-2'>
                         {packetData.summary.complete && (
-                          <AssortmentExcelButton
-                            lotId={lot.id}
-                            kapanNo={lot.kapanNo}
-                          />
+                          <>
+                            <AssortmentExcelButton
+                              lotId={lot.id}
+                              kapanNo={lot.kapanNo}
+                            />
+                            <Link to='/semi-polish/ready-for-issue'>
+                              <Button
+                                size='sm'
+                                className='cursor-pointer gap-1.5'
+                              >
+                                <FileCheck className='size-3.5' />
+                                Issue In 4P
+                                <ArrowRight className='size-3.5' />
+                              </Button>
+                            </Link>
+                          </>
                         )}
                         <Badge
                           variant={

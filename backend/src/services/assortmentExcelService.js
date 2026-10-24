@@ -190,33 +190,63 @@ function buildWorksheet(lot, packets) {
 </worksheet>`;
 }
 
-const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+function buildContentTypes(sheetCount) {
+  const worksheetOverrides = Array.from(
+    { length: sheetCount },
+    (_, index) =>
+      `  <Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`,
+  ).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+${worksheetOverrides}
   <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
 </Types>`;
+}
 
 const rootRelationships = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>`;
 
-function buildWorkbook(sheetName) {
+function safeSheetName(value, index) {
+  const cleaned = String(value || `Sheet ${index + 1}`)
+    .replace(/[\\/*?:\[\]]/g, ' ')
+    .trim();
+  return (cleaned || `Sheet ${index + 1}`).slice(0, 31);
+}
+
+function buildWorkbook(sheets) {
+  const sheetNodes = sheets
+    .map(
+      (sheet, index) =>
+        `<sheet name="${escapeXml(safeSheetName(sheet.name, index))}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`,
+    )
+    .join('');
+
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="${escapeXml(sheetName)}" sheetId="1" r:id="rId1"/></sheets>
+  <sheets>${sheetNodes}</sheets>
   <calcPr calcId="191029" fullCalcOnLoad="1"/>
 </workbook>`;
 }
 
-const workbookRelationships = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+function buildWorkbookRelationships(sheetCount) {
+  const worksheetRelationships = Array.from(
+    { length: sheetCount },
+    (_, index) =>
+      `  <Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`,
+  ).join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+${worksheetRelationships}
+  <Relationship Id="rId${sheetCount + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
+}
 
 const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -242,7 +272,7 @@ const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <fill><patternFill patternType="solid"><fgColor rgb="FFF2F4F7"/><bgColor indexed="64"/></patternFill></fill>
     <fill><patternFill patternType="solid"><fgColor rgb="FFE2EFDA"/><bgColor indexed="64"/></patternFill></fill>
   </fills>
-  <borders count="4">
+  <borders count="13">
     <border><left/><right/><top/><bottom/><diagonal/></border>
     <border>
       <left style="medium"><color rgb="FF000000"/></left>
@@ -265,11 +295,74 @@ const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
       <bottom style="double"><color rgb="FF000000"/></bottom>
       <diagonal/>
     </border>
+    <border>
+      <left style="thin"><color rgb="FF7A7A7A"/></left>
+      <right style="thin"><color rgb="FF7A7A7A"/></right>
+      <top style="thin"><color rgb="FF7A7A7A"/></top>
+      <bottom style="thin"><color rgb="FF7A7A7A"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="medium"><color rgb="FF262626"/></left>
+      <right style="thin"><color rgb="FF7A7A7A"/></right>
+      <top style="thin"><color rgb="FF7A7A7A"/></top>
+      <bottom style="thin"><color rgb="FF7A7A7A"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="thin"><color rgb="FF7A7A7A"/></left>
+      <right style="medium"><color rgb="FF262626"/></right>
+      <top style="thin"><color rgb="FF7A7A7A"/></top>
+      <bottom style="thin"><color rgb="FF7A7A7A"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="thin"><color rgb="FF7A7A7A"/></left>
+      <right style="thin"><color rgb="FF7A7A7A"/></right>
+      <top style="thin"><color rgb="FF7A7A7A"/></top>
+      <bottom style="medium"><color rgb="FF262626"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="medium"><color rgb="FF262626"/></left>
+      <right style="thin"><color rgb="FF7A7A7A"/></right>
+      <top style="thin"><color rgb="FF7A7A7A"/></top>
+      <bottom style="medium"><color rgb="FF262626"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="thin"><color rgb="FF7A7A7A"/></left>
+      <right style="medium"><color rgb="FF262626"/></right>
+      <top style="thin"><color rgb="FF7A7A7A"/></top>
+      <bottom style="medium"><color rgb="FF262626"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="thin"><color rgb="FF7A7A7A"/></left>
+      <right style="thin"><color rgb="FF7A7A7A"/></right>
+      <top style="medium"><color rgb="FF262626"/></top>
+      <bottom style="thin"><color rgb="FF7A7A7A"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="medium"><color rgb="FF262626"/></left>
+      <right style="thin"><color rgb="FF7A7A7A"/></right>
+      <top style="medium"><color rgb="FF262626"/></top>
+      <bottom style="thin"><color rgb="FF7A7A7A"/></bottom>
+      <diagonal/>
+    </border>
+    <border>
+      <left style="thin"><color rgb="FF7A7A7A"/></left>
+      <right style="medium"><color rgb="FF262626"/></right>
+      <top style="medium"><color rgb="FF262626"/></top>
+      <bottom style="thin"><color rgb="FF7A7A7A"/></bottom>
+      <diagonal/>
+    </border>
   </borders>
   <cellStyleXfs count="1">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
   </cellStyleXfs>
-  <cellXfs count="16">
+  <cellXfs count="27">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
     <xf numFmtId="0" fontId="3" fillId="5" borderId="1" xfId="0" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
@@ -286,21 +379,46 @@ const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <xf numFmtId="1" fontId="4" fillId="0" borderId="1" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
     <xf numFmtId="164" fontId="4" fillId="0" borderId="1" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="right" vertical="center"/></xf>
     <xf numFmtId="164" fontId="4" fillId="0" borderId="1" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="5" fillId="6" borderId="10" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="5" fillId="6" borderId="11" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="5" fillId="6" borderId="12" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="4" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="5" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="6" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="7" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="8" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="9" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="5" fillId="6" borderId="4" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="5" fillId="6" borderId="7" xfId="0" applyAlignment="1" applyNumberFormat="1"><alignment horizontal="center" vertical="center"/></xf>
   </cellXfs>
   <cellStyles count="1">
     <cellStyle name="Normal" xfId="0" builtinId="0"/>
   </cellStyles>
 </styleSheet>`;
 
-export function buildStyledExcel(sheetName, worksheet) {
+export function buildStyledWorkbook(sheets) {
+  if (!Array.isArray(sheets) || sheets.length === 0) {
+    throw new Error('At least one worksheet is required.');
+  }
+
   return createZip([
-    { name: '[Content_Types].xml', content: contentTypes },
+    { name: '[Content_Types].xml', content: buildContentTypes(sheets.length) },
     { name: '_rels/.rels', content: rootRelationships },
-    { name: 'xl/workbook.xml', content: buildWorkbook(sheetName) },
-    { name: 'xl/_rels/workbook.xml.rels', content: workbookRelationships },
+    { name: 'xl/workbook.xml', content: buildWorkbook(sheets) },
+    {
+      name: 'xl/_rels/workbook.xml.rels',
+      content: buildWorkbookRelationships(sheets.length),
+    },
     { name: 'xl/styles.xml', content: styles },
-    { name: 'xl/worksheets/sheet1.xml', content: worksheet },
+    ...sheets.map((sheet, index) => ({
+      name: `xl/worksheets/sheet${index + 1}.xml`,
+      content: sheet.worksheet,
+    })),
   ]);
+}
+
+export function buildStyledExcel(sheetName, worksheet) {
+  return buildStyledWorkbook([{ name: sheetName, worksheet }]);
 }
 
 export function buildAssortmentExcel(lot, packets) {

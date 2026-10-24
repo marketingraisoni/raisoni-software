@@ -3,6 +3,7 @@ import { API_MESSAGES } from '../constants/messages.js';
 import { ApiError } from '../errors/ApiError.js';
 import { Lot } from '../models/Lot.js';
 import { AssortmentPacket } from '../models/AssortmentPacket.js';
+import { SemiPolishProcess } from '../models/SemiPolishProcess.js';
 import { logAudit } from '../services/auditService.js';
 import { broadcastEvent } from '../sockets/socketManager.js';
 import { sendSuccess } from '../utils/apiResponse.js';
@@ -24,6 +25,52 @@ function buildLotQuery({ search = '', status }) {
   return query;
 }
 
+export function buildLotAssortmentProgress(lot, stats) {
+  const assortedPcs = Number(stats?.totalPackets ?? 0);
+  const assortedCarat = Number(Number(stats?.totalCarat ?? 0).toFixed(3));
+  const assortedMilliCarat = Math.round(assortedCarat * 1000);
+  const targetMilliCarat = Math.round(Number(lot.totalCarat) * 1000);
+  const complete =
+    assortedPcs === lot.totalPcs && assortedMilliCarat === targetMilliCarat;
+
+  return {
+    assortmentComplete: complete,
+    assortmentStatus: complete
+      ? 'completed'
+      : assortedPcs === 0 && assortedMilliCarat === 0
+        ? 'pending'
+        : 'in_progress',
+    assortedPcs,
+    assortedCarat,
+  };
+}
+
+export function buildFourPProgress(assortmentComplete, process) {
+  if (!process || process.status === 'cancelled') {
+    return {
+      fourPStatus: 'pending',
+      fourPReady: assortmentComplete,
+      fourPProcessId: null,
+      fourPIssueNo: '',
+      fourPVendorName: '',
+      fourPExpectedPackets: 0,
+      fourPReturnedPackets: 0,
+    };
+  }
+
+  const completed = process.status === 'returned';
+
+  return {
+    fourPStatus: completed ? 'completed' : 'in_process',
+    fourPReady: false,
+    fourPProcessId: String(process._id ?? process.id ?? ''),
+    fourPIssueNo: String(process.issueNo ?? ''),
+    fourPVendorName: String(process.vendorName ?? ''),
+    fourPExpectedPackets: Number(process.plannedPacketCount ?? 0),
+    fourPReturnedPackets: Number(process.returnedPacketCount ?? 0),
+  };
+}
+
 export const getLots = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
   const query = buildLotQuery(req.query);
@@ -38,32 +85,50 @@ export const getLots = asyncHandler(async (req, res) => {
       .lean(),
   ]);
 
-  const packetStats = lots.length
-    ? await AssortmentPacket.aggregate([
-        { $match: { lot: { $in: lots.map((lot) => lot._id) } } },
-        {
-          $group: {
-            _id: '$lot',
-            totalPackets: { $sum: 1 },
-            totalCarat: { $sum: '$carat' },
+  const lotIds = lots.map((lot) => lot._id);
+  const [packetStats, fourPProcesses] = lots.length
+    ? await Promise.all([
+        AssortmentPacket.aggregate([
+          { $match: { lot: { $in: lotIds } } },
+          {
+            $group: {
+              _id: '$lot',
+              totalPackets: { $sum: 1 },
+              totalCarat: { $sum: '$carat' },
+            },
           },
-        },
+        ]),
+        SemiPolishProcess.find({ lot: { $in: lotIds } })
+          .select(
+            'lot issueNo vendorName status plannedPacketCount returnedPacketCount createdAt'
+          )
+          .sort({ createdAt: -1 })
+          .lean(),
       ])
-    : [];
+    : [[], []];
   const packetStatsByLot = new Map(
     packetStats.map((stats) => [String(stats._id), stats])
   );
+  const latestFourPProcessByLot = new Map();
+  fourPProcesses.forEach((process) => {
+    const lotId = String(process.lot);
+    if (!latestFourPProcessByLot.has(lotId)) {
+      latestFourPProcessByLot.set(lotId, process);
+    }
+  });
   const lotsWithAssortmentStatus = lots.map((lot) => {
     const stats = packetStatsByLot.get(String(lot._id));
-    const totalPackets = stats?.totalPackets ?? 0;
-    const totalMilliCarat = Math.round(Number(stats?.totalCarat ?? 0) * 1000);
-    const targetMilliCarat = Math.round(Number(lot.totalCarat) * 1000);
+    const assortmentProgress = buildLotAssortmentProgress(lot, stats);
+    const fourPProcess = latestFourPProcessByLot.get(String(lot._id));
     const { deletedAt, ...rest } = lot;
 
     return {
       ...rest,
-      assortmentComplete:
-        totalPackets === lot.totalPcs && totalMilliCarat === targetMilliCarat,
+      ...assortmentProgress,
+      ...buildFourPProgress(
+        assortmentProgress.assortmentComplete,
+        fourPProcess
+      ),
     };
   });
 

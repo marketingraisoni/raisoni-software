@@ -1,14 +1,15 @@
-import { type ReactNode } from 'react'
+import { Fragment, useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   fetchSemiPolishById,
+  fetchSemiPolishPlanning,
   semiPolishQueryKeys,
 } from '@/services/semi-polish-service'
 import {
-  ArrowLeft,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   CircleDot,
   ClipboardCheck,
   Loader2,
@@ -41,9 +42,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { BackButton } from '@/components/back-button'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
 import { ProcessExcelButton } from './components/process-excel-button'
+import { ProcessPacketPlanningDetails } from './components/process-packet-planning-details'
 import {
   SEMI_POLISH_PROCESS_STATUS,
   type SemiPolishProcess,
@@ -51,7 +54,6 @@ import {
 
 type Props = {
   processId: string
-  onBack: () => void
 }
 
 type OverviewItemProps = {
@@ -70,12 +72,12 @@ type TimelineStepProps = {
 
 const statusDetails = {
   in_process: {
-    label: 'In 4P Process',
+    label: 'In Process',
     className:
       'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   },
   returned: {
-    label: 'Returned',
+    label: 'Completed',
     className:
       'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   },
@@ -217,7 +219,10 @@ function ProcessLifecycle({ process }: { process: SemiPolishProcess }) {
   )
 }
 
-export function SemiPolishDetailPage({ processId, onBack }: Props) {
+export function SemiPolishDetailPage({ processId }: Props) {
+  const [expandedPacketNumber, setExpandedPacketNumber] = useState<
+    number | null
+  >(null)
   const user = useAuthStore((state) => state.auth.user)
   const canUpdate = hasPermission(
     user,
@@ -228,6 +233,40 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
     queryKey: semiPolishQueryKeys.detail(processId),
     queryFn: () => fetchSemiPolishById(processId),
   })
+  const planningQuery = useQuery({
+    queryKey: semiPolishQueryKeys.planning(processId),
+    queryFn: () => fetchSemiPolishPlanning(processId),
+    enabled: Boolean(processQuery.data?.activePlanningImport),
+  })
+  const packetPlansById = useMemo(
+    () =>
+      new Map(
+        (planningQuery.data?.packetPlans ?? [])
+          .filter((plan) => plan.matchedPacket)
+          .map((plan) => [String(plan.matchedPacket), plan])
+      ),
+    [planningQuery.data?.packetPlans]
+  )
+  const packetPlansByNumber = useMemo(
+    () =>
+      new Map(
+        (planningQuery.data?.packetPlans ?? []).map((plan) => [
+          plan.packetNumber,
+          plan,
+        ])
+      ),
+    [planningQuery.data?.packetPlans]
+  )
+  const packetReturnsByNumber = useMemo(
+    () =>
+      new Map(
+        (planningQuery.data?.packetReturns ?? []).map((packetReturn) => [
+          packetReturn.packetNumber,
+          packetReturn,
+        ])
+      ),
+    [planningQuery.data?.packetReturns]
+  )
 
   if (processQuery.isLoading) {
     return (
@@ -257,9 +296,7 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
               The record may be unavailable or the server could not be reached.
             </p>
             <div className='mt-5 flex justify-center gap-2'>
-              <Button variant='outline' onClick={onBack}>
-                <ArrowLeft /> Back
-              </Button>
+              <BackButton fallback={{ to: '/semi-polish' }}>Back</BackButton>
               <Button onClick={() => processQuery.refetch()}>
                 <RefreshCw /> Try again
               </Button>
@@ -281,6 +318,12 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
     getText(receivedBy, 'name') || getText(receivedBy, 'username')
   const isReturned = process.status === SEMI_POLISH_PROCESS_STATUS.RETURNED
 
+  const togglePacket = (packetNumber: number) => {
+    setExpandedPacketNumber((current) =>
+      current === packetNumber ? null : packetNumber
+    )
+  }
+
   return (
     <>
       <AppHeader fixed />
@@ -292,14 +335,7 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
         <div className='flex h-0 min-h-0 w-full flex-1 flex-col gap-3 overflow-y-auto pb-4 lg:overflow-hidden print:h-auto print:overflow-visible print:pb-0'>
           <div className='flex shrink-0 flex-wrap items-start justify-between gap-3 print:hidden'>
             <div className='flex min-w-0 items-start gap-3'>
-              <Button
-                variant='outline'
-                size='icon'
-                aria-label='Back to 4P processes'
-                onClick={onBack}
-              >
-                <ArrowLeft />
-              </Button>
+              <BackButton fallback={{ to: '/semi-polish' }} />
               <div className='min-w-0'>
                 <div className='flex flex-wrap items-center gap-2'>
                   <h1 className='truncate text-xl font-bold tracking-tight'>
@@ -389,7 +425,9 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                         label='Loss percentage'
                         value={
                           process.processLossPercentage != null
-                            ? String(process.processLossPercentage).endsWith('%')
+                            ? String(process.processLossPercentage).endsWith(
+                                '%'
+                              )
                               ? process.processLossPercentage
                               : `${process.processLossPercentage}%`
                             : '0%'
@@ -471,9 +509,14 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                   <CardTitle className='text-center text-base'>
                     Packet handover manifest
                   </CardTitle>
-                  <Badge variant='secondary' className='absolute end-0'>
-                    {(process.packets || []).length} packets
-                  </Badge>
+                  <div className='absolute end-0 flex items-center gap-2'>
+                    {planningQuery.data?.planningImport && (
+                      <Badge variant='outline'>Imported details</Badge>
+                    )}
+                    <Badge variant='secondary'>
+                      {(process.packets || []).length} packets
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className='min-h-0 flex-1 overflow-auto p-0 print:overflow-visible [&_[data-slot=table-container]]:overflow-visible'>
@@ -499,22 +542,77 @@ export function SemiPolishDetailPage({ processId, onBack }: Props) {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      (process.packets || []).map((packet, index) => (
-                        <TableRow
-                          key={packet.packetId || `${packet.name}-${index}`}
-                        >
-                          <TableCell className='ps-5 font-mono text-muted-foreground'>
-                            {packet.srNo}
-                          </TableCell>
-                          <TableCell className='font-semibold'>
-                            {packet.name}
-                          </TableCell>
-                          <TableCell>{packet.grade || 'A'}</TableCell>
-                          <TableCell className='pe-5 text-right font-mono font-semibold'>
-                            {formatCarat(packet.carat)} CT
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      (process.packets || []).map((packet, index) => {
+                        const plan =
+                          packetPlansById.get(String(packet.packetId)) ??
+                          packetPlansByNumber.get(packet.srNo)
+                        const isExpanded = Boolean(
+                          plan && expandedPacketNumber === plan.packetNumber
+                        )
+
+                        return (
+                          <Fragment
+                            key={packet.packetId || `${packet.name}-${index}`}
+                          >
+                            <TableRow
+                              tabIndex={plan ? 0 : undefined}
+                              aria-expanded={plan ? isExpanded : undefined}
+                              className={cn(
+                                plan &&
+                                  'cursor-pointer bg-muted/10 hover:bg-muted/30'
+                              )}
+                              onClick={() =>
+                                plan && togglePacket(plan.packetNumber)
+                              }
+                              onKeyDown={(event) => {
+                                if (
+                                  plan &&
+                                  (event.key === 'Enter' || event.key === ' ')
+                                ) {
+                                  event.preventDefault()
+                                  togglePacket(plan.packetNumber)
+                                }
+                              }}
+                            >
+                              <TableCell className='ps-5 font-mono text-muted-foreground'>
+                                <span className='flex items-center gap-2'>
+                                  {plan && (
+                                    <ChevronDown
+                                      className={cn(
+                                        'size-4 transition-transform duration-300',
+                                        !isExpanded && '-rotate-90'
+                                      )}
+                                    />
+                                  )}
+                                  {packet.srNo}
+                                </span>
+                              </TableCell>
+                              <TableCell className='font-semibold'>
+                                {packet.name}
+                              </TableCell>
+                              <TableCell>{packet.grade || 'A'}</TableCell>
+                              <TableCell className='pe-5 text-right font-mono font-semibold'>
+                                {formatCarat(packet.carat)} CT
+                              </TableCell>
+                            </TableRow>
+                            {plan && isExpanded && (
+                              <TableRow className='border-b-2 bg-muted/10 hover:bg-muted/10'>
+                                <TableCell
+                                  colSpan={4}
+                                  className='p-0 whitespace-normal'
+                                >
+                                  <ProcessPacketPlanningDetails
+                                    plan={plan}
+                                    packetReturn={packetReturnsByNumber.get(
+                                      plan.packetNumber
+                                    )}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Fragment>
+                        )
+                      })
                     )}
                   </TableBody>
                 </Table>

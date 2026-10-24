@@ -35,6 +35,16 @@ export const PERMISSION_MODULES = Object.values(PERMISSION_MODULE) as [
   ...PermissionModule[],
 ]
 
+export const MANAGEABLE_PERMISSION_MODULES = [
+  PERMISSION_MODULE.DASHBOARD,
+  PERMISSION_MODULE.USERS,
+  PERMISSION_MODULE.PERMISSIONS,
+  PERMISSION_MODULE.SETTINGS,
+  PERMISSION_MODULE.LOTS,
+  PERMISSION_MODULE.ASSORTMENT,
+  PERMISSION_MODULE.SEMI_POLISH,
+] as const satisfies readonly PermissionModule[]
+
 export type PermissionGrant = {
   module: PermissionModule
   actions: PermissionAction[]
@@ -166,15 +176,15 @@ export const PERMISSION_MODULE_DEFINITIONS: Record<
 }
 
 export const PERMISSION_CATALOG: PermissionCatalogItem[] =
-  PERMISSION_MODULES.map((module) => {
+  MANAGEABLE_PERMISSION_MODULES.map((module) => {
     const definition = PERMISSION_MODULE_DEFINITIONS[module]
     return { module, label: definition.label, actions: [...definition.actions] }
   })
 
 const fullPermissions = (): PermissionGrant[] =>
-  PERMISSION_CATALOG.map(({ module, actions }) => ({
+  PERMISSION_MODULES.map((module) => ({
     module,
-    actions: [...actions],
+    actions: [...PERMISSION_MODULE_DEFINITIONS[module].actions],
   }))
 
 export function getDefaultPermissions(userType: UserType): PermissionGrant[] {

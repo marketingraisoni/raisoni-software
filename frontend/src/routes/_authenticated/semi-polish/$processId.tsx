@@ -7,12 +7,6 @@ export const Route = createFileRoute('/_authenticated/semi-polish/$processId')({
 
 function SemiPolishDetailRoute() {
   const { processId } = Route.useParams()
-  const navigate = Route.useNavigate()
 
-  return (
-    <SemiPolishDetailPage
-      processId={processId}
-      onBack={() => void navigate({ to: '/semi-polish' })}
-    />
-  )
+  return <SemiPolishDetailPage processId={processId} />
 }

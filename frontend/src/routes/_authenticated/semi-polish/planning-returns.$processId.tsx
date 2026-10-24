@@ -14,12 +14,6 @@ function SemiPolishPlanningReturnRoute() {
   return (
     <SemiPolishPlanningReturnPage
       processId={processId}
-      onBack={() =>
-        void navigate({
-          to: '/semi-polish/$processId',
-          params: { processId },
-        })
-      }
       onFinalized={() =>
         void navigate({
           to: '/semi-polish/$processId',

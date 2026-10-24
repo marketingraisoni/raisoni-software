@@ -236,7 +236,7 @@ export function SemiPolishActivePage() {
             variant='outline'
             className='border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
           >
-            In 4P Process
+            In Process
           </Badge>
         ),
         meta: { className: 'text-center' },
@@ -385,7 +385,7 @@ export function SemiPolishActivePage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel className='cursor-pointer'>
-                Keep Issue
+                Keep
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmCancel}

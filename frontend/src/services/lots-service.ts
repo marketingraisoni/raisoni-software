@@ -2,6 +2,8 @@ import axios from 'axios'
 import { type ApiResponse } from '@/types/api'
 import { apiClient } from '@/lib/api-client'
 import {
+  ASSORTMENT_STATUS,
+  FOUR_P_STATUS,
   type AssortmentPacket,
   type AssortmentSummary,
   type Lot,
@@ -53,6 +55,17 @@ type PacketData = {
 
 function parseLot(value: unknown): Lot {
   const record = value as Record<string, unknown>
+  const assortedPcs = Number(record.assortedPcs || 0)
+  const assortedCarat = Number(record.assortedCarat || 0)
+  const assortmentComplete = record.assortmentComplete === true
+  const assortmentStatus = assortmentComplete
+    ? ASSORTMENT_STATUS.COMPLETED
+    : record.assortmentStatus === ASSORTMENT_STATUS.IN_PROGRESS ||
+        assortedPcs > 0 ||
+        assortedCarat > 0
+      ? ASSORTMENT_STATUS.IN_PROGRESS
+      : ASSORTMENT_STATUS.PENDING
+
   return {
     id: String(record.id || record._id || ''),
     kapanNo: String(record.kapanNo || ''),
@@ -60,7 +73,24 @@ function parseLot(value: unknown): Lot {
     totalPcs: Number(record.totalPcs || 0),
     entryDate: new Date(String(record.entryDate)),
     status: record.status === 'closed' ? 'closed' : 'active',
-    assortmentComplete: record.assortmentComplete === true,
+    assortmentComplete,
+    assortmentStatus,
+    assortedPcs,
+    assortedCarat,
+    fourPStatus:
+      record.fourPStatus === FOUR_P_STATUS.IN_PROCESS
+        ? FOUR_P_STATUS.IN_PROCESS
+        : record.fourPStatus === FOUR_P_STATUS.COMPLETED
+          ? FOUR_P_STATUS.COMPLETED
+          : FOUR_P_STATUS.PENDING,
+    fourPReady: record.fourPReady === true,
+    fourPProcessId: record.fourPProcessId
+      ? String(record.fourPProcessId)
+      : null,
+    fourPIssueNo: String(record.fourPIssueNo || ''),
+    fourPVendorName: String(record.fourPVendorName || ''),
+    fourPExpectedPackets: Number(record.fourPExpectedPackets || 0),
+    fourPReturnedPackets: Number(record.fourPReturnedPackets || 0),
     createdAt: new Date(String(record.createdAt)),
     updatedAt: new Date(String(record.updatedAt)),
   }

@@ -792,12 +792,12 @@ export function Chats() {
               </div>
             </div>
 
-            {/* Teammates List */}
+            {/* Users List */}
             <ScrollArea className='flex-1 p-2'>
               {loadingUsers ? (
                 <div className='flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground'>
                   <Loader2 className='size-5 animate-spin' />
-                  <span className='text-xs'>Loading teammates...</span>
+                  <span className='text-xs'>Loading users...</span>
                 </div>
               ) : filteredUsers.length === 0 ? (
                 <div className='flex flex-col items-center justify-center gap-2 py-12 text-center text-muted-foreground'>
@@ -1522,12 +1522,8 @@ export function Chats() {
                 <MessagesSquare className='size-8 text-primary/70' />
               </div>
               <h2 className='mt-4 text-lg font-semibold text-foreground'>
-                Select a teammate to start chatting
+                Select a user to start chatting
               </h2>
-              <p className='mt-1 max-w-sm text-xs text-muted-foreground'>
-                Connect with any staff or colleague in real time. Share messages,
-                images, and documents up to 20 MB.
-              </p>
               <Button
                 onClick={() => setCreateConversationDialog(true)}
                 className='mt-5'

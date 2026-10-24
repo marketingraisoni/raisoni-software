@@ -7,12 +7,6 @@ export const Route = createFileRoute('/_authenticated/packets/$lotId')({
 
 function PacketDetailPage() {
   const { lotId } = Route.useParams()
-  const navigate = Route.useNavigate()
 
-  return (
-    <AssortmentDetail
-      lotId={lotId}
-      onBack={() => void navigate({ to: '/packets' })}
-    />
-  )
+  return <AssortmentDetail lotId={lotId} />
 }

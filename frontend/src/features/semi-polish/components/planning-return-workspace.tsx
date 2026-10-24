@@ -426,6 +426,47 @@ export function PlanningReturnWorkspace({
       ),
     [data?.packetReturns]
   )
+  const importedLotSummary = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        grade: string
+        packetCount: number
+        roughCarat: number
+        polishedCarat: number
+      }
+    >()
+
+    for (const plan of data?.packetPlans ?? []) {
+      const grade = plan.planningGrade.trim().toUpperCase() || 'UNSPECIFIED'
+      const current = groups.get(grade) ?? {
+        grade,
+        packetCount: 0,
+        roughCarat: 0,
+        polishedCarat: 0,
+      }
+      current.packetCount += 1
+      current.roughCarat += plan.roughCarat
+      current.polishedCarat += plan.plannedPolishedCarat
+      groups.set(grade, current)
+    }
+
+    return [...groups.values()]
+      .map((group) => ({
+        ...group,
+        lot:
+          group.grade === 'UNSPECIFIED'
+            ? process.kapanNo
+            : `${process.kapanNo}-(${group.grade})`,
+        yieldPercentage:
+          group.roughCarat > 0
+            ? (group.polishedCarat / group.roughCarat) * 100
+            : 0,
+      }))
+      .sort((left, right) =>
+        left.grade.localeCompare(right.grade, undefined, { numeric: true })
+      )
+  }, [data?.packetPlans, process.kapanNo])
   const packetTableData = useMemo(() => {
     const returnRevisionByPacket = new Map(
       (data?.packetReturns ?? []).map((item) => [
@@ -882,15 +923,13 @@ export function PlanningReturnWorkspace({
     const hasIssue = returnStatus === PACKET_RETURN_STATUS.ISSUE
     const processIsActive =
       process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
-    const canEdit =
-      processIsActive && !isVerified && !hasIssue
+    const canEdit = processIsActive && !isVerified && !hasIssue
     const summaryCells = [
       {
         label: 'Total pieces',
-        value:
-          isPartial
-            ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
-            : String(plan.plannedPieceCount),
+        value: isPartial
+          ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
+          : String(plan.plannedPieceCount),
       },
       {
         label: 'Issued carat',
@@ -1131,22 +1170,19 @@ export function PlanningReturnWorkspace({
         className={cn(
           'overflow-hidden rounded-lg border border-primary/20 bg-background shadow-sm',
           mode === 'row' && 'm-4',
-          isVerified &&
-            'border-emerald-500/35 bg-emerald-500/[0.025]'
+          isVerified && 'border-emerald-500/35 bg-emerald-500/[0.025]'
         )}
       >
         <div
           className={cn(
             'border-b bg-primary/[0.055] px-4 py-3',
-            isVerified &&
-              'border-emerald-500/25 bg-emerald-500/10'
+            isVerified && 'border-emerald-500/25 bg-emerald-500/10'
           )}
         >
           <p
             className={cn(
               'text-sm font-semibold tracking-wide text-primary/80 uppercase',
-              isVerified &&
-                'text-emerald-700 dark:text-emerald-400'
+              isVerified && 'text-emerald-700 dark:text-emerald-400'
             )}
           >
             {plan.planningLotNo} · {plan.rawPacketLabel}
@@ -1191,10 +1227,9 @@ export function PlanningReturnWorkspace({
             {[
               {
                 key: 'pieces',
-                value:
-                  isPartial
-                    ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
-                    : plan.plannedPieceCount,
+                value: isPartial
+                  ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
+                  : plan.plannedPieceCount,
                 mono: false,
                 warning: false,
               },
@@ -1270,7 +1305,8 @@ export function PlanningReturnWorkspace({
           </div>
         )}
 
-        {((hasIssue && returned) || ((!returned || isPartial) && processIsActive)) && (
+        {((hasIssue && returned) ||
+          ((!returned || isPartial) && processIsActive)) && (
           <div className='border-t p-3'>
             {hasIssue && returned ? (
               <div className='space-y-3'>
@@ -1496,7 +1532,7 @@ export function PlanningReturnWorkspace({
 
   return (
     <>
-      <Card className='flex min-h-[620px] flex-1 flex-col gap-0 overflow-hidden py-0 shadow-none'>
+      <Card className='flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0 shadow-none'>
         <CardHeader className='flex! flex-row flex-wrap items-center justify-between gap-3 border-b px-4 py-3!'>
           {planningImport ? (
             <div className='flex flex-wrap items-center gap-x-5 gap-y-2 text-sm'>
@@ -1619,12 +1655,19 @@ export function PlanningReturnWorkspace({
 
           {!planningImport ? (
             <div
+              role='region'
+              aria-label='Upload planning workbook dropzone'
               className={cn(
-                'flex min-h-56 flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors',
+                'relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors',
                 dragging
                   ? 'border-primary bg-primary/5'
                   : 'border-border bg-muted/10'
               )}
+              onClick={() => {
+                if (processIsActive && !uploadMutation.isPending) {
+                  fileInputRef.current?.click()
+                }
+              }}
               onDragEnter={(event) => {
                 event.preventDefault()
                 setDragging(true)
@@ -1633,30 +1676,35 @@ export function PlanningReturnWorkspace({
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
             >
-              {uploadMutation.isPending ? (
-                <Loader2 className='size-9 animate-spin text-primary' />
-              ) : (
-                <FileSpreadsheet className='size-10 text-primary' />
-              )}
-              <h3 className='mt-4 font-semibold'>
-                Drop the 4P planning workbook here
-              </h3>
-              <p className='mt-1 max-w-lg text-sm text-muted-foreground'>
-                The original Excel and every packet/polished-piece detail will
-                be stored. Importing does not mark any packet as returned.
-              </p>
+              <div className='pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent' />
+              <div className='relative flex size-20 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-xs'>
+                {uploadMutation.isPending ? (
+                  <Loader2 className='size-10 animate-spin text-primary' />
+                ) : (
+                  <UploadCloud className='size-10 text-primary' />
+                )}
+              </div>
+              <div className='max-w-md text-center'>
+                <h3 className='text-xl font-bold tracking-tight sm:text-2xl'>
+                  Upload 4P Planning File
+                </h3>
+                <p className='mt-1 text-sm text-muted-foreground'>
+                  Drag & drop your Excel workbook (.xlsx) here, or click to browse
+                </p>
+              </div>
               <Button
-                className='mt-5'
-                disabled={
-                  uploadMutation.isPending || !processIsActive
-                }
-                onClick={() => fileInputRef.current?.click()}
+                className='mt-1'
+                disabled={uploadMutation.isPending || !processIsActive}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  fileInputRef.current?.click()
+                }}
               >
                 <UploadCloud /> Select Excel file
               </Button>
             </div>
           ) : (
-            <div className='flex min-h-[500px] flex-1 flex-col overflow-hidden rounded-md border bg-background'>
+            <div className='flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border bg-background'>
               <div className='border-b p-3'>
                 <DataTableToolbar
                   table={packetTable}
@@ -1756,8 +1804,7 @@ export function PlanningReturnWorkspace({
                           process.status ===
                           SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
                         const isExpanded =
-                          packetExpansion[plan.packetNumber] ??
-                          !isVerified
+                          packetExpansion[plan.packetNumber] ?? !isVerified
                         const differenceActive =
                           differencePacketNumber === plan.packetNumber
                         const resolutionActive =
@@ -1933,10 +1980,9 @@ export function PlanningReturnWorkspace({
                                           {[
                                             {
                                               key: 'pieces',
-                                              value:
-                                                isPartial
-                                                  ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
-                                                  : plan.plannedPieceCount,
+                                              value: isPartial
+                                                ? `${receivedPieceCount} / ${plan.plannedPieceCount}`
+                                                : plan.plannedPieceCount,
                                               mono: false,
                                               warning: false,
                                             },
@@ -2451,10 +2497,83 @@ export function PlanningReturnWorkspace({
                   tone={data.progress.issuePackets ? 'warn' : 'good'}
                 />
               </div>
+
+              {importedLotSummary.length > 0 && (
+                <div className='space-y-2'>
+                  <div>
+                    <p className='text-sm font-semibold'>
+                      Imported Excel summary
+                    </p>
+                    <p className='text-xs text-muted-foreground'>
+                      Lot and grade totals calculated from the imported packet
+                      rows.
+                    </p>
+                  </div>
+                  <div className='overflow-hidden rounded-lg border'>
+                    <Table className='text-xs'>
+                      <TableHeader>
+                        <TableRow className='bg-muted/50 hover:bg-muted/50'>
+                          <TableHead className='h-9 ps-3'>Lot</TableHead>
+                          <TableHead className='h-9 text-right'>PCS</TableHead>
+                          <TableHead className='h-9 text-right'>
+                            R.WT.
+                          </TableHead>
+                          <TableHead className='h-9 text-right'>
+                            POL CTS.
+                          </TableHead>
+                          <TableHead className='h-9 pe-3 text-right'>
+                            Y%
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importedLotSummary.map((summary) => (
+                          <TableRow key={summary.grade}>
+                            <TableCell className='ps-3 font-medium'>
+                              {summary.lot}
+                            </TableCell>
+                            <TableCell className='text-right font-mono'>
+                              {summary.packetCount}
+                            </TableCell>
+                            <TableCell className='text-right font-mono'>
+                              {formatCarat(summary.roughCarat)}
+                            </TableCell>
+                            <TableCell className='text-right font-mono'>
+                              {formatCarat(summary.polishedCarat)}
+                            </TableCell>
+                            <TableCell className='pe-3 text-right font-mono'>
+                              {summary.yieldPercentage.toFixed(2)}%
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className='bg-muted/40 font-semibold hover:bg-muted/40'>
+                          <TableCell className='ps-3'>Total</TableCell>
+                          <TableCell className='text-right font-mono'>
+                            {planningImport.packetCount}
+                          </TableCell>
+                          <TableCell className='text-right font-mono'>
+                            {formatCarat(planningImport.planningRoughCarat)}
+                          </TableCell>
+                          <TableCell className='text-right font-mono'>
+                            {formatCarat(planningImport.plannedPolishedCarat)}
+                          </TableCell>
+                          <TableCell className='pe-3 text-right font-mono'>
+                            {Number(
+                              planningImport.plannedYieldPercentage ?? 0
+                            ).toFixed(2)}
+                            %
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
             </div>
-            <SheetFooter className='border-t sm:flex-row'>
+            <SheetFooter className='w-full border-t sm:flex-row'>
               <Button
                 variant='outline'
+                className='w-full flex-1'
                 onClick={() =>
                   downloadPlanningWorkbook(
                     processId,
@@ -2466,6 +2585,7 @@ export function PlanningReturnWorkspace({
               </Button>
               {processIsActive && (
                 <Button
+                  className='w-full flex-1'
                   onClick={() => {
                     setPlanningDetailsOpen(false)
                     fileInputRef.current?.click()

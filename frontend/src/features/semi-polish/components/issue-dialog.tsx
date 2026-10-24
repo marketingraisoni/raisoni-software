@@ -19,6 +19,7 @@ import { DatePicker } from '@/components/date-picker'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -40,17 +41,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { optionalMobileSchema } from '@/lib/validators'
 import { type EligibleLot, type Vendor } from '../data/schema'
 import { ProcessSummary } from './process-summary'
 
 const vendorFormSchema = z.object({
   name: z.string().trim().min(1, 'Vendor name is required.').max(100),
-  mobile: z
-    .string()
-    .trim()
-    .max(20, 'Mobile number is too long.')
-    .optional()
-    .or(z.literal('')),
+  mobile: optionalMobileSchema,
 })
 
 const startOfDay = (date: Date) => {
@@ -240,6 +237,10 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
             </div>
             <div className='space-y-1'>
               <DialogTitle>Issue to 4P Semi-Polish</DialogTitle>
+              <DialogDescription className='sr-only'>
+                Select or create a vendor and issue the selected lot for 4P
+                semi-polish processing.
+              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -260,7 +261,7 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
         )}
 
         {isAddingVendor ? (
-          <Form {...vendorForm}>
+          <Form key='vendor-form' {...vendorForm}>
             <form
               id='semi-polish-vendor-form'
               className='space-y-4 rounded-lg border bg-muted/10 p-4'
@@ -300,10 +301,10 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
                       <FormLabel>Vendor name</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder='Diamond Craft Works'
+                          placeholder='Enter Vendor...'
                           autoComplete='organization'
-                          autoFocus
                           {...field}
+                          value={field.value ?? ''}
                         />
                       </FormControl>
                       <FormMessage />
@@ -320,9 +321,10 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
                         <Input
                           type='tel'
                           inputMode='tel'
-                          placeholder='9876543210'
+                          placeholder='Enter mobile number...'
                           autoComplete='tel'
                           {...field}
+                          value={field.value ?? ''}
                         />
                       </FormControl>
                       <FormMessage />
@@ -335,7 +337,7 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
             </form>
           </Form>
         ) : (
-          <Form {...form}>
+          <Form key='issue-form' {...form}>
             <form
               id='semi-polish-issue-form'
               className='space-y-5'

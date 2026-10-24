@@ -1,15 +1,16 @@
 import {
-  PERMISSION_CATALOG,
   PERMISSION_MODULE_DEFINITIONS,
   PERMISSION_MODULES,
 } from "../constants/permissions.js";
 import { USER_TYPE } from "../constants/user.js";
 
 const fullPermissions = () =>
-  PERMISSION_CATALOG.map(({ module, actions }) => ({
-    module,
-    actions: [...actions],
-  }));
+  Object.values(PERMISSION_MODULE_DEFINITIONS).map(
+    ({ module, actions }) => ({
+      module,
+      actions: [...actions],
+    }),
+  );
 
 export function getDefaultPermissions(userType) {
   if ([USER_TYPE.SUPER_ADMIN, USER_TYPE.ADMIN].includes(userType)) {
@@ -30,10 +31,10 @@ export function normalizePermissions(permissions = []) {
 
   for (const permission of permissions) {
     if (!PERMISSION_MODULES.includes(permission.module)) continue;
-    const catalogEntry = PERMISSION_CATALOG.find(
+    const moduleDefinition = Object.values(PERMISSION_MODULE_DEFINITIONS).find(
       ({ module }) => module === permission.module,
     );
-    const allowedActions = new Set(catalogEntry?.actions || []);
+    const allowedActions = new Set(moduleDefinition?.actions || []);
     const actions = [...new Set(permission.actions || [])].filter((action) =>
       allowedActions.has(action),
     );

@@ -149,12 +149,18 @@ export const PERMISSION_MODULES = Object.freeze(
   Object.values(PERMISSION_MODULE),
 );
 
+export const MANAGEABLE_PERMISSION_MODULES = Object.freeze([
+  PERMISSION_MODULE.DASHBOARD,
+  PERMISSION_MODULE.USERS,
+  PERMISSION_MODULE.PERMISSIONS,
+  PERMISSION_MODULE.SETTINGS,
+  PERMISSION_MODULE.LOTS,
+  PERMISSION_MODULE.ASSORTMENT,
+  PERMISSION_MODULE.SEMI_POLISH,
+]);
+
 export const PERMISSION_CATALOG = Object.freeze(
-  Object.values(PERMISSION_MODULE_DEFINITIONS).map(
-    ({ module, label, actions }) => ({
-      module,
-      label,
-      actions,
-    }),
-  ),
+  Object.values(PERMISSION_MODULE_DEFINITIONS)
+    .filter(({ module }) => MANAGEABLE_PERMISSION_MODULES.includes(module))
+    .map(({ module, label, actions }) => ({ module, label, actions })),
 );

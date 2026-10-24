@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
@@ -31,10 +31,15 @@ import { IssueDialog } from './components/issue-dialog'
 import { type EligibleLot } from './data/schema'
 import { SEMI_POLISH_TABLE_COLUMN } from './data/table'
 
-export function SemiPolishReadyForIssuePage() {
+type Props = {
+  initialLotId?: string
+}
+
+export function SemiPolishReadyForIssuePage({ initialLotId }: Props) {
   const [selectedLotForIssue, setSelectedLotForIssue] =
     useState<EligibleLot | null>(null)
   const [isIssueOpen, setIsIssueOpen] = useState(false)
+  const openedInitialLotId = useRef<string | null>(null)
 
   // Table states
   const [pagination, setPagination] = useState<PaginationState>({
@@ -50,7 +55,23 @@ export function SemiPolishReadyForIssuePage() {
     queryKey: semiPolishQueryKeys.eligibleLots(sortParams),
     queryFn: () => fetchEligibleLots(sortParams),
   })
-  const eligibleLots = eligibleLotsQuery.data ?? []
+  const eligibleLots = useMemo(
+    () => eligibleLotsQuery.data ?? [],
+    [eligibleLotsQuery.data]
+  )
+
+  useEffect(() => {
+    if (!initialLotId || openedInitialLotId.current === initialLotId) return
+
+    const selectedLot = eligibleLots.find(
+      (lot) => (lot._id || lot.id) === initialLotId
+    )
+    if (!selectedLot) return
+
+    openedInitialLotId.current = initialLotId
+    setSelectedLotForIssue(selectedLot)
+    setIsIssueOpen(true)
+  }, [eligibleLots, initialLotId])
 
   const handleOpenIssue = (lot: EligibleLot) => {
     setSelectedLotForIssue(lot)
@@ -179,7 +200,7 @@ export function SemiPolishReadyForIssuePage() {
                       className='cursor-pointer gap-1.5'
                     >
                       <Clock className='size-3.5' />
-                      Active in 4P
+                      In Process
                     </Button>
                   </Link>
                   <Button

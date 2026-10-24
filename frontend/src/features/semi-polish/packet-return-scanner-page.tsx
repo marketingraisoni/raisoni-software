@@ -354,7 +354,7 @@ export function SemiPolishPacketReturnScannerPage() {
   return (
     <>
       <AppHeader fixed />
-      <Main fixed fluid className='flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-6'>
+      <Main fixed fluid className='flex min-h-0 flex-1 flex-col gap-4 overflow-hidden'>
         <div className='flex shrink-0 items-center justify-between'>
           <div>
             <div className='flex items-center gap-2'>

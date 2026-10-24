@@ -1,7 +1,6 @@
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
-import { useNavigate } from '@tanstack/react-router'
 import { type Row } from '@tanstack/react-table'
-import { ArrowRight, Layers3, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import {
   PERMISSION_ACTION,
@@ -17,14 +16,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { AssortmentExcelButton } from '@/features/assortment/components/assortment-excel-button'
-import { LOT_STATUS, type Lot } from '../data/schema'
+import { type Lot } from '../data/schema'
 import { useLots } from './lots-provider'
 
 export function DataTableRowActions({ row }: { row: Row<Lot> }) {
   const { setOpen, setCurrentRow } = useLots()
-  const navigate = useNavigate()
   const user = useAuthStore((state) => state.auth.user)
-  const canRead = hasPermission(
+  const canReadAssortment = hasPermission(
     user,
     PERMISSION_MODULE.ASSORTMENT,
     PERMISSION_ACTION.READ
@@ -34,34 +32,18 @@ export function DataTableRowActions({ row }: { row: Row<Lot> }) {
     PERMISSION_MODULE.LOTS,
     PERMISSION_ACTION.DELETE
   )
-  const isActive = row.original.status === LOT_STATUS.ACTIVE
-
-  if (!canRead && !canDelete) return null
+  if (!canReadAssortment && !canDelete) {
+    return null
+  }
 
   return (
     <div className='flex items-center justify-end gap-2'>
-      {canRead && row.original.assortmentComplete && (
+      {canReadAssortment && row.original.assortmentComplete && (
         <AssortmentExcelButton
           lotId={row.original.id}
           kapanNo={row.original.kapanNo}
           compact
         />
-      )}
-      {canRead && (
-        <Button
-          type='button'
-          size='sm'
-          variant={isActive ? 'default' : 'outline'}
-          onClick={() =>
-            void navigate({
-              to: '/packets/$lotId',
-              params: { lotId: row.original.id },
-            })
-          }
-        >
-          <Layers3 /> {isActive ? 'Assort' : 'View'}{' '}
-          <ArrowRight />
-        </Button>
       )}
       {canDelete && (
         <DropdownMenu modal={false}>
