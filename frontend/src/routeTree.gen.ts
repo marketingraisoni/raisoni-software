@@ -43,7 +43,6 @@ import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
-import { Route as AuthenticatedSemiPolishReportRouteImport } from './routes/_authenticated/semi-polish/report'
 import { Route as AuthenticatedSemiPolishReadyForIssueRouteImport } from './routes/_authenticated/semi-polish/ready-for-issue'
 import { Route as AuthenticatedSemiPolishPacketScannerRouteImport } from './routes/_authenticated/semi-polish/packet-scanner'
 import { Route as AuthenticatedSemiPolishPacketReturnRouteImport } from './routes/_authenticated/semi-polish/packet-return'
@@ -233,12 +232,6 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
-const AuthenticatedSemiPolishReportRoute =
-  AuthenticatedSemiPolishReportRouteImport.update({
-    id: '/semi-polish/report',
-    path: '/semi-polish/report',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedSemiPolishReadyForIssueRoute =
   AuthenticatedSemiPolishReadyForIssueRouteImport.update({
     id: '/semi-polish/ready-for-issue',
@@ -310,7 +303,6 @@ export interface FileRoutesByFullPath {
   '/semi-polish/packet-return': typeof AuthenticatedSemiPolishPacketReturnRoute
   '/semi-polish/packet-scanner': typeof AuthenticatedSemiPolishPacketScannerRoute
   '/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
-  '/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -351,7 +343,6 @@ export interface FileRoutesByTo {
   '/semi-polish/packet-return': typeof AuthenticatedSemiPolishPacketReturnRoute
   '/semi-polish/packet-scanner': typeof AuthenticatedSemiPolishPacketScannerRoute
   '/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
-  '/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -397,7 +388,6 @@ export interface FileRoutesById {
   '/_authenticated/semi-polish/packet-return': typeof AuthenticatedSemiPolishPacketReturnRoute
   '/_authenticated/semi-polish/packet-scanner': typeof AuthenticatedSemiPolishPacketScannerRoute
   '/_authenticated/semi-polish/ready-for-issue': typeof AuthenticatedSemiPolishReadyForIssueRoute
-  '/_authenticated/semi-polish/report': typeof AuthenticatedSemiPolishReportRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -441,7 +431,6 @@ export interface FileRouteTypes {
     | '/semi-polish/packet-return'
     | '/semi-polish/packet-scanner'
     | '/semi-polish/ready-for-issue'
-    | '/semi-polish/report'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -482,7 +471,6 @@ export interface FileRouteTypes {
     | '/semi-polish/packet-return'
     | '/semi-polish/packet-scanner'
     | '/semi-polish/ready-for-issue'
-    | '/semi-polish/report'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -527,7 +515,6 @@ export interface FileRouteTypes {
     | '/_authenticated/semi-polish/packet-return'
     | '/_authenticated/semi-polish/packet-scanner'
     | '/_authenticated/semi-polish/ready-for-issue'
-    | '/_authenticated/semi-polish/report'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
@@ -802,13 +789,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
-    '/_authenticated/semi-polish/report': {
-      id: '/_authenticated/semi-polish/report'
-      path: '/semi-polish/report'
-      fullPath: '/semi-polish/report'
-      preLoaderRoute: typeof AuthenticatedSemiPolishReportRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/semi-polish/ready-for-issue': {
       id: '/_authenticated/semi-polish/ready-for-issue'
       path: '/semi-polish/ready-for-issue'
@@ -903,7 +883,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSemiPolishPacketReturnRoute: typeof AuthenticatedSemiPolishPacketReturnRoute
   AuthenticatedSemiPolishPacketScannerRoute: typeof AuthenticatedSemiPolishPacketScannerRoute
   AuthenticatedSemiPolishReadyForIssueRoute: typeof AuthenticatedSemiPolishReadyForIssueRoute
-  AuthenticatedSemiPolishReportRoute: typeof AuthenticatedSemiPolishReportRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
@@ -931,7 +910,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedSemiPolishPacketScannerRoute,
   AuthenticatedSemiPolishReadyForIssueRoute:
     AuthenticatedSemiPolishReadyForIssueRoute,
-  AuthenticatedSemiPolishReportRoute: AuthenticatedSemiPolishReportRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,

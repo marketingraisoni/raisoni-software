@@ -5,7 +5,6 @@ import {
   AppWindow,
   Boxes,
   Clock,
-  Download,
   Gem,
   Layers3,
   LayoutDashboard,
@@ -25,7 +24,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -282,19 +280,7 @@ export function Dashboard() {
       {/* ===== Main ===== */}
       <Main fluid={true} className='flex flex-1 flex-col'>
         <div className='mb-2 flex items-center justify-between space-y-2'>
-          <div>
-            <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
-          </div>
-          <div className='flex items-center space-x-2'>
-            <Button
-              variant='outline'
-              onClick={() => window.print()}
-              className='gap-1.5'
-            >
-              <Download className='h-4 w-4' />
-              Download Report
-            </Button>
-          </div>
+          <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
         </div>
 
         <Tabs

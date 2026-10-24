@@ -4,10 +4,8 @@ import { Link } from '@tanstack/react-router'
 import {
   ArrowUpRight,
   CheckCircle2,
-  Download,
   Gem,
   Layers,
-  RefreshCw,
   Scale,
   Search,
 } from 'lucide-react'
@@ -27,7 +25,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { toast } from 'sonner'
 import { formatCarat } from '@/lib/format-carat'
 import { formatDate } from '@/lib/format-date'
 import { cn } from '@/lib/utils'
@@ -218,11 +215,7 @@ const CustomShapeBar = (props: {
 export function SemiPolishReport() {
   const [search, setSearch] = useState('')
 
-  const {
-    data: listData,
-    isFetching,
-    refetch,
-  } = useQuery({
+  const { data: listData } = useQuery({
     queryKey: semiPolishQueryKeys.list(REPORT_QUERY),
     queryFn: () => fetchSemiPolishList(REPORT_QUERY),
   })
@@ -497,92 +490,17 @@ export function SemiPolishReport() {
     })
   }, [allProcesses, search])
 
-  const handleExportCSV = () => {
-    if (!allProcesses.length) {
-      toast.error('No records available to export')
-      return
-    }
-
-    const headers = [
-      'Kapan No',
-      'Issue No',
-      'Vendor',
-      'Issue Date',
-      'Issued Carat',
-      'Issued Pkt',
-      'Returned Carat',
-      'Returned Pcs',
-      'Loss Carat',
-      'Loss %',
-      'Status',
-    ]
-
-    const rows = filteredTableRecords.map((p) => [
-      `"${p.kapanNo || ''}"`,
-      `"${p.issueNo || ''}"`,
-      `"${p.vendorName || ''}"`,
-      `"${formatDate(p.issueDate)}"`,
-      p.issuedCarat ?? '',
-      p.issuedPieces ?? '',
-      p.returnedCarat ?? '',
-      p.returnedPieces ?? '',
-      p.processLossCarat ?? '',
-      p.processLossPercentage != null
-        ? `"${p.processLossPercentage}%"`
-        : '',
-      `"${p.status || ''}"`,
-    ])
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n')
-
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
-    link.setAttribute(
-      'download',
-      `4p_semi_polish_report_${new Date().toISOString().slice(0, 10)}.csv`
-    )
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    toast.success('Report exported successfully')
-  }
 
   return (
     <div className='space-y-4'>
       <Tabs defaultValue='overview' className='space-y-4'>
-        {/* Sub-tabs header and actions */}
+        {/* Sub-tabs header */}
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <TabsList>
             <TabsTrigger value='overview'>Overview</TabsTrigger>
             <TabsTrigger value='analytics'>Analytics</TabsTrigger>
             <TabsTrigger value='records'>Detailed Records</TabsTrigger>
           </TabsList>
-
-          <div className='flex items-center gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={handleExportCSV}
-              className='gap-1.5'
-            >
-              <Download className='h-4 w-4' />
-              Export CSV
-            </Button>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-8 w-8'
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              <RefreshCw
-                className={cn('h-4 w-4', isFetching && 'animate-spin')}
-              />
-            </Button>
-          </div>
         </div>
 
         {/* 1. OVERVIEW SUB-TAB */}
