@@ -96,7 +96,7 @@ function SidebarMenuCollapsible({
   return (
     <Collapsible
       asChild
-      defaultOpen={checkIsActive(href, item, true)}
+      defaultOpen={item.defaultOpen || checkIsActive(href, item, true)}
       className='group/collapsible'
     >
       <SidebarMenuItem>

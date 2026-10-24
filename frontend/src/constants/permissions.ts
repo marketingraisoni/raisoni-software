@@ -26,6 +26,7 @@ export const PERMISSION_MODULE = {
   LOTS: 'lots',
   ASSORTMENT: 'assortment',
   SEMI_POLISH: 'semi_polish',
+  CHAT: 'chat',
 } as const
 
 export type PermissionModule =
@@ -43,6 +44,7 @@ export const MANAGEABLE_PERMISSION_MODULES = [
   PERMISSION_MODULE.LOTS,
   PERMISSION_MODULE.ASSORTMENT,
   PERMISSION_MODULE.SEMI_POLISH,
+  PERMISSION_MODULE.CHAT,
 ] as const satisfies readonly PermissionModule[]
 
 export type PermissionGrant = {
@@ -170,6 +172,15 @@ export const PERMISSION_MODULE_DEFINITIONS: Record<
         PERMISSION_ACTION.CREATE,
         PERMISSION_ACTION.UPDATE,
       ],
+      staff: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
+    },
+  },
+  [PERMISSION_MODULE.CHAT]: {
+    module: PERMISSION_MODULE.CHAT,
+    label: 'Chat',
+    actions: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
+    defaults: {
+      manager: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
       staff: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
     },
   },

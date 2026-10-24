@@ -11,9 +11,12 @@ export const USER_TABLE_COLUMN = {
 export const callTypes = new Map<UserStatus, string>([
   [
     USER_STATUS.ACTIVE,
-    'bg-teal-100/30 text-teal-900 dark:text-teal-200 border-teal-200',
+    'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 dark:border-emerald-500/20',
   ],
-  [USER_STATUS.INACTIVE, 'bg-neutral-300/40 border-neutral-300'],
+  [
+    USER_STATUS.INACTIVE,
+    'border-muted-foreground/30 bg-muted/60 text-muted-foreground dark:border-muted-foreground/20',
+  ],
 ])
 
 export const userTypes = [

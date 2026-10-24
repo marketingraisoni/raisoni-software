@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getApiErrorMessage } from '@/services/auth-service'
 import {
@@ -39,6 +39,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
+import { Separator } from '@/components/ui/separator'
 
 export function Permissions() {
   const queryClient = useQueryClient()
@@ -191,25 +192,27 @@ export function Permissions() {
                     No users found.
                   </div>
                 ) : (
-                  manageableUsers.map((user) => (
-                    <button
-                      key={user.id}
-                      type='button'
-                      onClick={() => setSelectedUserId(user.id)}
-                      className={`mb-1 w-full rounded-md px-3 py-2 text-start transition-colors ${
-                        activeUserId === user.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-muted'
-                      }`}
-                    >
-                      <span className='block truncate text-sm font-medium'>
-                        {user.name}
-                      </span>
-                      <span className='block truncate text-xs opacity-75'>
-                        {user.username} ·{' '}
-                        {user.userTypeLabel || USER_TYPE_LABEL[user.userType]}
-                      </span>
-                    </button>
+                  manageableUsers.map((user, index) => (
+                    <Fragment key={user.id}>
+                      {index > 0 && <Separator className='my-1 opacity-50' />}
+                      <button
+                        type='button'
+                        onClick={() => setSelectedUserId(user.id)}
+                        className={`w-full rounded-md px-3 py-2 text-start transition-colors ${
+                          activeUserId === user.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'hover:bg-muted'
+                        }`}
+                      >
+                        <span className='block truncate text-sm font-medium'>
+                          {user.name}
+                        </span>
+                        <span className='block truncate text-xs opacity-75'>
+                          {user.username} ·{' '}
+                          {user.userTypeLabel || USER_TYPE_LABEL[user.userType]}
+                        </span>
+                      </button>
+                    </Fragment>
                   ))
                 )}
               </div>
@@ -237,15 +240,17 @@ export function Permissions() {
                 </div>
               ) : (
                 <>
-                  <div className='flex items-center justify-between border-b px-6 py-4'>
+                  <div className='flex items-center justify-between border-b p-4'>
                     <div className='flex items-center gap-3'>
                       <div className='rounded-md bg-primary/10 p-2 text-primary'>
                         <ShieldCheck className='size-5' />
                       </div>
-                      <div>
+                      <div className='flex items-center gap-2'>
                         <h2 className='font-semibold'>{selectedUser.name}</h2>
-                        <p className='text-sm text-muted-foreground'>
-                          {selectedUser.email} ·{' '}
+                        <Separator orientation='vertical' className='h-4' />
+                        <p className='text-sm text-muted-foreground flex items-center gap-2'>
+                          {selectedUser.email}
+                          <Separator orientation='vertical' className='h-4' />
                           {selectedUser.userTypeLabel ||
                             USER_TYPE_LABEL[selectedUser.userType]}
                         </p>
@@ -321,7 +326,7 @@ export function Permissions() {
                   </div>
 
                   {canUpdate && !isSuperAdmin && (
-                    <div className='flex justify-end gap-2 border-t px-6 py-4'>
+                    <div className='flex justify-end gap-2 border-t px-6 p-2.5'>
                       <Button
                         variant='outline'
                         onClick={() =>

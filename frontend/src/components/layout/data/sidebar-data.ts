@@ -42,6 +42,7 @@ export const sidebarData: SidebarData = {
           title: 'Chat',
           url: '/chats',
           icon: MessagesSquare,
+          permission: { module: PERMISSION_MODULE.CHAT },
         },
       ],
     },
@@ -110,6 +111,7 @@ export const sidebarData: SidebarData = {
         {
           title: '4P Semi-Polish',
           icon: AppWindow,
+          defaultOpen: true,
           items: [
             {
               title: 'Running 4P Process',

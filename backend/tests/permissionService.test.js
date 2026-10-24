@@ -30,6 +30,10 @@ test('permission catalog includes independently assignable workflow modules', ()
     PERMISSION_ACTION.UPDATE,
     PERMISSION_ACTION.DELETE,
   ]);
+  assert.deepEqual(catalog.get(PERMISSION_MODULE.CHAT), [
+    PERMISSION_ACTION.READ,
+    PERMISSION_ACTION.CREATE,
+  ]);
   assert.equal(catalog.has(PERMISSION_MODULE.CUSTOMERS), false);
   assert.equal(catalog.has(PERMISSION_MODULE.PRODUCTS), false);
   assert.equal(catalog.has(PERMISSION_MODULE.ORDERS), false);
@@ -53,6 +57,10 @@ test('default permissions are generated from module definitions', () => {
     PERMISSION_ACTION.CREATE,
   ]);
   assert.deepEqual(staff.get(PERMISSION_MODULE.SEMI_POLISH), [
+    PERMISSION_ACTION.READ,
+    PERMISSION_ACTION.CREATE,
+  ]);
+  assert.deepEqual(staff.get(PERMISSION_MODULE.CHAT), [
     PERMISSION_ACTION.READ,
     PERMISSION_ACTION.CREATE,
   ]);

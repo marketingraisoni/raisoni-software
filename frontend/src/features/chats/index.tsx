@@ -64,6 +64,11 @@ import {
 } from '@/services/chat-service'
 import { NewChat } from './components/new-chat'
 import {
+  PERMISSION_ACTION,
+  PERMISSION_MODULE,
+  hasPermission,
+} from '@/constants/permissions'
+import {
   type ChatUser,
   type ChatMessage,
   type ChatAttachment,
@@ -110,6 +115,11 @@ function getFileIcon(mimeType: string, filename: string) {
 export function Chats() {
   const currentUser = useAuthStore((state) => state.auth.user)
   const { socket, isUserOnline, refreshUnreadChatCount } = useSocket()
+  const canSendMessages = hasPermission(
+    currentUser,
+    PERMISSION_MODULE.CHAT,
+    PERMISSION_ACTION.CREATE
+  )
 
   const [search, setSearch] = useState('')
   const [users, setUsers] = useState<ChatUser[]>([])
@@ -767,15 +777,17 @@ export function Chats() {
                   >
                     <RefreshCw className='size-4 text-muted-foreground' />
                   </Button>
-                  <Button
-                    size='icon'
-                    variant='outline'
-                    onClick={() => setCreateConversationDialog(true)}
-                    title='New conversation'
-                    className='size-8 rounded-lg'
-                  >
-                    <UserPlus className='size-4 text-primary' />
-                  </Button>
+                  {canSendMessages && (
+                    <Button
+                      size='icon'
+                      variant='outline'
+                      onClick={() => setCreateConversationDialog(true)}
+                      title='New conversation'
+                      className='size-8 rounded-lg'
+                    >
+                      <UserPlus className='size-4 text-primary' />
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -1440,80 +1452,86 @@ export function Chats() {
               />
 
               {/* Message Input Footer with Shadcn elements */}
-              <form
-                onSubmit={handleSendMessage}
-                className='flex flex-none items-center gap-2 border-t bg-card p-3'
-              >
-                <TooltipProvider>
-                  {/* Image attachment button */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type='button'
-                        size='icon'
-                        variant='ghost'
-                        className='size-9 rounded-lg text-muted-foreground hover:text-foreground'
-                        onClick={() => imageInputRef.current?.click()}
-                        disabled={isUploading || pendingAttachments.length >= 10}
-                      >
-                        <ImageIcon className='size-4' />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side='top'>
-                      <span>Attach images (up to 10)</span>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* General file attachment button */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type='button'
-                        size='icon'
-                        variant='ghost'
-                        className='size-9 rounded-lg text-muted-foreground hover:text-foreground'
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading || pendingAttachments.length >= 10}
-                      >
-                        <Paperclip className='size-4' />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side='top'>
-                      <span>Attach files (up to 10, max 20 MB each)</span>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                {/* Always-focused message Input */}
-                <div className='relative flex-1'>
-                  <Input
-                    ref={inputRef}
-                    type='text'
-                    placeholder='Type a message'
-                    value={inputText}
-                    onChange={handleInputChange}
-                    className='h-10 text-sm'
-                    autoFocus
-                  />
-                </div>
-
-                <Button
-                  type='submit'
-                  size='icon'
-                  disabled={
-                    (!inputText.trim() && pendingAttachments.length === 0) ||
-                    isSending ||
-                    isUploading
-                  }
-                  className='size-10 shrink-0'
+              {canSendMessages ? (
+                <form
+                  onSubmit={handleSendMessage}
+                  className='flex flex-none items-center gap-2 border-t bg-card p-3'
                 >
-                  {isSending ? (
-                    <Loader2 className='size-4 animate-spin' />
-                  ) : (
-                    <Send className='size-4' />
-                  )}
-                </Button>
-              </form>
+                  <TooltipProvider>
+                    {/* Image attachment button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type='button'
+                          size='icon'
+                          variant='ghost'
+                          className='size-9 rounded-lg text-muted-foreground hover:text-foreground'
+                          onClick={() => imageInputRef.current?.click()}
+                          disabled={isUploading || pendingAttachments.length >= 10}
+                        >
+                          <ImageIcon className='size-4' />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side='top'>
+                        <span>Attach images (up to 10)</span>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* General file attachment button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type='button'
+                          size='icon'
+                          variant='ghost'
+                          className='size-9 rounded-lg text-muted-foreground hover:text-foreground'
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading || pendingAttachments.length >= 10}
+                        >
+                          <Paperclip className='size-4' />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side='top'>
+                        <span>Attach files (up to 10, max 20 MB each)</span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {/* Always-focused message Input */}
+                  <div className='relative flex-1'>
+                    <Input
+                      ref={inputRef}
+                      type='text'
+                      placeholder='Type a message'
+                      value={inputText}
+                      onChange={handleInputChange}
+                      className='h-10 text-sm'
+                      autoFocus
+                    />
+                  </div>
+
+                  <Button
+                    type='submit'
+                    size='icon'
+                    disabled={
+                      (!inputText.trim() && pendingAttachments.length === 0) ||
+                      isSending ||
+                      isUploading
+                    }
+                    className='size-10 shrink-0'
+                  >
+                    {isSending ? (
+                      <Loader2 className='size-4 animate-spin' />
+                    ) : (
+                      <Send className='size-4' />
+                    )}
+                  </Button>
+                </form>
+              ) : (
+                <div className='flex items-center justify-center border-t bg-muted/30 p-3 text-xs text-muted-foreground'>
+                  You have read-only access to this conversation.
+                </div>
+              )}
             </div>
           ) : (
             /* ================= EMPTY STATE ================= */
@@ -1524,13 +1542,15 @@ export function Chats() {
               <h2 className='mt-4 text-lg font-semibold text-foreground'>
                 Select a user to start chatting
               </h2>
-              <Button
-                onClick={() => setCreateConversationDialog(true)}
-                className='mt-5'
-              >
-                <UserPlus className='mr-2 size-4' />
-                New conversation
-              </Button>
+              {canSendMessages && (
+                <Button
+                  onClick={() => setCreateConversationDialog(true)}
+                  className='mt-5'
+                >
+                  <UserPlus className='mr-2 size-4' />
+                  New conversation
+                </Button>
+              )}
             </div>
           )}
         </section>

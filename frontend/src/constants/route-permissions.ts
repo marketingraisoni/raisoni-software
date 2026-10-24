@@ -82,6 +82,16 @@ export const AUTHENTICATED_ROUTE_PERMISSIONS: readonly RoutePermissionRule[] = [
     action: PERMISSION_ACTION.READ,
   },
   {
+    path: '/chats',
+    module: PERMISSION_MODULE.CHAT,
+    action: PERMISSION_ACTION.READ,
+  },
+  {
+    path: '/chat',
+    module: PERMISSION_MODULE.CHAT,
+    action: PERMISSION_ACTION.READ,
+  },
+  {
     path: '/',
     module: PERMISSION_MODULE.DASHBOARD,
     action: PERMISSION_ACTION.READ,

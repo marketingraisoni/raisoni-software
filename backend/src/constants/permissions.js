@@ -121,6 +121,24 @@ const moduleDefinitions = {
       staff: [PERMISSION_ACTION.READ, PERMISSION_ACTION.CREATE],
     },
   },
+  CHAT: {
+    module: "chat",
+    label: "Chat",
+    actions: Object.freeze([
+      PERMISSION_ACTION.READ,
+      PERMISSION_ACTION.CREATE,
+    ]),
+    defaults: Object.freeze({
+      manager: Object.freeze([
+        PERMISSION_ACTION.READ,
+        PERMISSION_ACTION.CREATE,
+      ]),
+      staff: Object.freeze([
+        PERMISSION_ACTION.READ,
+        PERMISSION_ACTION.CREATE,
+      ]),
+    }),
+  },
 };
 
 export const PERMISSION_MODULE_DEFINITIONS = Object.freeze(
@@ -157,6 +175,7 @@ export const MANAGEABLE_PERMISSION_MODULES = Object.freeze([
   PERMISSION_MODULE.LOTS,
   PERMISSION_MODULE.ASSORTMENT,
   PERMISSION_MODULE.SEMI_POLISH,
+  PERMISSION_MODULE.CHAT,
 ]);
 
 export const PERMISSION_CATALOG = Object.freeze(

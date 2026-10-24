@@ -6,7 +6,7 @@ import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
 import { USER_TYPE_LABEL } from '@/constants/user-types'
 import { callTypes, userTypes } from '../data/data'
-import { type User } from '../data/schema'
+import { USER_STATUS, type User } from '../data/schema'
 import { DataTableRowActions } from './data-table-row-actions'
 
 export const usersColumns: ColumnDef<User>[] = [
@@ -60,14 +60,28 @@ export const usersColumns: ColumnDef<User>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='Status' />
     ),
-    cell: ({ row }) => (
-      <Badge
-        variant='outline'
-        className={cn('capitalize', callTypes.get(row.original.status))}
-      >
-        {row.original.status}
-      </Badge>
-    ),
+    cell: ({ row }) => {
+      const status = row.original.status
+      return (
+        <Badge
+          variant='outline'
+          className={cn(
+            'inline-flex items-center gap-1.5 font-medium capitalize',
+            callTypes.get(status)
+          )}
+        >
+          <span
+            className={cn(
+              'size-1.5 rounded-full',
+              status === USER_STATUS.ACTIVE
+                ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
+                : 'bg-muted-foreground'
+            )}
+          />
+          {status}
+        </Badge>
+      )
+    },
   },
   {
     accessorKey: 'userType',
