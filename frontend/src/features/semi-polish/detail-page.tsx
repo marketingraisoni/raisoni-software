@@ -206,7 +206,7 @@ function ProcessLifecycle({ process }: { process: SemiPolishProcess }) {
               }
               description={
                 isReturned && process.returnDate
-                  ? `${formatDate(process.returnDate)} · ${process.returnedPieces ?? 0} PCs · ${formatCarat(process.returnedCarat ?? 0)} CT received.`
+                  ? `${formatDate(process.returnDate)} · ${process.returnedPieces ?? 0} pcs · ${formatCarat(process.returnedCarat ?? 0)} CT received.`
                   : 'Pending receipt from the vendor.'
               }
               state={isReturned ? 'complete' : 'pending'}
@@ -400,8 +400,8 @@ export function SemiPolishDetailPage({ processId }: Props) {
                   <OverviewItem label='Lot / Kapan' value={process.kapanNo} />
                   <OverviewItem label='4P Vendor' value={process.vendorName} />
                   <OverviewItem
-                    label='Issued pieces'
-                    value={`${process.issuedPieces} PCs`}
+                    label='Issued packets'
+                    value={`${process.issuedPieces} Pkt`}
                   />
                   <OverviewItem
                     label='Issued weight'
@@ -411,7 +411,7 @@ export function SemiPolishDetailPage({ processId }: Props) {
                     <>
                       <OverviewItem
                         label='Returned pieces'
-                        value={`${process.returnedPieces ?? 0} PCs`}
+                        value={`${process.returnedPieces ?? 0} pcs`}
                       />
                       <OverviewItem
                         label='Returned weight'
@@ -619,7 +619,7 @@ export function SemiPolishDetailPage({ processId }: Props) {
               </CardContent>
               <CardFooter className='sticky bottom-0 z-10 mt-auto flex items-center justify-between border-t bg-muted/80 px-5 py-2.5! backdrop-blur-xs print:static print:bg-transparent'>
                 <span className='text-sm font-semibold'>
-                  Total issued · {process.issuedPieces} PCs
+                  Total issued · {process.issuedPieces} Pkt
                 </span>
                 <span className='font-mono text-sm font-bold text-primary'>
                   {formatCarat(process.issuedCarat)} CT

@@ -66,12 +66,25 @@ export interface DashboardAnalytics {
   devices: { name: string; value: number }[]
 }
 
+export interface AssortmentAnalytics {
+  gradeDistribution: { name: string; value: number; count?: number }[]
+  sizeBrackets: { range: string; count: number; carats: number }[]
+  scatterData: { x: number; y: number; z: number; name: string; grade: string }[]
+  lotAssortmentComparison: {
+    kapan: string
+    roughCarat: number
+    packetCarat: number
+    conversionPct: number
+  }[]
+}
+
 export interface DashboardData {
   metrics: DashboardMetrics
   overviewChart: OverviewChartPoint[]
   recentSales: RecentSaleItem[]
   recentLots?: RecentSaleItem[]
   analytics: DashboardAnalytics
+  assortmentAnalytics?: AssortmentAnalytics
   recentUsers: unknown[]
   recentActivity: unknown[]
   serverInfo: {

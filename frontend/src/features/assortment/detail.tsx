@@ -206,7 +206,7 @@ export function AssortmentDetail({ lotId }: Props) {
                   }
                 />
                 <SummaryCard
-                  label='Remaining Pieces'
+                  label='Remaining Packets'
                   value={String(packetData.summary.remainingPackets)}
                 />
                 <SummaryCard
@@ -275,7 +275,7 @@ export function AssortmentDetail({ lotId }: Props) {
                           }
                         >
                           {primaryProgress.createdPackets} /{' '}
-                          {primaryProgress.targetPcs} PCs
+                          {primaryProgress.targetPcs} Pkt
                         </Badge>
                       </div>
                     </div>

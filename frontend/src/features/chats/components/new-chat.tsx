@@ -14,7 +14,6 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { getDisplayNameInitials } from '@/lib/utils'
 import { type ChatUser } from '../data/chat-types'
 

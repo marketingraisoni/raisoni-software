@@ -92,10 +92,10 @@ export function AssortmentLots({ onAssort }: Props) {
       {
         accessorKey: 'totalPcs',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title='Total Pieces' />
+          <DataTableColumnHeader column={column} title='Total Pkt' />
         ),
         cell: ({ row }) => (
-          <span>{row.original.totalPcs.toLocaleString()} PCs</span>
+          <span>{row.original.totalPcs.toLocaleString()} Pkt</span>
         ),
         enableSorting: false,
       },

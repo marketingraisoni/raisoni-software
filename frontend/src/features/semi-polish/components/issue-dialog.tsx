@@ -250,7 +250,7 @@ export function IssueDialog({ lot, open, onOpenChange }: Props) {
             title='Assorted lot summary'
             items={[
               { label: 'Lot No', value: lot.kapanNo },
-              { label: 'Total Pieces', value: `${lot.totalPcs} PCs` },
+              { label: 'Total Pkt', value: `${lot.totalPcs} Pkt` },
               {
                 label: 'Total Carat',
                 value: `${formatCarat(lot.totalCarat)} CT`,

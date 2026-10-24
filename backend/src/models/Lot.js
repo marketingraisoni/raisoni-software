@@ -18,11 +18,11 @@ const lotSchema = new mongoose.Schema(
     },
     totalPcs: {
       type: Number,
-      required: [true, 'Total Pieces is required'],
-      min: [1, 'Total Pieces must be at least 1'],
+      required: [true, 'Total Pkt is required'],
+      min: [1, 'Total Pkt must be at least 1'],
       validate: {
         validator: Number.isInteger,
-        message: 'Total Pieces must be a whole number'
+        message: 'Total Pkt must be a whole number'
       }
     },
     entryDate: {

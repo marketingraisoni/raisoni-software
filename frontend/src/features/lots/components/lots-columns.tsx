@@ -54,7 +54,7 @@ export const lotsColumns: ColumnDef<Lot>[] = [
   {
     accessorKey: 'totalPcs',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Total PCs' />
+      <DataTableColumnHeader column={column} title='Total Pkt' />
     ),
     cell: ({ row }) => <span>{row.original.totalPcs.toLocaleString()}</span>,
     enableSorting: false,

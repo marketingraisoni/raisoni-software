@@ -197,7 +197,7 @@ export function ReturnDialog({ process, open, onOpenChange }: Props) {
               },
               {
                 label: 'Issued Material',
-                value: `${formatCarat(process.issuedCarat)} CT · ${process.issuedPieces} PCs`,
+                value: `${formatCarat(process.issuedCarat)} CT · ${process.issuedPieces} Pkt`,
                 accent: true,
               },
             ]}

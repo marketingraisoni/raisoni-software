@@ -123,9 +123,9 @@ export function SemiPolishReadyForIssuePage({ initialLotId }: Props) {
       {
         accessorKey: 'totalPcs',
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title='Assorted Pieces' />
+          <DataTableColumnHeader column={column} title='Assorted Pkt' />
         ),
-        cell: ({ row }) => <span>{row.original.totalPcs} pcs</span>,
+        cell: ({ row }) => <span>{row.original.totalPcs} Pkt</span>,
         enableSorting: false,
       },
       {

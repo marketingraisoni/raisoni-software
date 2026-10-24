@@ -34,7 +34,7 @@ const formSchema = z.object({
     .length(2, 'Kapan No must contain exactly 2 letters.')
     .regex(/^[A-Z]{2}$/, 'Only letters from A to Z are allowed.'),
   totalCarat: z.number({ error: 'Total Carat is required.' }).positive('Total Carat must be greater than 0.').multipleOf(0.001, 'Use up to 3 decimal places.'),
-  totalPcs: z.number({ error: 'Total PCs is required.' }).int('Total PCs must be a whole number.').positive('Total PCs must be at least 1.'),
+  totalPcs: z.number({ error: 'Total Pkt is required.' }).int('Total Pkt must be a whole number.').positive('Total Pkt must be at least 1.'),
   entryDate: z.date(),
 })
 
@@ -115,7 +115,7 @@ export function LotsActionDialog({ open, onOpenChange }: Props) {
             )} />
 
             <NumberField form={form} name='totalCarat' label='Total Carat' suffix='CT' step={0.1} />
-            <NumberField form={form} name='totalPcs' label='Total PCs' suffix='PCs' step={1} />
+            <NumberField form={form} name='totalPcs' label='Total Pkt' suffix='Pkt' step={1} />
 
             <FormField control={form.control} name='entryDate' render={({ field }) => (
               <FormItem className='grid grid-cols-6 items-center gap-x-4 gap-y-1 space-y-0'>

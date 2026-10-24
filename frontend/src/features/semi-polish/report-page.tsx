@@ -399,7 +399,7 @@ export function SemiPolishReportPage() {
       'Vendor',
       'Issue Date',
       'Issued Carat',
-      'Issued Pcs',
+      'Issued Pkt',
       'Returned Carat',
       'Returned Pcs',
       'Loss Carat',
@@ -727,79 +727,7 @@ export function SemiPolishReportPage() {
             value='analytics'
             className='flex-1 overflow-y-auto space-y-4 pb-4 data-[state=inactive]:hidden'
           >
-            {/* Top Chart Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Process Loss Trend</CardTitle>
-                <CardDescription>
-                  Loss percentage across completed returns over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent className='px-6'>
-                {trendData.length === 0 ? (
-                  <div className='flex h-[300px] items-center justify-center text-sm text-muted-foreground'>
-                    No completed return data available to display trend
-                  </div>
-                ) : (
-                  <ResponsiveContainer width='100%' height={300}>
-                    <AreaChart data={trendData}>
-                      <defs>
-                        <linearGradient
-                          id='lossTrendGradient'
-                          x1='0'
-                          y1='0'
-                          x2='0'
-                          y2='1'
-                        >
-                          <stop
-                            offset='5%'
-                            stopColor='var(--chart-1)'
-                            stopOpacity={0.35}
-                          />
-                          <stop
-                            offset='95%'
-                            stopColor='var(--chart-1)'
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey='name'
-                        stroke='#888888'
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke='#888888'
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => `${v}%`}
-                      />
-                      <Tooltip
-                        content={<ChartTooltip suffix='%' />}
-                        cursor={{
-                          stroke: 'currentColor',
-                          strokeDasharray: '4 4',
-                          opacity: 0.25,
-                        }}
-                      />
-                      <Area
-                        type='monotone'
-                        dataKey='lossPct'
-                        name='Loss Percentage'
-                        stroke='var(--chart-1)'
-                        strokeWidth={2}
-                        fill='url(#lossTrendGradient)'
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Analytics KPI Row */}
+            {/* 1. Analytics KPI Row */}
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -828,7 +756,7 @@ export function SemiPolishReportPage() {
                     {summary.avgLossPercentage}%
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    Target is ≤ 4.0%
+                    Target benchmark is ≤ 4.0%
                   </p>
                 </CardContent>
               </Card>
@@ -866,11 +794,82 @@ export function SemiPolishReportPage() {
               </Card>
             </div>
 
-            {/* Analytics 7-Column Grid */}
+            {/* 2. Row 1: Process Loss Trend (4 cols) + Vendor Yield Leaderboard (3 cols) */}
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
               <Card className='col-span-1 lg:col-span-4'>
                 <CardHeader>
-                  <CardTitle>Vendor Yield Performance</CardTitle>
+                  <CardTitle>Process Loss Trend (Area Chart)</CardTitle>
+                  <CardDescription>
+                    Loss percentage across completed returns over time
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='px-6'>
+                  {trendData.length === 0 ? (
+                    <div className='flex h-[300px] items-center justify-center text-sm text-muted-foreground'>
+                      No completed return data available to display trend
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width='100%' height={300}>
+                      <AreaChart data={trendData}>
+                        <defs>
+                          <linearGradient
+                            id='lossTrendGradient'
+                            x1='0'
+                            y1='0'
+                            x2='0'
+                            y2='1'
+                          >
+                            <stop
+                              offset='5%'
+                              stopColor='var(--chart-1)'
+                              stopOpacity={0.35}
+                            />
+                            <stop
+                              offset='95%'
+                              stopColor='var(--chart-1)'
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <XAxis
+                          dataKey='name'
+                          stroke='#888888'
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          stroke='#888888'
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => `${v}%`}
+                        />
+                        <Tooltip
+                          content={<ChartTooltip suffix='%' />}
+                          cursor={{
+                            stroke: 'currentColor',
+                            strokeDasharray: '4 4',
+                            opacity: 0.25,
+                          }}
+                        />
+                        <Area
+                          type='monotone'
+                          dataKey='lossPct'
+                          name='Loss Percentage'
+                          stroke='var(--chart-1)'
+                          strokeWidth={2}
+                          fill='url(#lossTrendGradient)'
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className='col-span-1 lg:col-span-3'>
+                <CardHeader>
+                  <CardTitle>Vendor Yield Leaderboard</CardTitle>
                   <CardDescription>
                     Recovery rates across active vendors
                   </CardDescription>
@@ -889,8 +888,11 @@ export function SemiPolishReportPage() {
                   )}
                 </CardContent>
               </Card>
+            </div>
 
-              <Card className='col-span-1 lg:col-span-3'>
+            {/* 3. Row 2: Yield Quality Distribution (4 cols) + Process Status Benchmark (3 cols) */}
+            <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
+              <Card className='col-span-1 lg:col-span-4'>
                 <CardHeader>
                   <CardTitle>Yield Quality Distribution</CardTitle>
                   <CardDescription>
@@ -909,6 +911,33 @@ export function SemiPolishReportPage() {
                       valueFormatter={(n) => `${n} lots`}
                     />
                   )}
+                </CardContent>
+              </Card>
+
+              <Card className='col-span-1 lg:col-span-3'>
+                <CardHeader>
+                  <CardTitle>Process Performance Metrics</CardTitle>
+                  <CardDescription>
+                    Operational targets and compliance summary
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='space-y-3 text-xs'>
+                  <div className='flex items-center justify-between py-1 border-b'>
+                    <span className='text-muted-foreground'>Recovery Yield Target</span>
+                    <span className='font-semibold text-emerald-600 dark:text-emerald-400'>≥ 95.0% (Current: {summary.yieldRate}%)</span>
+                  </div>
+                  <div className='flex items-center justify-between py-1 border-b'>
+                    <span className='text-muted-foreground'>Tolerance Loss Ceiling</span>
+                    <span className='font-semibold text-amber-600 dark:text-amber-400'>≤ 4.5% (Current: {summary.avgLossPercentage}%)</span>
+                  </div>
+                  <div className='flex items-center justify-between py-1 border-b'>
+                    <span className='text-muted-foreground'>Active Vendors</span>
+                    <span className='font-semibold'>{vendorLeaderboard.length} external partners</span>
+                  </div>
+                  <div className='flex items-center justify-between py-1'>
+                    <span className='text-muted-foreground'>Total Return Recovery</span>
+                    <span className='font-semibold text-foreground'>{formatCarat(summary.totalReturnedCarat)} CT</span>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1003,7 +1032,7 @@ export function SemiPolishReportPage() {
                                 {formatCarat(process.issuedCarat)} CT
                               </span>{' '}
                               <span className='text-muted-foreground font-normal'>
-                                ({process.issuedPieces} pcs)
+                                ({process.issuedPieces} Pkt)
                               </span>
                             </TableCell>
                             <TableCell className='px-4 py-3 text-left font-medium text-sm'>

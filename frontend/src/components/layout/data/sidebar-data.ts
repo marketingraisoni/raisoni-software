@@ -9,7 +9,7 @@ import {
   UserCog,
   Users,
   UserRoundKey,
-  Gem,
+  Boxes,
   Layers3,
   AppWindow,
   Clock,
@@ -87,21 +87,23 @@ export const sidebarData: SidebarData = {
       title: 'Lot Management',
       items: [
         {
-          title: 'All Lots',
-          url: '/lots',
-          icon: Gem,
-          permission: { module: PERMISSION_MODULE.LOTS },
-        },
-      ],
-    },
-    {
-      title: 'Assortment',
-      items: [
-        {
-          title: 'Packet Creation',
-          url: '/packets',
-          icon: Layers3,
-          permission: { module: PERMISSION_MODULE.ASSORTMENT },
+          title: 'Lot Management',
+          icon: Boxes,
+          defaultOpen: true,
+          items: [
+            {
+              title: 'All Lots',
+              url: '/lots',
+              icon: Boxes,
+              permission: { module: PERMISSION_MODULE.LOTS },
+            },
+            {
+              title: 'Packet Creation',
+              url: '/packets',
+              icon: Layers3,
+              permission: { module: PERMISSION_MODULE.ASSORTMENT },
+            },
+          ],
         },
       ],
     },
@@ -113,6 +115,15 @@ export const sidebarData: SidebarData = {
           icon: AppWindow,
           defaultOpen: true,
           items: [
+            {
+              title: 'Ready for Issue',
+              url: '/semi-polish/ready-for-issue',
+              icon: FileCheck,
+              permission: {
+                module: PERMISSION_MODULE.SEMI_POLISH,
+                action: PERMISSION_ACTION.CREATE,
+              },
+            },
             {
               title: 'Running 4P Process',
               url: '/semi-polish',
@@ -126,15 +137,6 @@ export const sidebarData: SidebarData = {
               permission: {
                 module: PERMISSION_MODULE.SEMI_POLISH,
                 action: PERMISSION_ACTION.UPDATE,
-              },
-            },
-            {
-              title: 'Ready for Issue',
-              url: '/semi-polish/ready-for-issue',
-              icon: FileCheck,
-              permission: {
-                module: PERMISSION_MODULE.SEMI_POLISH,
-                action: PERMISSION_ACTION.CREATE,
               },
             },
             {

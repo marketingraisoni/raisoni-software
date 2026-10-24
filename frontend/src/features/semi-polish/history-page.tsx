@@ -136,7 +136,7 @@ export function SemiPolishHistoryPage() {
         cell: ({ row }) => (
           <span>
             {formatCarat(row.original.issuedCarat)} CT (
-            {row.original.issuedPieces} pcs)
+            {row.original.issuedPieces} Pkt)
           </span>
         ),
         enableSorting: false,

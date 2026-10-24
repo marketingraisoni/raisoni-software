@@ -131,7 +131,7 @@ function buildWorksheet(lot, packets) {
   const rightBoxRows = [
     `${inlineCell('F2', 'Lot Number', 2)}${inlineCell('G2', lot.kapanNo, 3)}${inlineCell('H2', 'Grade', 2)}${inlineCell('I2', 'A', 3)}`,
     `${inlineCell('F3', 'Entry Date', 2)}${numberCell('G3', excelDate(lot.entryDate), 11)}${inlineCell('H3', 'Status', 2)}${inlineCell('I3', 'Complete', 12)}`,
-    `${inlineCell('F4', 'Total Pieces', 2)}${numberCell('G4', lot.totalPcs, 13)}${inlineCell('H4', 'Total Carat', 2)}${numberCell('I4', lot.totalCarat, 14)}`,
+    `${inlineCell('F4', 'Total Pkt', 2)}${numberCell('G4', lot.totalPcs, 13)}${inlineCell('H4', 'Total Carat', 2)}${numberCell('I4', lot.totalCarat, 14)}`,
   ];
 
   const maxDataOrBoxRow = Math.max(lastDataRow, 4);

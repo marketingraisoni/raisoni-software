@@ -49,7 +49,7 @@ function buildProcessWorksheet(process) {
     `${inlineCell('F2', 'Issue / Jangad No', 2)}${inlineCell('G2', process.issueNo, 3)}${inlineCell('H2', 'Status', 2)}${inlineCell('I2', String(process.status).replace('_', ' '), 12)}`,
     `${inlineCell('F3', 'Lot / Kapan', 2)}${inlineCell('G3', process.kapanNo, 3)}${inlineCell('H3', '4P Vendor', 2)}${inlineCell('I3', process.vendorName, 3)}`,
     `${inlineCell('F4', 'Issue Date', 2)}${optionalDateCell('G4', process.issueDate)}${inlineCell('H4', 'Expected Return', 2)}${optionalDateCell('I4', process.expectedReturnDate)}`,
-    `${inlineCell('F5', 'Issued Pieces', 2)}${numberCell('G5', process.issuedPieces, 13)}${inlineCell('H5', 'Issued Carat', 2)}${numberCell('I5', process.issuedCarat, 15)}`,
+    `${inlineCell('F5', 'Issued Pkt', 2)}${numberCell('G5', process.issuedPieces, 13)}${inlineCell('H5', 'Issued Carat', 2)}${numberCell('I5', process.issuedCarat, 15)}`,
     `${inlineCell('F6', 'Return Date', 2)}${optionalDateCell('G6', process.returnDate)}${inlineCell('H6', 'Returned Pieces', 2)}${optionalNumberCell('I6', process.returnedPieces, 13)}`,
     `${inlineCell('F7', 'Returned Carat', 2)}${optionalNumberCell('G7', process.returnedCarat, 15)}${inlineCell('H7', 'Process Loss', 2)}${optionalNumberCell('I7', process.processLossCarat, 15)}`,
     `${inlineCell('F8', 'Loss Percentage', 2)}${optionalPercentageCell('G8', process.processLossPercentage, 15)}${inlineCell('H8', 'Issued By', 2)}${inlineCell('I8', process.issuedByName || '-', 3)}`,
@@ -79,7 +79,7 @@ function buildProcessWorksheet(process) {
   const formula = packets.length ? `SUM(D2:D${lastDataRow})` : '';
   rows.push(
     `<row r="${totalRow}" ht="24" customHeight="1">` +
-      `${inlineCell(`A${totalRow}`, `Total issued - ${process.issuedPieces} PCs`, 9)}` +
+      `${inlineCell(`A${totalRow}`, `Total issued - ${process.issuedPieces} Pkt`, 9)}` +
       `<c r="B${totalRow}" s="9"/><c r="C${totalRow}" s="9"/>` +
       `${numberCell(`D${totalRow}`, process.issuedCarat, 10, formula)}` +
     `</row>`
