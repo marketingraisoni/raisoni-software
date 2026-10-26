@@ -265,7 +265,7 @@ export function SemiPolishHistoryPage() {
             asyncState={listQuery}
             messages={{
               errorTitle: 'Unable to load history.',
-              empty: 'No returned 4P records found.',
+              empty: 'No records found.',
             }}
           />
         </div>

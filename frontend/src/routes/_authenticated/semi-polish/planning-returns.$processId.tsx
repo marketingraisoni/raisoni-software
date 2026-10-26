@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { SemiPolishPlanningReturnPage } from '@/features/semi-polish'
+import { SemiPolishPlanningReturnPage } from '@/features/semi-polish/planning-return-page'
 
 export const Route = createFileRoute(
   '/_authenticated/semi-polish/planning-returns/$processId'

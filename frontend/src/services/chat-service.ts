@@ -1,5 +1,5 @@
-import { apiClient } from '@/lib/api-client'
 import { type ApiResponse } from '@/types/api'
+import { apiClient } from '@/lib/api-client'
 import {
   type ChatUser,
   type ChatMessage,
@@ -7,13 +7,9 @@ import {
   type ChatMessagesResponse,
 } from '@/features/chats/data/chat-types'
 
-export const chatQueryKeys = {
-  users: ['chat', 'users'] as const,
-  messages: (userId: string) => ['chat', 'messages', userId] as const,
-}
-
 export async function fetchChatUsers(): Promise<ChatUser[]> {
-  const response = await apiClient.get<ApiResponse<{ users: ChatUser[] }>>('/chats/users')
+  const response =
+    await apiClient.get<ApiResponse<{ users: ChatUser[] }>>('/chats/users')
   return response.data?.data?.users || []
 }
 

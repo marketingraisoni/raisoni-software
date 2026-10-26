@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { SemiPolishDetailPage } from '@/features/semi-polish'
+import { SemiPolishDetailPage } from '@/features/semi-polish/detail-page'
 
 export const Route = createFileRoute('/_authenticated/semi-polish/$processId')({
   component: SemiPolishDetailRoute,

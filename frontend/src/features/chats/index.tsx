@@ -754,7 +754,7 @@ export function Chats() {
       <AppHeader />
 
       {/* Full-width fluid container for wide messenger experience */}
-      <Main fixed fluid className='h-[calc(100svh-4rem)] w-full p-2 md:p-3'>
+      <Main fixed fluid className='h-[calc(100svh-4rem)] w-full'>
         <section className='flex size-full gap-2 lg:gap-3 overflow-hidden rounded-xl border bg-card shadow-sm'>
           {/* ================= LEFT SIDE: CONTACTS LIST ================= */}
           <div className='flex h-full w-full flex-col border-r bg-card sm:w-72 lg:w-84 xl:w-96 flex-shrink-0'>

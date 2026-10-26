@@ -1,6 +1,8 @@
 import { apiClient } from '@/lib/api-client'
-import { type PermissionCatalogItem } from '@/constants/permissions'
-import { type PermissionGrant } from '@/constants/permissions'
+import {
+  type PermissionCatalogItem,
+  type PermissionGrant,
+} from '@/constants/permissions'
 import { userSchema } from '@/features/users/data/schema'
 import { type ApiResponse } from '@/types/api'
 

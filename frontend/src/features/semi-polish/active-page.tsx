@@ -118,8 +118,7 @@ export function SemiPolishActivePage() {
   const inProcessList = useMemo(
     () =>
       (listQuery.data?.processes || []).filter(
-        (process) =>
-          process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
+        (process) => process.status === SEMI_POLISH_PROCESS_STATUS.IN_PROCESS
       ),
     [listQuery.data?.processes]
   )
@@ -346,19 +345,7 @@ export function SemiPolishActivePage() {
             asyncState={listQuery}
             messages={{
               errorTitle: 'Unable to load active 4P handovers.',
-              empty: (
-                <>
-                  No active 4P issues found.{' '}
-                  {canCreate && (
-                    <Link
-                      to='/semi-polish/ready-for-issue'
-                      className='font-medium text-primary hover:underline'
-                    >
-                      Issue a lot ready from assortment &rarr;
-                    </Link>
-                  )}
-                </>
-              ),
+              empty: 'No active 4P issues found.',
             }}
           />
         </div>

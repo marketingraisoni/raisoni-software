@@ -33,7 +33,7 @@ describe('authenticated route permissions', () => {
     expect(getAuthenticatedRoutePermission(path)).toEqual({ module, action })
   })
 
-  it('leaves authenticated utility pages without a module restriction', () => {
-    expect(getAuthenticatedRoutePermission('/help-center')).toBeNull()
+  it('leaves unknown paths without a module restriction', () => {
+    expect(getAuthenticatedRoutePermission('/removed-page')).toBeNull()
   })
 })

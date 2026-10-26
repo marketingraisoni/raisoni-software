@@ -7,10 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import {
-  DataTable,
-  type DataTableAsyncState,
-} from '@/components/data-table'
+import { DataTable, type DataTableAsyncState } from '@/components/data-table'
 import { USER_TABLE_COLUMN, userTypes } from '../data/data'
 import { USER_STATUS, type User } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
@@ -111,7 +108,10 @@ export function UsersTable({
         }}
         pagination={{ totalRows }}
         asyncState={asyncState}
-        messages={{ errorTitle: 'Unable to load users.' }}
+        messages={{
+          errorTitle: 'Unable to load users.',
+          empty: 'No users found.',
+        }}
       />
       <DataTableBulkActions table={table} />
     </div>

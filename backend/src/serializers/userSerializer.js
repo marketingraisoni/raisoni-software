@@ -8,6 +8,7 @@ export function serializeUser(user, options = {}) {
     name: value.name,
     username: value.username,
     email: value.email,
+    avatarUrl: value.avatarUrl ?? '',
     userType: value.userType,
     status: value.status,
     notes: value.notes ?? '',

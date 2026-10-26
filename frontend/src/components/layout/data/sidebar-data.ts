@@ -1,11 +1,5 @@
 import {
   LayoutDashboard,
-  Monitor,
-  HelpCircle,
-  Bell,
-  Palette,
-  Settings,
-  Wrench,
   UserCog,
   Users,
   UserRoundKey,
@@ -17,16 +11,13 @@ import {
   FileCheck,
   ClipboardClock,
   MessagesSquare,
+  Settings,
+  CircleHelp,
 } from 'lucide-react'
 import { PERMISSION_ACTION, PERMISSION_MODULE } from '@/constants/permissions'
-import { type SidebarData } from '../types'
+import { type NavGroup } from '../types'
 
-export const sidebarData: SidebarData = {
-  user: {
-    name: 'satnaing',
-    email: 'satnaingdev@gmail.com',
-    avatar: '/avatars/shadcn.jpg',
-  },
+export const sidebarData: { navGroups: NavGroup[] } = {
   navGroups: [
     {
       title: 'General',
@@ -46,42 +37,6 @@ export const sidebarData: SidebarData = {
       ],
     },
 
-    // {
-    //   title: 'Pages',
-    //   items: [
-    //     {
-    //       title: 'Errors',
-    //       icon: Bug,
-    //       items: [
-    //         {
-    //           title: 'Unauthorized',
-    //           url: '/errors/unauthorized',
-    //           icon: Lock,
-    //         },
-    //         {
-    //           title: 'Forbidden',
-    //           url: '/errors/forbidden',
-    //           icon: UserX,
-    //         },
-    //         {
-    //           title: 'Not Found',
-    //           url: '/errors/not-found',
-    //           icon: FileX,
-    //         },
-    //         {
-    //           title: 'Internal Server Error',
-    //           url: '/errors/internal-server-error',
-    //           icon: ServerOff,
-    //         },
-    //         {
-    //           title: 'Maintenance Error',
-    //           url: '/errors/maintenance-error',
-    //           icon: Construction,
-    //         },
-    //       ],
-    //     },
-    //   ],
-    // },
     {
       title: 'Lot Management',
       items: [
@@ -169,11 +124,6 @@ export const sidebarData: SidebarData = {
             },
           ],
         },
-        // {
-        //   title: 'Help Center',
-        //   url: '/help-center',
-        //   icon: HelpCircle,
-        // },
       ],
     },
     {
@@ -181,44 +131,13 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: 'Settings',
+          url: '/settings',
           icon: Settings,
-          items: [
-            {
-              title: 'Profile',
-              url: '/settings',
-              icon: UserCog,
-              permission: { module: PERMISSION_MODULE.SETTINGS },
-            },
-            {
-              title: 'Account',
-              url: '/settings/account',
-              icon: Wrench,
-              permission: { module: PERMISSION_MODULE.SETTINGS },
-            },
-            {
-              title: 'Appearance',
-              url: '/settings/appearance',
-              icon: Palette,
-              permission: { module: PERMISSION_MODULE.SETTINGS },
-            },
-            {
-              title: 'Notifications',
-              url: '/settings/notifications',
-              icon: Bell,
-              permission: { module: PERMISSION_MODULE.SETTINGS },
-            },
-            {
-              title: 'Display',
-              url: '/settings/display',
-              icon: Monitor,
-              permission: { module: PERMISSION_MODULE.SETTINGS },
-            },
-          ],
         },
         {
           title: 'Help Center',
           url: '/help-center',
-          icon: HelpCircle,
+          icon: CircleHelp,
         },
       ],
     },

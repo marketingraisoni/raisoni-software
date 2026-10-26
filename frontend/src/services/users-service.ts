@@ -34,7 +34,7 @@ type LegacyUserResponse = {
   user: User
 }
 
-export type CreateUserInput = {
+type CreateUserInput = {
   name: string
   username: string
   email: string
@@ -44,7 +44,7 @@ export type CreateUserInput = {
   notes?: string
 }
 
-export type UpdateUserInput = Partial<
+type UpdateUserInput = Partial<
   Omit<CreateUserInput, 'username' | 'password'>
 > & {
   password?: string
@@ -60,7 +60,7 @@ export type UsersQuery = {
   sortOrder?: 'asc' | 'desc'
 }
 
-export type PaginationMeta = {
+type PaginationMeta = {
   page: number
   limit: number
   total: number

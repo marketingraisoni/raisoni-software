@@ -1,9 +1,19 @@
 import { type QueryClient } from '@tanstack/react-query'
-import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
+import {
+  createRootRouteWithContext,
+  Navigate,
+  Outlet,
+} from '@tanstack/react-router'
+import { useAuthStore } from '@/stores/auth-store'
 import { Toaster } from '@/components/ui/sonner'
+import { getFirstAccessibleNavigationRoute } from '@/components/layout/navigation-permissions'
 import { NavigationProgress } from '@/components/navigation-progress'
 import { GeneralError } from '@/features/errors/general-error'
-import { NotFoundError } from '@/features/errors/not-found-error'
+
+function NotFoundRedirect() {
+  const user = useAuthStore((state) => state.auth.user)
+  return <Navigate to={getFirstAccessibleNavigationRoute(user)} replace />
+}
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -14,15 +24,9 @@ export const Route = createRootRouteWithContext<{
         <NavigationProgress />
         <Outlet />
         <Toaster duration={5000} />
-        {/* {import.meta.env.MODE === 'development' && (
-          <>
-            <ReactQueryDevtools buttonPosition='bottom-left' />
-            <TanStackRouterDevtools position='bottom-right' />
-          </>
-        )} */}
       </>
     )
   },
-  notFoundComponent: NotFoundError,
+  notFoundComponent: NotFoundRedirect,
   errorComponent: GeneralError,
 })

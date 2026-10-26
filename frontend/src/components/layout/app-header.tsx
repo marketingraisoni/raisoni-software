@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { ConfigDrawer } from '@/components/config-drawer'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
@@ -17,7 +16,6 @@ export function AppHeader({ fixed, leading, children }: AppHeaderProps) {
       {leading ?? <Search className='me-auto' />}
       {children}
       <ThemeSwitch />
-      <ConfigDrawer />
       <ProfileDropdown />
     </Header>
   )

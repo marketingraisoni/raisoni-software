@@ -23,7 +23,7 @@ import {
 import { DataTableSkeleton } from './skeleton'
 import { DataTableToolbar, type DataTableToolbarProps } from './toolbar'
 
-export type DataTableProps<TData> = {
+type DataTableProps<TData> = {
   table: TanStackTable<TData>
   title: ReactNode
   description?: ReactNode
@@ -51,7 +51,7 @@ export type DataTableAsyncState = {
   refetch?: () => unknown
 }
 
-export type DataTableMessages = {
+type DataTableMessages = {
   errorTitle?: ReactNode
   errorDescription?: ReactNode
   empty?: ReactNode
@@ -77,15 +77,12 @@ export function DataTable<TData>({
   headClassName,
   cellClassName,
 }: DataTableProps<TData>) {
-  const isLoading =
-    asyncState?.isLoading ?? asyncState?.isPending ?? false
-  const error =
-    asyncState?.error ?? (asyncState?.isError ? true : undefined)
+  const isLoading = asyncState?.isLoading ?? asyncState?.isPending ?? false
+  const error = asyncState?.error ?? (asyncState?.isError ? true : undefined)
   const errorTitle = messages?.errorTitle ?? 'Unable to load data.'
   const errorDescription =
-    messages?.errorDescription ??
-    'Check the backend connection and try again.'
-  const emptyContent = messages?.empty ?? 'No results.'
+    messages?.errorDescription ?? 'Check the backend connection and try again.'
+  const emptyContent = messages?.empty ?? 'No data found.'
   const retryLabel = messages?.retry ?? 'Try again'
   const rows = table.getRowModel().rows
   const hasRows = rows.length > 0
@@ -104,11 +101,7 @@ export function DataTable<TData>({
       }
       pagination={
         pagination !== false ? (
-          <DataTablePagination
-            table={table}
-            className='px-0'
-            {...pagination}
-          />
+          <DataTablePagination table={table} className='px-0' {...pagination} />
         ) : undefined
       }
       className={className}

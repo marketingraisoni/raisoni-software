@@ -219,8 +219,7 @@ export function SemiPolishReadyForIssuePage({ initialLotId }: Props) {
             asyncState={eligibleLotsQuery}
             messages={{
               errorTitle: 'Unable to load eligible lots.',
-              empty:
-                'No lots are currently awaiting 4P issue. All completed lots are either issued or lots are still in assortment.',
+              empty: 'No lots found.',
             }}
           />
         </div>

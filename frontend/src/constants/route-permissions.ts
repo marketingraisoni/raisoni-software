@@ -5,7 +5,7 @@ import {
   type PermissionModule,
 } from './permissions'
 
-export type AuthenticatedRoutePermission = {
+type AuthenticatedRoutePermission = {
   module: PermissionModule
   action: PermissionAction
 }
@@ -15,7 +15,7 @@ type RoutePermissionRule = AuthenticatedRoutePermission & {
   exact?: boolean
 }
 
-export const AUTHENTICATED_ROUTE_PERMISSIONS: readonly RoutePermissionRule[] = [
+const AUTHENTICATED_ROUTE_PERMISSIONS: readonly RoutePermissionRule[] = [
   {
     path: '/semi-polish/packet-scanner',
     module: PERMISSION_MODULE.SEMI_POLISH,
@@ -74,11 +74,6 @@ export const AUTHENTICATED_ROUTE_PERMISSIONS: readonly RoutePermissionRule[] = [
   {
     path: '/users',
     module: PERMISSION_MODULE.USERS,
-    action: PERMISSION_ACTION.READ,
-  },
-  {
-    path: '/settings',
-    module: PERMISSION_MODULE.SETTINGS,
     action: PERMISSION_ACTION.READ,
   },
   {

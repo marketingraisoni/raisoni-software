@@ -130,7 +130,7 @@ describe('UserAuthForm', () => {
     })
 
     const { getByRole, getByLabelText } = await render(
-      <UserAuthForm redirectTo='/settings' />
+      <UserAuthForm redirectTo='/lots' />
     )
 
     await userEvent.fill(
@@ -145,7 +145,7 @@ describe('UserAuthForm', () => {
 
     await vi.waitFor(() =>
       expect(navigate).toHaveBeenCalledWith({
-        to: '/settings',
+        to: '/lots',
         replace: true,
       })
     )

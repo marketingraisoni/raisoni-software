@@ -1,14 +1,11 @@
-import type {
-  ColumnFiltersState,
-  SortingState,
-} from '@tanstack/react-table'
+import type { ColumnFiltersState, SortingState } from '@tanstack/react-table'
 
-export const SORT_ORDER = {
+const SORT_ORDER = {
   ASCENDING: 'asc',
   DESCENDING: 'desc',
 } as const
 
-export type SortOrder = (typeof SORT_ORDER)[keyof typeof SORT_ORDER]
+type SortOrder = (typeof SORT_ORDER)[keyof typeof SORT_ORDER]
 
 function getFilterValue(filters: ColumnFiltersState, columnId: string) {
   return filters.find((filter) => filter.id === columnId)?.value

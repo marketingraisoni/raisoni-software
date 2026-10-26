@@ -17,6 +17,7 @@ export interface AuthUser {
   name: string
   username: string
   email: string
+  avatarUrl?: string
   userType: UserType
   userTypeLabel: string
   permissions: PermissionGrant[]

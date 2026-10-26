@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { SemiPolishReadyForIssuePage } from '@/features/semi-polish'
+import { SemiPolishReadyForIssuePage } from '@/features/semi-polish/ready-for-issue-page'
 
 const readyForIssueSearchSchema = z.object({
   lotId: z.string().optional(),

@@ -1,13 +1,16 @@
 import axios from 'axios'
+import { type ApiErrorResponse, type ApiResponse } from '@/types/api'
+import { type AuthUser } from '@/stores/auth-store'
+import { apiClient } from '@/lib/api-client'
+import {
+  getDefaultPermissions,
+  type PermissionGrant,
+} from '@/constants/permissions'
 import {
   USER_TYPE_LABEL,
   legacyRoleToUserType,
   type UserType,
 } from '@/constants/user-types'
-import { apiClient } from '@/lib/api-client'
-import { type AuthUser } from '@/stores/auth-store'
-import { type ApiErrorResponse, type ApiResponse } from '@/types/api'
-import { getDefaultPermissions, type PermissionGrant } from '@/constants/permissions'
 
 type LoginData = {
   token: string
@@ -23,19 +26,23 @@ type LegacyLoginResponse = {
   success: boolean
   message: string
   token: string
-  user: AuthUser | (Omit<AuthUser, 'userType' | 'userTypeLabel' | 'permissions'> & {
-    role: string
-    permissions?: PermissionGrant[]
-  })
+  user:
+    | AuthUser
+    | (Omit<AuthUser, 'userType' | 'userTypeLabel' | 'permissions'> & {
+        role: string
+        permissions?: PermissionGrant[]
+      })
 }
 
 type LegacyCurrentUserResponse = {
   success: boolean
   message?: string
-  user: AuthUser | (Omit<AuthUser, 'userType' | 'userTypeLabel' | 'permissions'> & {
-    role: string
-    permissions?: PermissionGrant[]
-  })
+  user:
+    | AuthUser
+    | (Omit<AuthUser, 'userType' | 'userTypeLabel' | 'permissions'> & {
+        role: string
+        permissions?: PermissionGrant[]
+      })
 }
 
 function normalizeAuthUser(user: LegacyLoginResponse['user']): AuthUser {
@@ -43,6 +50,7 @@ function normalizeAuthUser(user: LegacyLoginResponse['user']): AuthUser {
     const userType = user.userType
     return {
       ...user,
+      avatarUrl: user.avatarUrl || '',
       userTypeLabel: user.userTypeLabel || USER_TYPE_LABEL[userType] || 'Staff',
       permissions: user.permissions || getDefaultPermissions(user.userType),
     }
@@ -53,6 +61,7 @@ function normalizeAuthUser(user: LegacyLoginResponse['user']): AuthUser {
     name: user.name,
     username: user.username,
     email: user.email,
+    avatarUrl: user.avatarUrl || '',
     lastLogin: user.lastLogin,
     userType,
     userTypeLabel: USER_TYPE_LABEL[userType],
@@ -89,7 +98,58 @@ export async function getCurrentUser() {
   const { data: response } = await apiClient.get<
     ApiResponse<CurrentUserData> | LegacyCurrentUserResponse
   >('/auth/me')
-  return normalizeAuthUser('data' in response ? response.data.user : response.user)
+  return normalizeAuthUser(
+    'data' in response ? response.data.user : response.user
+  )
+}
+
+export async function updateCurrentUserProfile(input: {
+  name: string
+  username: string
+}) {
+  const { data: response } = await apiClient.put<
+    ApiResponse<{ user: AuthUser }>
+  >('/auth/profile', input)
+
+  return {
+    message: response.message,
+    user: normalizeAuthUser(response.data.user),
+  }
+}
+
+export async function uploadCurrentUserPhoto(file: File) {
+  const { data: response } = await apiClient.post<
+    ApiResponse<{ user: AuthUser }>
+  >('/auth/profile/photo', file, {
+    headers: { 'Content-Type': file.type },
+  })
+
+  return {
+    message: response.message,
+    user: normalizeAuthUser(response.data.user),
+  }
+}
+
+export async function removeCurrentUserPhoto() {
+  const { data: response } = await apiClient.delete<
+    ApiResponse<{ user: AuthUser }>
+  >('/auth/profile/photo')
+
+  return {
+    message: response.message,
+    user: normalizeAuthUser(response.data.user),
+  }
+}
+
+export async function changeCurrentUserPassword(input: {
+  currentPassword: string
+  newPassword: string
+}) {
+  const { data: response } = await apiClient.post<ApiResponse<null>>(
+    '/auth/change-password',
+    input
+  )
+  return response.message
 }
 
 export async function logout() {

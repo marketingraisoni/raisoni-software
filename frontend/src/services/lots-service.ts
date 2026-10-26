@@ -15,14 +15,14 @@ export const lotQueryKey = (lotId: string) => ['lots', lotId] as const
 export const lotPacketsQueryKey = (lotId: string) =>
   ['lots', lotId, 'packets'] as const
 
-export type CreateLotInput = {
+type CreateLotInput = {
   kapanNo: string
   totalCarat: number
   totalPcs: number
   entryDate: string
 }
 
-export type LotsQuery = {
+type LotsQuery = {
   page: number
   pageSize: number
   search?: string

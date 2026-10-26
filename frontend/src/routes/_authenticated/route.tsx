@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/services/auth-service'
 import { useAuthStore } from '@/stores/auth-store'
 import { getAuthenticatedRoutePermission } from '@/constants/route-permissions'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+import { getFirstAccessibleNavigationRoute } from '@/components/layout/navigation-permissions'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
@@ -34,7 +35,12 @@ export const Route = createFileRoute('/_authenticated')({
         .getState()
         .auth.canAccess(permission.module, permission.action)
     ) {
-      throw redirect({ to: '/403' })
+      throw redirect({
+        to: getFirstAccessibleNavigationRoute(
+          useAuthStore.getState().auth.user
+        ),
+        replace: true,
+      })
     }
   },
   component: AuthenticatedLayout,

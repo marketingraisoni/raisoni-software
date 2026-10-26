@@ -11,15 +11,16 @@ import { getDefaultPermissions } from '../src/services/permissionService.js';
 
 export async function cleanupDummyData() {
   try {
-    const [deletedOrders, deletedProducts, deletedCustomers, deletedMovements] = await Promise.all([
-      Order.deleteMany({}),
-      Product.deleteMany({}),
-      Customer.deleteMany({}),
-      InventoryMovement.deleteMany({}),
-    ]);
+    const [deletedOrders, deletedProducts, deletedCustomers, deletedMovements] =
+      await Promise.all([
+        Order.deleteMany({}),
+        Product.deleteMany({}),
+        Customer.deleteMany({}),
+        InventoryMovement.deleteMany({}),
+      ]);
 
     logger.info(
-      `Purged dummy seeder data: ${deletedOrders.deletedCount} orders, ${deletedProducts.deletedCount} products, ${deletedCustomers.deletedCount} customers, ${deletedMovements.deletedCount} movements.`
+      `Purged dummy seeder data: ${deletedOrders.deletedCount} orders, ${deletedProducts.deletedCount} products, ${deletedCustomers.deletedCount} customers, ${deletedMovements.deletedCount} movements.`,
     );
   } catch (err) {
     logger.warn(`Cleanup dummy data skipped: ${err.message}`);
@@ -32,7 +33,9 @@ export async function seedDatabase(options = { reset: false }) {
     logger.info('Starting database seeding...');
 
     if (options.reset) {
-      logger.warn('Reset flag enabled: cleaning business data, users, and settings...');
+      logger.warn(
+        'Reset flag enabled: cleaning business data, users, and settings...',
+      );
       await cleanupDummyData();
       await User.deleteMany({});
       await Setting.deleteMany({});
@@ -100,7 +103,9 @@ export async function seedDatabase(options = { reset: false }) {
         user.status = USER_STATUS.ACTIVE;
         user.permissions = seededUser.permissions;
         await user.save();
-        logger.info(`Updated user permissions: ${u.email} (type ${u.userType})`);
+        logger.info(
+          `Updated user permissions: ${u.email} (type ${u.userType})`,
+        );
       }
       usersMap[u.userType] = user;
     }
@@ -141,18 +146,44 @@ export async function seedDatabase(options = { reset: false }) {
         category: 'inventory',
         description: 'Default low stock warning threshold',
       },
+      {
+        key: 'administratorName',
+        value: 'Raisoni Jauharis',
+        category: 'support',
+        description: 'Administrator contact name shown in Help Center',
+      },
+      {
+        key: 'administratorEmail',
+        value: 'raisonijauharis@gmail.com',
+        category: 'support',
+        description: 'Administrator support email shown in Help Center',
+      },
+      {
+        key: 'softwareDepartmentName',
+        value: 'Software Department',
+        category: 'support',
+        description: 'Software support contact name shown in Help Center',
+      },
+      {
+        key: 'softwareDepartmentEmail',
+        value: 'divyesh.raisoni@gmail.com',
+        category: 'support',
+        description: 'Software support email shown in Help Center',
+      },
     ];
 
     for (const s of defaultSettings) {
       await Setting.findOneAndUpdate(
         { key: s.key },
         { ...s, updatedBy: adminUser?._id },
-        { upsert: true }
+        { upsert: true },
       );
     }
     logger.info('Application settings initialized.');
 
-    logger.success('✅ Database seeding finished successfully (dummy data excluded)!');
+    logger.success(
+      '✅ Database seeding finished successfully (dummy data excluded)!',
+    );
     return true;
   } catch (err) {
     logger.error(`Database seeding failed: ${err.message}`);

@@ -1,5 +1,5 @@
-import { apiClient } from '@/lib/api-client'
 import { type ApiResponse } from '@/types/api'
+import { apiClient } from '@/lib/api-client'
 
 export const dashboardQueryKey = ['dashboard'] as const
 
@@ -69,7 +69,13 @@ export interface DashboardAnalytics {
 export interface AssortmentAnalytics {
   gradeDistribution: { name: string; value: number; count?: number }[]
   sizeBrackets: { range: string; count: number; carats: number }[]
-  scatterData: { x: number; y: number; z: number; name: string; grade: string }[]
+  scatterData: {
+    x: number
+    y: number
+    z: number
+    name: string
+    grade: string
+  }[]
   lotAssortmentComparison: {
     kapan: string
     roughCarat: number
@@ -78,7 +84,7 @@ export interface AssortmentAnalytics {
   }[]
 }
 
-export interface DashboardData {
+interface DashboardData {
   metrics: DashboardMetrics
   overviewChart: OverviewChartPoint[]
   recentSales: RecentSaleItem[]
@@ -96,10 +102,15 @@ export interface DashboardData {
   }
 }
 
-export async function fetchDashboardData(signal?: AbortSignal): Promise<DashboardData> {
-  const response = await apiClient.get<ApiResponse<DashboardData>>('/dashboard', {
-    signal,
-  })
+export async function fetchDashboardData(
+  signal?: AbortSignal
+): Promise<DashboardData> {
+  const response = await apiClient.get<ApiResponse<DashboardData>>(
+    '/dashboard',
+    {
+      signal,
+    }
+  )
 
   if (!response.data.data) {
     throw new Error(response.data.message || 'Failed to load dashboard data')

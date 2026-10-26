@@ -4,12 +4,6 @@ import type {
   PermissionModule,
 } from '@/constants/permissions'
 
-type User = {
-  name: string
-  email: string
-  avatar: string
-}
-
 type BaseNavItem = {
   title: string
   badge?: string
@@ -38,9 +32,4 @@ type NavGroup = {
   items: NavItem[]
 }
 
-type SidebarData = {
-  user: User
-  navGroups: NavGroup[]
-}
-
-export type { SidebarData, NavGroup, NavItem, NavCollapsible, NavLink }
+export type { NavGroup, NavItem, NavCollapsible, NavLink }

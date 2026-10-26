@@ -29,7 +29,7 @@ export const semiPolishQueryKeys = {
     ['semi-polish', 'packet-lookup', code] as const,
 }
 
-export type SemiPolishListResponse = {
+type SemiPolishListResponse = {
   processes: SemiPolishProcess[]
   pagination: {
     page: number
@@ -87,19 +87,6 @@ export async function issueToSemiPolish(data: {
   notes?: string
 }): Promise<SemiPolishProcess> {
   const response = await apiClient.post('/semi-polish/issue', data)
-  return response.data.data.process
-}
-
-export async function receiveFromSemiPolish(
-  id: string,
-  data: {
-    returnedPieces: number
-    returnedCarat: number
-    returnDate?: string
-    returnNotes?: string
-  }
-): Promise<SemiPolishProcess> {
-  const response = await apiClient.post(`/semi-polish/${id}/return`, data)
   return response.data.data.process
 }
 

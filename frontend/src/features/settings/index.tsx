@@ -1,59 +1,32 @@
 import { Outlet } from '@tanstack/react-router'
-import { Monitor, Bell, Palette, Wrench, UserCog } from 'lucide-react'
+import { KeyRound, UserRound } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { AppHeader } from '@/components/layout/app-header'
 import { Main } from '@/components/layout/main'
-import { SidebarNav } from './components/sidebar-nav'
+import { SettingsNav } from './settings-nav'
 
-const sidebarNavItems = [
-  {
-    title: 'Profile',
-    href: '/settings',
-    icon: <UserCog size={18} />,
-  },
-  {
-    title: 'Account',
-    href: '/settings/account',
-    icon: <Wrench size={18} />,
-  },
-  {
-    title: 'Appearance',
-    href: '/settings/appearance',
-    icon: <Palette size={18} />,
-  },
-  {
-    title: 'Notifications',
-    href: '/settings/notifications',
-    icon: <Bell size={18} />,
-  },
-  {
-    title: 'Display',
-    href: '/settings/display',
-    icon: <Monitor size={18} />,
-  },
-]
+const settingsItems = [
+  { title: 'Profile', href: '/settings', icon: UserRound },
+  { title: 'Change Password', href: '/settings/password', icon: KeyRound },
+] as const
 
-export function Settings() {
+export function SettingsLayout() {
   return (
     <>
-      {/* ===== Top Heading ===== */}
       <AppHeader />
-
       <Main fixed>
-        <div className='space-y-0.5'>
+        <div>
           <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
             Settings
           </h1>
-          <p className='text-muted-foreground'>
-            Manage your account settings and set e-mail preferences.
-          </p>
+          <p className='text-muted-foreground'>Manage your account settings.</p>
         </div>
         <Separator className='my-4 lg:my-6' />
-        <div className='flex flex-1 flex-col space-y-2 overflow-hidden md:space-y-2 lg:flex-row lg:space-y-0 lg:space-x-12'>
-          <aside className='top-0 lg:sticky lg:w-1/5'>
-            <SidebarNav items={sidebarNavItems} />
+        <div className='flex flex-1 flex-col gap-6 overflow-hidden lg:flex-row lg:gap-12'>
+          <aside className='shrink-0 lg:w-52'>
+            <SettingsNav items={settingsItems} />
           </aside>
-          <div className='flex w-full overflow-y-hidden p-1'>
+          <div className='min-w-0 flex-1 overflow-y-auto pe-1 pb-8'>
             <Outlet />
           </div>
         </div>

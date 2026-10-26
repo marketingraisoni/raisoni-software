@@ -31,12 +31,12 @@ export const PERMISSION_MODULE = {
 
 export type PermissionModule =
   (typeof PERMISSION_MODULE)[keyof typeof PERMISSION_MODULE]
-export const PERMISSION_MODULES = Object.values(PERMISSION_MODULE) as [
+const PERMISSION_MODULES = Object.values(PERMISSION_MODULE) as [
   PermissionModule,
   ...PermissionModule[],
 ]
 
-export const MANAGEABLE_PERMISSION_MODULES = [
+const MANAGEABLE_PERMISSION_MODULES = [
   PERMISSION_MODULE.DASHBOARD,
   PERMISSION_MODULE.USERS,
   PERMISSION_MODULE.PERMISSIONS,
@@ -67,7 +67,7 @@ const ALL_ACTIONS = PERMISSION_ACTIONS
 const READ_ONLY = [PERMISSION_ACTION.READ] as const
 const READ_UPDATE = [PERMISSION_ACTION.READ, PERMISSION_ACTION.UPDATE] as const
 
-export const PERMISSION_MODULE_DEFINITIONS: Record<
+const PERMISSION_MODULE_DEFINITIONS: Record<
   PermissionModule,
   PermissionModuleDefinition
 > = {

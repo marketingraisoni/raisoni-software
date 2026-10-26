@@ -1,8 +1,7 @@
 import { useAuthStore } from '@/stores/auth-store'
-import { useSocket } from '@/context/socket-context'
-import { PERMISSION_ACTION, hasPermission } from '@/constants/permissions'
 import { USER_TYPE_LABEL } from '@/constants/user-types'
 import { useLayout } from '@/context/layout-provider'
+import { useSocket } from '@/context/socket-context'
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +13,7 @@ import { AppTitle } from './app-title'
 import { sidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
+import { canAccessNavigationItem } from './navigation-permissions'
 import type { NavItem } from './types'
 
 export function AppSidebar() {
@@ -21,26 +21,12 @@ export function AppSidebar() {
   const user = useAuthStore((state) => state.auth.user)
   const { unreadChatCount } = useSocket()
   const filterNavItem = (item: NavItem): NavItem | null => {
-    if (
-      item.permission &&
-      !hasPermission(
-        user,
-        item.permission.module,
-        item.permission.action || PERMISSION_ACTION.READ
-      )
-    ) {
-      return null
-    }
+    if (!canAccessNavigationItem(user, item)) return null
 
     if ('items' in item && item.items) {
-      const items = item.items.filter((child) => {
-        if (!child.permission) return true
-        return hasPermission(
-          user,
-          child.permission.module,
-          child.permission.action || PERMISSION_ACTION.READ
-        )
-      })
+      const items = item.items.filter((child) =>
+        canAccessNavigationItem(user, child)
+      )
       return items.length > 0 ? { ...item, items } : null
     }
 
@@ -85,7 +71,7 @@ export function AppSidebar() {
           user={{
             name: user?.name || 'Raisoni User',
             email: user?.email || '',
-            avatar: '',
+            avatar: user?.avatarUrl || '',
             userTypeLabel: user
               ? USER_TYPE_LABEL[user.userType] || user.userTypeLabel
               : undefined,

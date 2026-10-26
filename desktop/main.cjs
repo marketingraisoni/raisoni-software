@@ -87,6 +87,7 @@ async function createWindow() {
     minWidth: 1024,
     minHeight: 680,
     show: false,
+    autoHideMenuBar: true,
     title: 'Raisoni ERP',
     backgroundColor: '#f8fafc',
     ...(fs.existsSync(iconPath) ? { icon: iconPath } : {}),
@@ -95,8 +96,23 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      webSecurity: true
+      webSecurity: true,
+      devTools: false
     }
+  });
+
+  Menu.setApplicationMenu(null);
+  mainWindow.setMenu(null);
+  mainWindow.setMenuBarVisibility(false);
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const key = input.key.toLowerCase();
+    const isDevToolsShortcut =
+      key === 'f12' ||
+      ((input.control || input.meta) && input.shift && ['i', 'j', 'c'].includes(key)) ||
+      (input.meta && input.alt && ['i', 'j', 'c'].includes(key));
+
+    if (isDevToolsShortcut) event.preventDefault();
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -121,15 +137,12 @@ async function createWindow() {
     mainWindow = null;
   });
 
-  setupMenu();
-
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   const isViteDevelopment = !app.isPackaged && Boolean(devServerUrl);
 
   if (isViteDevelopment) {
     applicationOrigin = devServerUrl;
     await mainWindow.loadURL(devServerUrl);
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
     return;
   }
 
@@ -149,71 +162,6 @@ async function createWindow() {
       )
     );
   }
-}
-
-function setupMenu() {
-  const isMac = process.platform === 'darwin';
-  const template = [
-    ...(isMac ? [{ role: 'appMenu' }] : []),
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'Reload Application',
-          accelerator: 'CmdOrCtrl+R',
-          click: () => mainWindow?.reload()
-        },
-        { type: 'separator' },
-        isMac ? { role: 'close' } : { role: 'quit' }
-      ]
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' }
-      ]
-    },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' },
-        {
-          label: 'Developer Tools',
-          accelerator: 'F12',
-          click: () => mainWindow?.webContents.toggleDevTools()
-        }
-      ]
-    },
-    {
-      label: 'Help',
-      submenu: [
-        {
-          label: 'About Raisoni ERP',
-          click: () => {
-            const { dialog } = require('electron');
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'About Raisoni ERP',
-              message: `Raisoni ERP (v${app.getVersion()})`,
-              detail: 'Offline Windows desktop business management software built with Electron.'
-            });
-          }
-        }
-      ]
-    }
-  ];
-
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 ipcMain.handle('app:version', () => app.getVersion());
