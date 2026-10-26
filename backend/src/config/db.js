@@ -54,6 +54,7 @@ async function connectEmbeddedDatabase() {
       instance: {
         dbName: config.databaseName,
         dbPath: persistentDbDir,
+        port: 27017,
         storageEngine: 'wiredTiger'
       }
     });

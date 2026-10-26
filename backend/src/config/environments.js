@@ -6,7 +6,7 @@ export const ENVIRONMENT_NAMES = Object.freeze([
 
 export const ENVIRONMENT_DEFAULTS = Object.freeze({
   development: Object.freeze({
-    port: 3001,
+    port: 3000,
     databaseName: 'raisoni_software_development'
   }),
   staging: Object.freeze({
@@ -14,7 +14,7 @@ export const ENVIRONMENT_DEFAULTS = Object.freeze({
     databaseName: 'raisoni_software_staging'
   }),
   production: Object.freeze({
-    port: 3000,
+    port: 2000,
     databaseName: 'raisoni_software_production'
   })
 });

@@ -8,9 +8,9 @@ import { playwright } from '@vitest/browser-playwright'
 
 // https://vite.dev/config/
 const environmentPorts: Record<string, number> = {
-  development: 3001,
+  development: 3000,
   staging: 3002,
-  production: 3000,
+  production: 2000,
 }
 
 export default defineConfig(({ mode }) => {
