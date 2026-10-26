@@ -67,8 +67,13 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     // Initial fetch of unread chat messages count
     refreshUnreadChatCount()
 
-    // Connect to same origin / proxy with auth token
-    const s = io('/', {
+    // Connect to server origin with auth token
+    const socketBaseUrl =
+      import.meta.env.VITE_SOCKET_URL ||
+      (import.meta.env.VITE_API_URL
+        ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')
+        : '/')
+    const s = io(socketBaseUrl, {
       path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],

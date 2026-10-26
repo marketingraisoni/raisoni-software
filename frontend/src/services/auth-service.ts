@@ -45,12 +45,21 @@ type LegacyCurrentUserResponse = {
       })
 }
 
+function resolveAvatarUrl(url?: string): string {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url
+  }
+  const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '')
+  return baseUrl ? `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}` : url
+}
+
 function normalizeAuthUser(user: LegacyLoginResponse['user']): AuthUser {
   if ('userType' in user) {
     const userType = user.userType
     return {
       ...user,
-      avatarUrl: user.avatarUrl || '',
+      avatarUrl: resolveAvatarUrl(user.avatarUrl),
       userTypeLabel: user.userTypeLabel || USER_TYPE_LABEL[userType] || 'Staff',
       permissions: user.permissions || getDefaultPermissions(user.userType),
     }
@@ -61,7 +70,7 @@ function normalizeAuthUser(user: LegacyLoginResponse['user']): AuthUser {
     name: user.name,
     username: user.username,
     email: user.email,
-    avatarUrl: user.avatarUrl || '',
+    avatarUrl: resolveAvatarUrl(user.avatarUrl),
     lastLogin: user.lastLogin,
     userType,
     userTypeLabel: USER_TYPE_LABEL[userType],

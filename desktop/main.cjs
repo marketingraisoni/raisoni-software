@@ -1,8 +1,6 @@
 const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
-const { pathToFileURL } = require('url');
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -11,9 +9,7 @@ if (!gotTheLock) {
 }
 
 let mainWindow = null;
-let stopBackend = null;
-let isStopping = false;
-let applicationOrigin = null;
+let applicationOrigin = 'http://192.168.1.125:3000';
 
 function escapeHtml(value) {
   return String(value)
@@ -24,59 +20,100 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function inlinePage(title, message) {
-  const safeTitle = escapeHtml(title);
-  const safeMessage = escapeHtml(message);
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f8fafc;color:#0f172a;font:16px/1.5 system-ui,sans-serif}.card{width:min(620px,calc(100% - 48px));padding:32px;border:1px solid #e2e8f0;border-radius:16px;background:white;box-shadow:0 16px 40px #0f172a12}h1{margin:0 0 12px;font-size:24px}p{margin:0;color:#475569;white-space:pre-wrap}</style></head><body><main class="card"><h1>${safeTitle}</h1><p>${safeMessage}</p></main></body></html>`;
+function getRemoteServerUrl() {
+  try {
+    const configPath = path.join(app.getPath('userData'), 'config', 'server-url.txt');
+    if (fs.existsSync(configPath)) {
+      const saved = fs.readFileSync(configPath, 'utf8').trim();
+      if (saved.startsWith('http://') || saved.startsWith('https://')) {
+        return saved.replace(/\/+$/, '');
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  const envUrl =
+    process.env.SERVER_URL ||
+    (process.env.VITE_API_URL ? process.env.VITE_API_URL.replace(/\/api\/?$/, '') : null);
+
+  return (envUrl || 'http://192.168.1.125:3000').replace(/\/+$/, '');
+}
+
+function errorPage(serverUrl, errorDetails) {
+  const safeUrl = escapeHtml(serverUrl);
+  const safeDetails = escapeHtml(errorDetails || '');
+  const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Raisoni ERP - Server Connection</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .card {
+      width: min(560px, calc(100% - 48px));
+      padding: 36px;
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      background: #1e293b;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.4);
+    }
+    h1 { margin: 0 0 12px; font-size: 22px; color: #f8fafc; }
+    p { margin: 0 0 14px; color: #94a3b8; font-size: 14px; line-height: 1.6; }
+    .server-box {
+      background: #0f172a;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: monospace;
+      color: #38bdf8;
+      font-size: 14px;
+      display: block;
+      margin-bottom: 20px;
+      border: 1px solid #334155;
+      word-break: break-all;
+    }
+    ul { margin: 0 0 24px 0; padding-left: 20px; color: #94a3b8; font-size: 13px; line-height: 1.8; }
+    strong { color: #f1f5f9; }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 11px 22px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    button:hover { background: #1d4ed8; }
+    .error-msg { font-size: 12px; color: #ef4444; margin-top: 16px; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Unable to Connect to Server</h1>
+    <p>Raisoni ERP could not connect to your office server at:</p>
+    <div class="server-box">${safeUrl}</div>
+    <ul>
+      <li>Ensure the server PC (<strong>192.168.1.125</strong>) is powered on and the backend is running.</li>
+      <li>Ensure this computer is connected to the same office Wi-Fi / LAN network.</li>
+      <li>Check that <strong>Port 3000</strong> is allowed in Windows Firewall on the server PC.</li>
+    </ul>
+    <button onclick="window.location.reload()">Retry Connection</button>
+    ${safeDetails ? `<div class="error-msg">Error: ${safeDetails}</div>` : ''}
+  </main>
+</body>
+</html>`;
   return `data:text/html;charset=UTF-8,${encodeURIComponent(html)}`;
-}
-
-function getOrCreateDesktopJwtSecret(environment) {
-  const configDir = path.join(app.getPath('userData'), 'config');
-  const secretPath = path.join(configDir, `${environment}-jwt-secret`);
-  fs.mkdirSync(configDir, { recursive: true });
-
-  if (fs.existsSync(secretPath)) {
-    const existingSecret = fs.readFileSync(secretPath, 'utf8').trim();
-    if (existingSecret.length >= 32) return existingSecret;
-  }
-
-  const newSecret = crypto.randomBytes(32).toString('hex');
-  fs.writeFileSync(secretPath, newSecret, { encoding: 'utf8', mode: 0o600 });
-  return newSecret;
-}
-
-async function startBundledBackend() {
-  const appEnvironment = app.isPackaged
-    ? 'production'
-    : (process.env.APP_ENV || 'development');
-  const dataDir = path.join(app.getPath('userData'), 'data', appEnvironment);
-  const mongoBinary = app.isPackaged
-    ? path.join(process.resourcesPath, 'mongodb', 'mongod.exe')
-    : path.join(__dirname, '..', 'resources', 'mongodb', 'mongod.exe');
-
-  fs.mkdirSync(dataDir, { recursive: true });
-
-  process.env.APP_ENV = appEnvironment;
-  process.env.NODE_ENV = appEnvironment === 'development' ? 'development' : 'production';
-  process.env.HOST = '0.0.0.0';
-  process.env.USE_EMBEDDED_MONGODB = 'true';
-  process.env.RAISONI_DATA_DIR = dataDir;
-  process.env.JWT_SECRET =
-    process.env.JWT_SECRET || getOrCreateDesktopJwtSecret(appEnvironment);
-  process.env.MONGOMS_SYSTEM_BINARY = mongoBinary;
-  process.env.MONGOMS_SYSTEM_BINARY_VERSION_CHECK = 'false';
-
-  if (!fs.existsSync(mongoBinary)) {
-    throw new Error(`The bundled database executable is missing at ${mongoBinary}. Rebuild the installer with npm run dist.`);
-  }
-
-  const serverEntry = path.join(__dirname, '..', 'backend', 'server.js');
-  const backend = await import(pathToFileURL(serverEntry).href);
-  const started = await backend.startServer();
-  stopBackend = backend.stopServer;
-  applicationOrigin = `http://127.0.0.1:${started.port}`;
-  return applicationOrigin;
 }
 
 async function createWindow() {
@@ -89,7 +126,7 @@ async function createWindow() {
     show: false,
     autoHideMenuBar: true,
     title: 'Raisoni ERP',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#0f172a',
     ...(fs.existsSync(iconPath) ? { icon: iconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -97,8 +134,8 @@ async function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
-      devTools: false
-    }
+      devTools: false,
+    },
   });
 
   Menu.setApplicationMenu(null);
@@ -125,7 +162,8 @@ async function createWindow() {
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
     const allowedDevelopmentUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:9090';
     if (
-      !navigationUrl.startsWith(applicationOrigin || allowedDevelopmentUrl) &&
+      !navigationUrl.startsWith(applicationOrigin) &&
+      !navigationUrl.startsWith(allowedDevelopmentUrl) &&
       !navigationUrl.startsWith('data:text/html')
     ) {
       event.preventDefault();
@@ -146,28 +184,22 @@ async function createWindow() {
     return;
   }
 
-  await mainWindow.loadURL(inlinePage('Starting Raisoni ERP', 'Preparing the local database and application…'));
-  mainWindow.show();
+  const targetServerUrl = getRemoteServerUrl();
+  applicationOrigin = targetServerUrl;
 
   try {
-    const appUrl = await startBundledBackend();
-    await mainWindow.loadURL(appUrl);
+    await mainWindow.loadURL(targetServerUrl);
   } catch (error) {
     const details = error instanceof Error ? error.message : String(error);
-    console.error('Desktop startup failed:', error);
-    await mainWindow.loadURL(
-      inlinePage(
-        'Raisoni ERP could not start',
-        `${details}\n\nClose the application and run it again. If the problem continues, reinstall the software.`
-      )
-    );
+    console.error('Connection failed:', details);
+    await mainWindow.loadURL(errorPage(targetServerUrl, details));
   }
 }
 
 ipcMain.handle('app:version', () => app.getVersion());
 
 app.whenReady().then(createWindow).catch((error) => {
-  console.error('Unable to create the desktop window:', error);
+  console.error('Unable to create desktop window:', error);
   app.quit();
 });
 
@@ -182,19 +214,6 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow().catch(console.error);
   }
-});
-
-app.on('before-quit', (event) => {
-  if (!stopBackend || isStopping) return;
-
-  event.preventDefault();
-  isStopping = true;
-  Promise.resolve(stopBackend())
-    .catch((error) => console.error('Backend shutdown failed:', error))
-    .finally(() => {
-      stopBackend = null;
-      app.quit();
-    });
 });
 
 app.on('window-all-closed', () => {
