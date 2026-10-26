@@ -15,7 +15,7 @@ export function SettingsNav({ items }: SettingsNavProps) {
   const pathname = useLocation({ select: (location) => location.pathname })
 
   return (
-    <nav className='flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible'>
+    <nav className='flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible'>
       {items.map((item) => {
         const isActive = pathname.replace(/\/+$/, '') === item.href
         return (

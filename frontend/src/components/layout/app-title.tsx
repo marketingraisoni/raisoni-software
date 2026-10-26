@@ -28,7 +28,7 @@ export function AppTitle() {
             </div>
             <div className='grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden'>
               <span className='truncate font-bold'>Raisoni ERP</span>
-              <span className='truncate text-xs text-muted-foreground'>Admin Panel</span>
+              {/* <span className='truncate text-xs text-muted-foreground'>Admin Panel</span> */}
             </div>
           </Link>
         </SidebarMenuButton>
