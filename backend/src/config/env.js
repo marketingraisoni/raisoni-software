@@ -10,25 +10,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../../..');
 
-// APP_ENV chooses the business environment. NODE_ENV remains available for
-// library optimizations and should be "production" for staging/production.
-const requestedEnvironment =
-  process.env.APP_ENV ||
-  (['development', 'staging', 'production'].includes(process.env.NODE_ENV)
-    ? process.env.NODE_ENV
-    : 'development');
-const environment = resolveEnvironmentName(requestedEnvironment);
-const defaults = ENVIRONMENT_DEFAULTS[environment];
-const externalEnvironment = { ...process.env };
-
-// Shared values (for example JWT_EXPIRES_IN) live in .env. Environment-specific
-// values override them from .env.development, .env.staging, or .env.production.
+const environment = resolveEnvironmentName(process.env.APP_ENV);
 dotenv.config({ path: path.join(projectRoot, '.env') });
 dotenv.config({
   path: path.join(projectRoot, `.env.${environment}`),
   override: true
 });
-Object.assign(process.env, externalEnvironment);
+
+const defaults = ENVIRONMENT_DEFAULTS[environment];
 
 const port = parseInteger(process.env.PORT, defaults.port, 'PORT');
 const databaseName = process.env.DATABASE_NAME || defaults.databaseName;
