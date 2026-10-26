@@ -1,21 +1,24 @@
 import { inflateRawSync } from "node:zlib";
 
-const REQUIRED_HEADERS = {
-  P: "LOT NO",
-  Q: "VRIDDHI LOT NO.",
-  R: "R.WT.",
-  S: "CK-ID",
-  T: "SR.NO",
-  U: "SR.NO",
-  V: "POL CTS.",
-  W: "SHAPE",
-  X: "CUT",
-  Y: "COLOR",
-  Z: "CLARITY",
-  AA: "LS",
-  AB: "SUM_P.CTS",
-  AC: "Y%",
-};
+// Headers are deliberately associated with data fields instead of Excel column
+// letters. Planning workbooks sometimes contain extra columns (for example,
+// DEMAND), which must not shift all of the values read after that column.
+const REQUIRED_HEADERS = [
+  { field: "planningLotNo", label: "LOT NO" },
+  { field: "packetLabel", label: "VRIDDHI LOT NO." },
+  { field: "roughCarat", label: "R.WT." },
+  { field: "checkerId", label: "CK-ID" },
+  { field: "sourceSerial", label: "SR.NO", occurrence: 0 },
+  { field: "planningSerial", label: "SR.NO", occurrence: 1 },
+  { field: "polishedCarat", label: "POL CTS." },
+  { field: "shape", label: "SHAPE" },
+  { field: "cut", label: "CUT" },
+  { field: "color", label: "COLOR" },
+  { field: "clarity", label: "CLARITY" },
+  { field: "ls", label: "LS" },
+  { field: "sumPolishedCarat", label: "SUM_P.CTS" },
+  { field: "yieldPercentage", label: "Y%" },
+];
 
 function roundCarat(value) {
   return Math.round((Number(value) || 0) * 1000) / 1000;
@@ -152,9 +155,51 @@ function parseSheetRows(xml, sharedStrings) {
 
 function normalizeHeader(value) {
   return String(value ?? "")
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
     .trim()
     .replace(/\s+/g, " ")
     .toUpperCase();
+}
+
+function headerIdentity(value) {
+  // Formatting punctuation is not semantically important in these headings:
+  // e.g. "VRIDDHI LOT NO" and "VRIDDHI LOT NO." identify the same field.
+  return normalizeHeader(value).replace(/[^A-Z0-9]+/g, "");
+}
+
+function excelColumnNumber(column) {
+  return [...String(column)].reduce(
+    (number, character) => number * 26 + character.charCodeAt(0) - 64,
+    0,
+  );
+}
+
+function resolveHeaderColumns(headerValues) {
+  const columnsByHeader = new Map();
+  for (const [column, value] of Object.entries(headerValues)) {
+    const identity = headerIdentity(value);
+    if (!identity) continue;
+    const columns = columnsByHeader.get(identity) ?? [];
+    columns.push(column);
+    columnsByHeader.set(identity, columns);
+  }
+  for (const columns of columnsByHeader.values()) {
+    columns.sort(
+      (left, right) => excelColumnNumber(left) - excelColumnNumber(right),
+    );
+  }
+
+  const resolved = {};
+  const missing = [];
+  for (const header of REQUIRED_HEADERS) {
+    const occurrence = header.occurrence ?? 0;
+    const column =
+      columnsByHeader.get(headerIdentity(header.label))?.[occurrence];
+    if (column) resolved[header.field] = column;
+    else missing.push(header.label);
+  }
+  return { resolved, missing };
 }
 
 function numberOrNull(value) {
@@ -182,19 +227,13 @@ export function buildPlanningFromRows(rows) {
   const headerRow = rows.find((row) => row.rowNumber === 2);
   if (!headerRow) throw new Error("The FILE sheet is missing its header row.");
 
-  const invalidHeaders = Object.entries(REQUIRED_HEADERS).filter(
-    ([column, expected]) =>
-      normalizeHeader(headerRow.values[column]) !== expected,
-  );
-  if (invalidHeaders.length) {
-    const columns = invalidHeaders
-      .map(
-        ([column, expected]) =>
-          `${column} (expected "${expected}", found "${normalizeHeader(headerRow.values[column])}")`,
-      )
+  const { resolved: columns, missing } = resolveHeaderColumns(headerRow.values);
+  if (missing.length) {
+    const availableHeaders = Object.entries(headerRow.values)
+      .map(([column, value]) => `${column} ("${normalizeHeader(value)}")`)
       .join(", ");
     throw new Error(
-      `The FILE sheet format is invalid. Check header columns: ${columns}. Available columns: ${Object.keys(headerRow.values).join(", ")}.`,
+      `The FILE sheet format is invalid. Missing required header${missing.length === 1 ? "" : "s"}: ${missing.map((header) => `"${header}"`).join(", ")}. Available headers: ${availableHeaders}.`,
     );
   }
 
@@ -202,52 +241,54 @@ export function buildPlanningFromRows(rows) {
   let current = null;
 
   for (const row of rows.filter((item) => item.rowNumber >= 3)) {
-    const rawPacket = String(row.values.Q ?? "").trim();
+    const rawPacket = String(row.values[columns.packetLabel] ?? "").trim();
     if (rawPacket && rawPacket !== "0") {
       if (current) packetPlans.push(current);
       const identity = extractPacketIdentity(rawPacket);
       if (!identity.packetNumber) {
         throw new Error(
-          `Unable to read the packet number in FILE!Q${row.rowNumber}.`,
+          `Unable to read the packet number in FILE!${columns.packetLabel}${row.rowNumber}.`,
         );
       }
       current = {
         ...identity,
-        planningLotNo: String(row.values.P ?? "").trim(),
-        roughCarat: roundCarat(numberOrNull(row.values.R)),
-        checkerId: String(row.values.S ?? "").trim(),
-        sourceSerial: numberOrNull(row.values.T),
-        planningSerial: numberOrNull(row.values.U),
+        planningLotNo: String(row.values[columns.planningLotNo] ?? "").trim(),
+        roughCarat: roundCarat(numberOrNull(row.values[columns.roughCarat])),
+        checkerId: String(row.values[columns.checkerId] ?? "").trim(),
+        sourceSerial: numberOrNull(row.values[columns.sourceSerial]),
+        planningSerial: numberOrNull(row.values[columns.planningSerial]),
         sourceStartRow: row.rowNumber,
         pieces: [],
       };
     }
 
-    const polishedCarat = numberOrNull(row.values.V);
+    const polishedCarat = numberOrNull(row.values[columns.polishedCarat]);
     if (polishedCarat !== null && polishedCarat > 0) {
       if (!current) {
         throw new Error(
-          `FILE!V${row.rowNumber} contains planning data before a packet number.`,
+          `FILE!${columns.polishedCarat}${row.rowNumber} contains planning data before a packet number.`,
         );
       }
       current.pieces.push({
         pieceNumber: current.pieces.length + 1,
         sourceRow: row.rowNumber,
-        planningSerial: numberOrNull(row.values.U) ?? current.planningSerial,
+        planningSerial:
+          numberOrNull(row.values[columns.planningSerial]) ??
+          current.planningSerial,
         polishedCarat: roundCarat(polishedCarat),
-        shape: String(row.values.W ?? "")
+        shape: String(row.values[columns.shape] ?? "")
           .trim()
           .toUpperCase(),
-        cut: String(row.values.X ?? "")
+        cut: String(row.values[columns.cut] ?? "")
           .trim()
           .toUpperCase(),
-        color: String(row.values.Y ?? "")
+        color: String(row.values[columns.color] ?? "")
           .trim()
           .toUpperCase(),
-        clarity: String(row.values.Z ?? "")
+        clarity: String(row.values[columns.clarity] ?? "")
           .trim()
           .toUpperCase(),
-        ls: String(row.values.AA ?? "")
+        ls: String(row.values[columns.ls] ?? "")
           .trim()
           .toUpperCase(),
       });

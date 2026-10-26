@@ -110,6 +110,65 @@ test("planning parser rejects changed workbook headers", () => {
         { rowNumber: 2, values: { ...headers, Q: "PACKET" } },
         { rowNumber: 3, values: { Q: "UN-9A(A)", R: "1", V: "0.4" } },
       ]),
-    /header columns: Q/,
+    /Missing required header: "VRIDDHI LOT NO\."/,
   );
+});
+
+test("planning parser identifies normalized headers after an extra column shifts them", () => {
+  const shiftedHeaders = {
+    P: "LOT NO",
+    Q: "VRIDDHI LOT NO",
+    R: "R.WT.",
+    S: "CK-ID",
+    T: "SR.NO",
+    U: "SR.NO",
+    V: "POL CTS.",
+    W: "SHAPE",
+    X: "DEMAND",
+    Y: "CUT",
+    Z: "COLOR",
+    AA: "CLARITY",
+    AB: "LS",
+    AC: "SUM_P.CTS",
+    AD: "Y%",
+  };
+
+  const result = buildPlanningFromRows([
+    { rowNumber: 2, values: shiftedHeaders },
+    {
+      rowNumber: 3,
+      values: {
+        P: "NEVD-UN/10",
+        Q: "UN-9A(A)",
+        R: "16.58",
+        S: "14",
+        T: "11",
+        U: "12",
+        V: "2.08",
+        W: "F-OVAL",
+        X: "IGNORED",
+        Y: "EX",
+        Z: "F",
+        AA: "VS1",
+        AB: "N",
+        AC: "2.08",
+        AD: "12.55",
+      },
+    },
+  ]);
+
+  assert.equal(result.packetCount, 1);
+  assert.equal(result.packetPlans[0].sourceSerial, 11);
+  assert.equal(result.packetPlans[0].planningSerial, 12);
+  assert.deepEqual(result.packetPlans[0].pieces[0], {
+    pieceNumber: 1,
+    sourceRow: 3,
+    planningSerial: 12,
+    polishedCarat: 2.08,
+    shape: "F-OVAL",
+    cut: "EX",
+    color: "F",
+    clarity: "VS1",
+    ls: "N",
+  });
 });
