@@ -128,6 +128,10 @@ export const API_MESSAGES = Object.freeze({
     LOT_CLOSED: 'Packets cannot be added to a closed lot',
     PCS_LIMIT: 'Packet count cannot exceed the lot Total PCs',
     CARAT_LIMIT: 'Packet carat weight cannot exceed the lot Total Carat',
+    WRITE_RATE_LIMITED:
+      'Too many packet entries were submitted. Please wait a moment and try again',
+    CREATE_BUSY:
+      'Packet entry is busy. Please try again in a moment',
     EXPORT_INCOMPLETE:
       'Excel can only be downloaded after all pieces and carat are assorted',
   }),

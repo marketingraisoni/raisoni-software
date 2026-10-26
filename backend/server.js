@@ -20,6 +20,8 @@ const frontendDistPath = path.resolve(__dirname, '../frontend/dist');
 
 import { User } from './src/models/User.js';
 import { Lot } from './src/models/Lot.js';
+import { AssortmentPacket } from './src/models/AssortmentPacket.js';
+import { AssortmentWriteLock } from './src/models/AssortmentWriteLock.js';
 import { Setting } from './src/models/Setting.js';
 import { seedDatabase } from './scripts/seed.js';
 import { migrateLegacyUserTypes } from './src/services/userMigrationService.js';
@@ -122,6 +124,10 @@ export async function startServer(port = config.port) {
     // Replace the former global Kapan uniqueness index with the active-only
     // index required by soft deletion and Kapan reuse.
     await Lot.syncIndexes();
+    // Explicitly create packet sequence and idempotency indexes before serving
+    // traffic so concurrent assortment writes have database-level guarantees.
+    await AssortmentPacket.createIndexes();
+    await AssortmentWriteLock.createIndexes();
     await migrateLegacyUserTypes();
     await Setting.updateOne(
       { key: 'appName', value: 'Raisoni Software Demo' },

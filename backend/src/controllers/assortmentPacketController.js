@@ -6,6 +6,7 @@ import { AssortmentGrade } from '../models/AssortmentGrade.js';
 import { Lot } from '../models/Lot.js';
 import { logAudit } from '../services/auditService.js';
 import { buildAssortmentExcel } from '../services/assortmentExcelService.js';
+import { withAssortmentWriteLock } from '../services/assortmentWriteLockService.js';
 import { broadcastEvent } from '../sockets/socketManager.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -13,20 +14,14 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 const toMilliCarat = (value) => Math.round(Number(value) * 1000);
 const fromMilliCarat = (value) => value / 1000;
 const PRIMARY_GRADE = 'A';
+const MAX_PACKET_CREATE_ATTEMPTS = 10;
 
 export function buildPacketName(kapanNo, srNo) {
   return `${kapanNo}-${srNo}${PRIMARY_GRADE}`;
 }
 
-export function buildSummary(lot, packets) {
-  let totalMilliCarat = 0;
-
-  for (const packet of packets) {
-    totalMilliCarat += toMilliCarat(packet.carat);
-  }
-
+function buildSummaryFromTotals(lot, totalPackets, totalMilliCarat) {
   const targetMilliCarat = toMilliCarat(lot.totalCarat);
-  const totalPackets = packets.length;
 
   return {
     totalPackets,
@@ -35,6 +30,112 @@ export function buildSummary(lot, packets) {
     remainingCarat: fromMilliCarat(Math.max(targetMilliCarat - totalMilliCarat, 0)),
     complete: totalPackets === lot.totalPcs && totalMilliCarat === targetMilliCarat,
   };
+}
+
+export function buildSummary(lot, packets) {
+  const totalMilliCarat = packets.reduce(
+    (total, packet) => total + toMilliCarat(packet.carat),
+    0
+  );
+  return buildSummaryFromTotals(lot, packets.length, totalMilliCarat);
+}
+
+async function getPacketStats(lotId) {
+  const [stats] = await AssortmentPacket.aggregate([
+    { $match: { lot: lotId } },
+    {
+      $group: {
+        _id: null,
+        totalPackets: { $sum: 1 },
+        totalCarat: { $sum: '$carat' },
+        maxSrNo: { $max: '$srNo' },
+      },
+    },
+  ]);
+
+  return {
+    totalPackets: Number(stats?.totalPackets || 0),
+    totalMilliCarat: toMilliCarat(stats?.totalCarat || 0),
+    maxSrNo: Number(stats?.maxSrNo || 0),
+  };
+}
+
+function assertPacketCapacity(lot, stats, carat) {
+  if (stats.totalPackets >= lot.totalPcs) {
+    throw ApiError.badRequest(API_MESSAGES.PACKET.PCS_LIMIT);
+  }
+  if (
+    stats.totalMilliCarat + toMilliCarat(carat) >
+    toMilliCarat(lot.totalCarat)
+  ) {
+    throw ApiError.badRequest(API_MESSAGES.PACKET.CARAT_LIMIT);
+  }
+}
+
+async function findPacketByRequestId(lotId, requestId) {
+  return AssortmentPacket.findOne({ lot: lotId, requestId });
+}
+
+async function createPacketRecord(lot, body, userId) {
+  for (let attempt = 0; attempt < MAX_PACKET_CREATE_ATTEMPTS; attempt += 1) {
+    const replayedPacket = await findPacketByRequestId(lot._id, body.requestId);
+    if (replayedPacket) {
+      return {
+        packet: replayedPacket,
+        created: false,
+        stats: await getPacketStats(lot._id),
+      };
+    }
+
+    const stats = await getPacketStats(lot._id);
+    assertPacketCapacity(lot, stats, body.carat);
+    const nextSrNo = stats.maxSrNo + 1;
+
+    try {
+      const packet = await AssortmentPacket.create({
+        lot: lot._id,
+        srNo: nextSrNo,
+        name: buildPacketName(lot.kapanNo, nextSrNo),
+        grade: PRIMARY_GRADE,
+        carat: body.carat,
+        requestId: body.requestId,
+        createdBy: userId,
+      });
+      return {
+        packet,
+        created: true,
+        stats: {
+          totalPackets: stats.totalPackets + 1,
+          totalMilliCarat:
+            stats.totalMilliCarat + toMilliCarat(packet.carat),
+          maxSrNo: nextSrNo,
+        },
+      };
+    } catch (error) {
+      if (error?.code !== 11000) throw error;
+
+      // The same request may have completed in another backend process after
+      // the client disconnected. Return that packet instead of creating one
+      // more. A sequence collision from another request is retried with fresh
+      // totals and the next available serial number.
+      const storedPacket = await findPacketByRequestId(
+        lot._id,
+        body.requestId
+      );
+      if (storedPacket) {
+        return {
+          packet: storedPacket,
+          created: false,
+          stats: await getPacketStats(lot._id),
+        };
+      }
+      if (attempt === MAX_PACKET_CREATE_ATTEMPTS - 1) {
+        throw ApiError.conflict(API_MESSAGES.PACKET.CREATE_BUSY);
+      }
+    }
+  }
+
+  throw ApiError.conflict(API_MESSAGES.PACKET.CREATE_BUSY);
 }
 
 function toPacketResponse(lot, packet) {
@@ -306,131 +407,114 @@ export const deleteAssortmentGrade = asyncHandler(async (req, res) => {
   });
 });
 
-export const updateAssortmentPacket = asyncHandler(async (req, res) => {
-  const lot = await findActiveLot(req.params.lotId);
-  if (lot.status !== 'active') {
-    throw ApiError.badRequest(API_MESSAGES.PACKET.LOT_CLOSED);
-  }
+export const updateAssortmentPacket = asyncHandler(async (req, res) =>
+  withAssortmentWriteLock(req.params.lotId, async () => {
+    const lot = await findActiveLot(req.params.lotId);
+    if (lot.status !== 'active') {
+      throw ApiError.badRequest(API_MESSAGES.PACKET.LOT_CLOSED);
+    }
 
-  const packet = await AssortmentPacket.findOne({
-    _id: req.params.packetId,
-    lot: lot._id,
-  });
-  if (!packet) {
-    throw ApiError.notFound(API_MESSAGES.PACKET.NOT_FOUND);
-  }
+    const packet = await AssortmentPacket.findOne({
+      _id: req.params.packetId,
+      lot: lot._id,
+    });
+    if (!packet) {
+      throw ApiError.notFound(API_MESSAGES.PACKET.NOT_FOUND);
+    }
 
-  const otherPackets = await AssortmentPacket.find({
-    lot: lot._id,
-    _id: { $ne: packet._id },
-  }).select('srNo name carat').lean();
-  const otherMilliCarat = otherPackets.reduce(
-    (total, currentPacket) => total + toMilliCarat(currentPacket.carat),
-    0
-  );
-  if (otherMilliCarat + toMilliCarat(req.body.carat) > toMilliCarat(lot.totalCarat)) {
-    throw ApiError.badRequest(API_MESSAGES.PACKET.CARAT_LIMIT);
-  }
+    const stats = await getPacketStats(lot._id);
+    const updatedTotalMilliCarat =
+      stats.totalMilliCarat -
+      toMilliCarat(packet.carat) +
+      toMilliCarat(req.body.carat);
+    if (updatedTotalMilliCarat > toMilliCarat(lot.totalCarat)) {
+      throw ApiError.badRequest(API_MESSAGES.PACKET.CARAT_LIMIT);
+    }
 
-  const previousCarat = packet.carat;
-  packet.name = buildPacketName(lot.kapanNo, packet.srNo);
-  packet.grade = PRIMARY_GRADE;
-  packet.carat = req.body.carat;
-  await packet.save();
+    const previousCarat = packet.carat;
+    packet.name = buildPacketName(lot.kapanNo, packet.srNo);
+    packet.grade = PRIMARY_GRADE;
+    packet.carat = req.body.carat;
+    await packet.save();
 
-  await logAudit({
-    action: 'ASSORTMENT_PACKET_UPDATED',
-    entityType: 'AssortmentPacket',
-    entityId: packet._id.toString(),
-    user: req.user,
-    req,
-    details: {
-      lotId: lot._id.toString(),
-      kapanNo: lot.kapanNo,
-      srNo: packet.srNo,
-      grade: packet.grade,
-      previousCarat,
-      carat: packet.carat,
-    },
-  });
-  broadcastEvent('assortment-packet:updated', {
-    lotId: lot._id,
-    packetId: packet._id,
-  });
+    await logAudit({
+      action: 'ASSORTMENT_PACKET_UPDATED',
+      entityType: 'AssortmentPacket',
+      entityId: packet._id.toString(),
+      user: req.user,
+      req,
+      details: {
+        lotId: lot._id.toString(),
+        kapanNo: lot.kapanNo,
+        srNo: packet.srNo,
+        grade: packet.grade,
+        previousCarat,
+        carat: packet.carat,
+      },
+    });
+    broadcastEvent('assortment-packet:updated', {
+      lotId: lot._id,
+      packetId: packet._id,
+    });
 
-  const { summary } = buildPacketData(lot, [
-    ...otherPackets,
-    packet.toObject(),
-  ]);
+    const summary = buildSummaryFromTotals(
+      lot,
+      stats.totalPackets,
+      updatedTotalMilliCarat
+    );
 
-  return sendSuccess(res, {
-    message: API_MESSAGES.PACKET.UPDATED,
-    data: { packet: toPacketResponse(lot, packet), summary },
-  });
-});
+    return sendSuccess(res, {
+      message: API_MESSAGES.PACKET.UPDATED,
+      data: { packet: toPacketResponse(lot, packet), summary },
+    });
+  })
+);
 
-export const createAssortmentPacket = asyncHandler(async (req, res) => {
-  const lot = await findActiveLot(req.params.lotId);
-  if (lot.status !== 'active') {
-    throw ApiError.badRequest(API_MESSAGES.PACKET.LOT_CLOSED);
-  }
+export const createAssortmentPacket = asyncHandler(async (req, res) =>
+  withAssortmentWriteLock(req.params.lotId, async () => {
+    const lot = await findActiveLot(req.params.lotId);
+    if (lot.status !== 'active') {
+      throw ApiError.badRequest(API_MESSAGES.PACKET.LOT_CLOSED);
+    }
 
-  const existingPackets = await AssortmentPacket.find({ lot: lot._id })
-    .select('srNo name grade carat')
-    .sort({ srNo: 1 })
-    .lean();
-  await backfillPrimaryPacketData(lot, existingPackets);
-  const currentSummary = buildSummary(lot, existingPackets);
+    const { packet, created, stats } = await createPacketRecord(
+      lot,
+      req.body,
+      req.user?._id
+    );
 
-  if (currentSummary.totalPackets >= lot.totalPcs) {
-    throw ApiError.badRequest(API_MESSAGES.PACKET.PCS_LIMIT);
-  }
+    if (created) {
+      await logAudit({
+        action: 'ASSORTMENT_PACKET_CREATED',
+        entityType: 'AssortmentPacket',
+        entityId: packet._id.toString(),
+        user: req.user,
+        req,
+        details: {
+          lotId: lot._id.toString(),
+          kapanNo: lot.kapanNo,
+          srNo: packet.srNo,
+          grade: packet.grade,
+          carat: packet.carat,
+          requestId: req.body.requestId,
+        },
+      });
+      broadcastEvent('assortment-packet:created', {
+        lotId: lot._id,
+        packetId: packet._id,
+      });
+    }
 
-  const nextTotalMilliCarat =
-    toMilliCarat(currentSummary.totalCarat) + toMilliCarat(req.body.carat);
-  if (nextTotalMilliCarat > toMilliCarat(lot.totalCarat)) {
-    throw ApiError.badRequest(API_MESSAGES.PACKET.CARAT_LIMIT);
-  }
+    const summary = buildSummaryFromTotals(
+      lot,
+      stats.totalPackets,
+      stats.totalMilliCarat
+    );
 
-  const nextSrNo = existingPackets.length
-    ? existingPackets[existingPackets.length - 1].srNo + 1
-    : 1;
-  const packet = await AssortmentPacket.create({
-    lot: lot._id,
-    srNo: nextSrNo,
-    name: buildPacketName(lot.kapanNo, nextSrNo),
-    grade: PRIMARY_GRADE,
-    carat: req.body.carat,
-    createdBy: req.user?._id,
-  });
-
-  await logAudit({
-    action: 'ASSORTMENT_PACKET_CREATED',
-    entityType: 'AssortmentPacket',
-    entityId: packet._id.toString(),
-    user: req.user,
-    req,
-    details: {
-      lotId: lot._id.toString(),
-      kapanNo: lot.kapanNo,
-      srNo: packet.srNo,
-      grade: packet.grade,
-      carat: packet.carat,
-    },
-  });
-  broadcastEvent('assortment-packet:created', {
-    lotId: lot._id,
-    packetId: packet._id,
-  });
-
-  const { summary } = buildPacketData(lot, [
-    ...existingPackets,
-    packet.toObject(),
-  ]);
-
-  return sendSuccess(res, {
-    statusCode: HTTP_STATUS.CREATED,
-    message: API_MESSAGES.PACKET.CREATED,
-    data: { packet: toPacketResponse(lot, packet), summary },
-  });
-});
+    return sendSuccess(res, {
+      statusCode: created ? HTTP_STATUS.CREATED : HTTP_STATUS.OK,
+      message: API_MESSAGES.PACKET.CREATED,
+      data: { packet: toPacketResponse(lot, packet), summary },
+    });
+  })
+);

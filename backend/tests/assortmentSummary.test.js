@@ -5,6 +5,9 @@ import {
   buildPacketName,
   buildSummary,
 } from '../src/controllers/assortmentPacketController.js';
+import { withLocalAssortmentWriteQueue } from '../src/services/assortmentWriteLockService.js';
+import { AssortmentPacket } from '../src/models/AssortmentPacket.js';
+import { assortmentPacketSchema } from '../src/validators/assortmentPacketValidator.js';
 
 test('packet names combine the lot, continuous sequence, and primary grade', () => {
   assert.equal(buildPacketName('UN', 9), 'UN-9A');
@@ -52,4 +55,61 @@ test('packet data returns a compact packet contract with the Grade A name', () =
     { id: 'packet-1', srNo: 1, name: 'UN-1A', carat: 0.1 },
     { id: 'packet-2', srNo: 2, name: 'UN-2A', carat: 0.1 },
   ]);
+});
+
+test('packet creation requests for the same lot run in submission order', async () => {
+  const events = [];
+  let releaseFirst;
+  const firstCanFinish = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+
+  const first = withLocalAssortmentWriteQueue('lot-1', async () => {
+    events.push('first-started');
+    await firstCanFinish;
+    events.push('first-finished');
+  });
+  const second = withLocalAssortmentWriteQueue('lot-1', async () => {
+    events.push('second-started');
+  });
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(events, ['first-started']);
+
+  releaseFirst();
+  await Promise.all([first, second]);
+  assert.deepEqual(events, [
+    'first-started',
+    'first-finished',
+    'second-started',
+  ]);
+});
+
+test('packet creation requires an idempotency request ID', () => {
+  assert.equal(
+    assortmentPacketSchema.safeParse({
+      carat: 0.125,
+      requestId: 'packet-request-1',
+    }).success,
+    true
+  );
+  assert.equal(assortmentPacketSchema.safeParse({ carat: 0.125 }).success, false);
+});
+
+test('packet model has unique sequence and idempotency indexes per lot', () => {
+  const indexes = AssortmentPacket.schema.indexes();
+  assert.equal(
+    indexes.some(
+      ([fields, options]) =>
+        fields.lot === 1 && fields.srNo === 1 && options.unique === true
+    ),
+    true
+  );
+  assert.equal(
+    indexes.some(
+      ([fields, options]) =>
+        fields.lot === 1 && fields.requestId === 1 && options.unique === true
+    ),
+    true
+  );
 });

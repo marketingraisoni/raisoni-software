@@ -33,6 +33,12 @@ const assortmentPacketSchema = new mongoose.Schema(
       required: true,
       min: [0.001, 'Packet carat must be greater than 0']
     },
+    requestId: {
+      type: String,
+      trim: true,
+      minlength: 8,
+      maxlength: 100
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
@@ -43,5 +49,12 @@ const assortmentPacketSchema = new mongoose.Schema(
 
 assortmentPacketSchema.index({ lot: 1, srNo: 1 }, { unique: true });
 assortmentPacketSchema.index({ lot: 1, name: 1 });
+assortmentPacketSchema.index(
+  { lot: 1, requestId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { requestId: { $type: 'string' } }
+  }
+);
 
 export const AssortmentPacket = mongoose.model('AssortmentPacket', assortmentPacketSchema);

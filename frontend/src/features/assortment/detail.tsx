@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -73,6 +73,10 @@ type PacketQueryData = Awaited<ReturnType<typeof getLotPackets>>
 
 type Props = {
   lotId: string
+}
+
+function createPacketRequestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`
 }
 
 export function AssortmentDetail({ lotId }: Props) {
@@ -473,13 +477,14 @@ function NextPacketBox({
   assortmentComplete: boolean
 }) {
   const queryClient = useQueryClient()
+  const submissionLock = useRef(false)
   const form = useForm<CaratForm>({
     resolver: zodResolver(caratFormSchema),
     defaultValues: { carat: Number.NaN },
   })
   const mutation = useMutation({
-    mutationFn: (values: CaratForm) =>
-      createLotPacket(lotId, { carat: values.carat }),
+    mutationFn: (values: CaratForm & { requestId: string }) =>
+      createLotPacket(lotId, values),
     onSuccess: (response) => {
       queryClient.setQueryData<PacketQueryData>(
         lotPacketsQueryKey(lotId),
@@ -503,6 +508,16 @@ function NextPacketBox({
       form.reset({ carat: Number.NaN })
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
+    onSettled: () => {
+      submissionLock.current = false
+    },
+  })
+  const submitPacket = form.handleSubmit((values) => {
+    // isPending is rendered asynchronously, so a rapid double Enter/click can
+    // otherwise send the same packet twice before the button becomes disabled.
+    if (submissionLock.current) return
+    submissionLock.current = true
+    mutation.mutate({ ...values, requestId: createPacketRequestId() })
   })
   const disabled =
     !canCreate ||
@@ -521,7 +536,7 @@ function NextPacketBox({
       </div>
       <Form {...form}>
         <form
-          onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+          onSubmit={submitPacket}
           className='mt-3 space-y-2'
         >
           <FormField

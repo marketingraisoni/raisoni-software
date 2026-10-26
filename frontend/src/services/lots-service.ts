@@ -15,6 +15,10 @@ export const lotQueryKey = (lotId: string) => ['lots', lotId] as const
 export const lotPacketsQueryKey = (lotId: string) =>
   ['lots', lotId, 'packets'] as const
 
+// Packet entry is performed repeatedly over a LAN. Keep the normal 15-second
+// API timeout for reads, but allow writes to wait through a short server queue.
+const ASSORTMENT_WRITE_TIMEOUT_MS = 60_000
+
 type CreateLotInput = {
   kapanNo: string
   totalCarat: number
@@ -169,10 +173,14 @@ export async function getLotPackets(lotId: string, signal?: AbortSignal) {
   }
 }
 
-export async function createLotPacket(lotId: string, input: { carat: number }) {
+export async function createLotPacket(
+  lotId: string,
+  input: { carat: number; requestId: string }
+) {
   const { data: response } = await apiClient.post<ApiResponse<PacketData>>(
     `/lots/${lotId}/packets`,
-    input
+    input,
+    { timeout: ASSORTMENT_WRITE_TIMEOUT_MS }
   )
   return {
     ...response,
@@ -190,7 +198,8 @@ export async function updateLotPacket(
 ) {
   const { data: response } = await apiClient.put<ApiResponse<PacketData>>(
     `/lots/${lotId}/packets/${packetId}`,
-    input
+    input,
+    { timeout: ASSORTMENT_WRITE_TIMEOUT_MS }
   )
   return {
     ...response,

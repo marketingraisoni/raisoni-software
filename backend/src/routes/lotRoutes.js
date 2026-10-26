@@ -10,6 +10,7 @@ import {
   updateAssortmentPacketSchema,
 } from "../validators/assortmentPacketValidator.js";
 import { PERMISSION_MODULE } from "../constants/permissions.js";
+import { assortmentWriteRateLimiter } from "../middleware/rateLimitMiddleware.js";
 
 const router = Router();
 
@@ -31,12 +32,14 @@ router.get(
 router.put(
   "/:lotId/packets/:packetId",
   permit(PERMISSION_MODULE.ASSORTMENT),
+  assortmentWriteRateLimiter,
   validate(updateAssortmentPacketSchema),
   assortmentPacketController.updateAssortmentPacket,
 );
 router.post(
   "/:lotId/packets",
   permit(PERMISSION_MODULE.ASSORTMENT),
+  assortmentWriteRateLimiter,
   validate(assortmentPacketSchema),
   assortmentPacketController.createAssortmentPacket,
 );
