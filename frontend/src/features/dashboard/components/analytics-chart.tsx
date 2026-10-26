@@ -9,16 +9,6 @@ import {
 } from 'recharts'
 import { type AnalyticsChartPoint } from '@/services/dashboard-service'
 
-const defaultData = [
-  { name: 'Mon', clicks: 120, uniques: 80 },
-  { name: 'Tue', clicks: 140, uniques: 90 },
-  { name: 'Wed', clicks: 180, uniques: 110 },
-  { name: 'Thu', clicks: 160, uniques: 105 },
-  { name: 'Fri', clicks: 210, uniques: 130 },
-  { name: 'Sat', clicks: 190, uniques: 120 },
-  { name: 'Sun', clicks: 150, uniques: 95 },
-]
-
 function AnalyticsCustomTooltip({
   active,
   payload,
@@ -80,7 +70,16 @@ function AnalyticsCustomTooltip({
 }
 
 export function AnalyticsChart({ data }: { data?: AnalyticsChartPoint[] }) {
-  const chartData = data && data.length > 0 ? data : defaultData
+  const chartData = data && data.length > 0 ? data : []
+  const hasData = chartData.some((d) => (d.clicks || 0) > 0 || (d.uniques || 0) > 0)
+
+  if (!hasData) {
+    return (
+      <div className='flex h-[320px] flex-col items-center justify-center text-center text-sm text-muted-foreground'>
+        <p className='font-medium'>No production volume recorded this week</p>
+      </div>
+    )
+  }
 
   return (
     <ResponsiveContainer width='100%' height={320}>

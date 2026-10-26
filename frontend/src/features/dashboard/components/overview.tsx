@@ -84,7 +84,7 @@ export function Overview({ data }: { data?: OverviewChartPoint[] }) {
   const chartData = useMemo(() => {
     const raw = data && data.length > 0 ? data : defaultData
     return raw.map((item) => {
-      const pieces = item.pieces || Math.round(item.total * 0.06)
+      const pieces = item.pieces || 0
       const avgDensity = pieces > 0 ? Math.round((item.total / pieces) * 10) / 10 : 0
       return {
         name: item.name,
@@ -94,6 +94,16 @@ export function Overview({ data }: { data?: OverviewChartPoint[] }) {
       }
     })
   }, [data])
+
+  const hasData = chartData.some((d) => (d.roughCarat || 0) > 0 || (d.totalPieces || 0) > 0)
+
+  if (!hasData) {
+    return (
+      <div className='flex h-[340px] flex-col items-center justify-center text-center text-sm text-muted-foreground'>
+        <p className='font-medium'>No annual overview data available</p>
+      </div>
+    )
+  }
 
   return (
     <div className='space-y-2'>

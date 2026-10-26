@@ -144,7 +144,54 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
         },
       },
       { $sort: { issuedCarat: -1 } },
-      { $limit: 4 },
+      { $limit: 6 },
+    ]),
+
+    // Real packet size brackets
+    AssortmentPacket.aggregate([
+      {
+        $facet: {
+          under5: [
+            { $match: { carat: { $lt: 5 } } },
+            { $group: { _id: null, count: { $sum: 1 }, carats: { $sum: '$carat' } } },
+          ],
+          from5to15: [
+            { $match: { carat: { $gte: 5, $lt: 15 } } },
+            { $group: { _id: null, count: { $sum: 1 }, carats: { $sum: '$carat' } } },
+          ],
+          from15to30: [
+            { $match: { carat: { $gte: 15, $lt: 30 } } },
+            { $group: { _id: null, count: { $sum: 1 }, carats: { $sum: '$carat' } } },
+          ],
+          from30to50: [
+            { $match: { carat: { $gte: 30, $lte: 50 } } },
+            { $group: { _id: null, count: { $sum: 1 }, carats: { $sum: '$carat' } } },
+          ],
+          over50: [
+            { $match: { carat: { $gt: 50 } } },
+            { $group: { _id: null, count: { $sum: 1 }, carats: { $sum: '$carat' } } },
+          ],
+        },
+      },
+    ]),
+
+    // Real 7-day daily activity
+    Lot.aggregate([
+      {
+        $match: {
+          deletedAt: null,
+          createdAt: {
+            $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          totalCarat: { $sum: '$totalCarat' },
+          totalPcs: { $sum: '$totalPcs' },
+        },
+      },
     ]),
   ]);
 
@@ -196,24 +243,31 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
     avatar: `/avatars/0${(idx % 5) + 1}.png`,
   }));
 
-  // Analytics days
-  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const avgPcsPerDay = Math.round((lotSummary.totalPcs || 0) / 7);
-  const avgCaratPerDay = Math.round(((lotSummary.totalCarat || 0) / 7) * 10) / 10;
-  const analyticsChart = daysOfWeek.map((name) => ({
-    name,
-    clicks: avgPcsPerDay,
-    uniques: Math.round(avgCaratPerDay),
-  }));
+  // Real 7-day activity chart
+  const dailyLotsMap = new Map();
+  for (const d of (dailyLotsAgg || [])) {
+    dailyLotsMap.set(d._id, d);
+  }
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const analyticsChart = [];
+  for (let i = 6; i >= 0; i--) {
+    const dateObj = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    const dateKey = dateObj.toISOString().slice(0, 10);
+    const dayName = dayNames[dateObj.getDay()];
+    const entry = dailyLotsMap.get(dateKey);
+    analyticsChart.push({
+      name: dayName,
+      clicks: entry ? entry.totalPcs || 0 : 0,
+      uniques: entry ? Math.round(entry.totalCarat * 100) / 100 : 0,
+    });
+  }
 
-  const referrers = vendorAgg.length > 0
+  const referrers = (vendorAgg && vendorAgg.length > 0)
     ? vendorAgg.map((v) => ({
-        name: v._id || 'Direct',
+        name: v._id || 'In-House',
         value: Math.round(v.issuedCarat || 0),
       }))
-    : [
-        { name: 'In-House 4P', value: Math.round(processSummary.totalIssuedCarat || 100) },
-      ];
+    : [];
 
   const devices = [
     { name: 'Active Lots', value: activeLots },
@@ -224,7 +278,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 
   const primaryLanIp = getPrimaryLanIp();
 
-  // Assortment grade breakdown
+  // Real assortment grade breakdown
   const totalPacketCarat = Math.round((packetSummary.totalCarat || 0) * 100) / 100;
   const gradeDistribution = (packetGradeAgg && packetGradeAgg.length > 0)
     ? packetGradeAgg.map((g) => ({
@@ -232,23 +286,39 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
         value: Math.round(g.totalCarat * 100) / 100,
         count: g.count,
       }))
-    : [
-        { name: 'Grade A', value: Math.round(totalPacketCarat * 0.44 * 100) / 100, count: Math.round((totalPackets || 0) * 0.42) },
-        { name: 'Grade B', value: Math.round(totalPacketCarat * 0.31 * 100) / 100, count: Math.round((totalPackets || 0) * 0.31) },
-        { name: 'Grade C', value: Math.round(totalPacketCarat * 0.17 * 100) / 100, count: Math.round((totalPackets || 0) * 0.19) },
-        { name: 'Grade D', value: Math.round(totalPacketCarat * 0.08 * 100) / 100, count: Math.round((totalPackets || 0) * 0.08) },
-      ];
+    : [];
 
-  // Size category brackets
+  // Real size category brackets from DB aggregation
+  const sbResult = (sizeBracketsAgg && sizeBracketsAgg[0]) || {};
   const sizeBrackets = [
-    { range: '< 5 Cts', count: Math.round((totalPackets || 0) * 0.22), carats: Math.round(totalPacketCarat * 0.09) },
-    { range: '5-15 Cts', count: Math.round((totalPackets || 0) * 0.37), carats: Math.round(totalPacketCarat * 0.27) },
-    { range: '15-30 Cts', count: Math.round((totalPackets || 0) * 0.25), carats: Math.round(totalPacketCarat * 0.35) },
-    { range: '30-50 Cts', count: Math.round((totalPackets || 0) * 0.12), carats: Math.round(totalPacketCarat * 0.20) },
-    { range: '> 50 Cts', count: Math.round((totalPackets || 0) * 0.04), carats: Math.round(totalPacketCarat * 0.09) },
+    {
+      range: '< 5 Cts',
+      count: sbResult.under5?.[0]?.count || 0,
+      carats: Math.round((sbResult.under5?.[0]?.carats || 0) * 100) / 100,
+    },
+    {
+      range: '5-15 Cts',
+      count: sbResult.from5to15?.[0]?.count || 0,
+      carats: Math.round((sbResult.from5to15?.[0]?.carats || 0) * 100) / 100,
+    },
+    {
+      range: '15-30 Cts',
+      count: sbResult.from15to30?.[0]?.count || 0,
+      carats: Math.round((sbResult.from15to30?.[0]?.carats || 0) * 100) / 100,
+    },
+    {
+      range: '30-50 Cts',
+      count: sbResult.from30to50?.[0]?.count || 0,
+      carats: Math.round((sbResult.from30to50?.[0]?.carats || 0) * 100) / 100,
+    },
+    {
+      range: '> 50 Cts',
+      count: sbResult.over50?.[0]?.count || 0,
+      carats: Math.round((sbResult.over50?.[0]?.carats || 0) * 100) / 100,
+    },
   ];
 
-  // Scatter chart data (packets distribution: x = srNo, y = carat, z = weight volume)
+  // Scatter chart data (only real packet samples, no mock generation)
   const scatterData = (packetSamples && packetSamples.length > 0)
     ? packetSamples.map((p, idx) => ({
         x: p.srNo || idx + 1,
@@ -257,29 +327,33 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
         name: `Packet #${p.srNo || idx + 1}`,
         grade: p.grade || 'A',
       }))
-    : Array.from({ length: 30 }, (_, i) => {
-        const srNo = i + 1;
-        const avg = totalPacketCarat / Math.max(totalPackets || 30, 1);
-        const factor = 0.4 + ((i * 17 + 3) % 13) * 0.12;
-        const carat = Math.round(avg * factor * 100) / 100;
-        return {
-          x: srNo,
-          y: carat,
-          z: Math.min(Math.max(carat * 8, 40), 280),
-          name: `Packet #${srNo}`,
-          grade: ['A', 'A', 'B', 'B', 'C', 'D'][i % 6],
-        };
-      });
+    : [];
 
-  // Lot Rough vs Assorted conversion comparison for Composed Chart
+  // Lot Rough vs Assorted conversion comparison with real DB packet aggregation
+  const recentLotIds = recentLots.map((l) => l._id);
+  const lotPacketAgg = recentLotIds.length > 0
+    ? await AssortmentPacket.aggregate([
+        { $match: { lot: { $in: recentLotIds } } },
+        {
+          $group: {
+            _id: '$lot',
+            totalPacketCarat: { $sum: '$carat' },
+            count: { $sum: 1 },
+          },
+        },
+      ])
+    : [];
+  const lotPacketMap = new Map(lotPacketAgg.map((p) => [p._id.toString(), p]));
+
   const lotAssortmentComparison = recentLots.map((lot) => {
     const rough = Math.round((lot.totalCarat || 0) * 100) / 100;
-    const packetCarats = Math.round(rough * 0.93 * 100) / 100;
+    const packetInfo = lotPacketMap.get(lot._id.toString());
+    const packetCarats = packetInfo ? Math.round(packetInfo.totalPacketCarat * 100) / 100 : 0;
     return {
       kapan: `Lot ${lot.kapanNo}`,
       roughCarat: rough,
       packetCarat: packetCarats,
-      conversionPct: rough > 0 ? Math.round((packetCarats / rough) * 100) : 0,
+      conversionPct: rough > 0 && packetCarats > 0 ? Math.round((packetCarats / rough) * 100) : 0,
     };
   });
 

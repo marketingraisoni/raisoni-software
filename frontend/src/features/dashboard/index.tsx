@@ -169,9 +169,10 @@ export function Dashboard() {
   const metrics = data?.metrics
 
   const overviewCustomBarData = useMemo(() => {
-    const rough = metrics?.totalCarat || 3000
-    const packet = metrics?.totalPacketCarat || Math.round(rough * 0.85)
-    const returned = Math.round(packet * 0.96)
+    const rough = metrics?.totalCarat || 0
+    const packet = metrics?.totalPacketCarat || 0
+    const returned = metrics?.totalReturnedCarat || 0
+    if (rough === 0 && packet === 0 && returned === 0) return []
     return [
       { name: 'Rough Inward', carats: rough, fill: '#3b82f6' },
       { name: 'Assorted Packets', carats: packet, fill: '#10b981' },
@@ -183,64 +184,66 @@ export function Dashboard() {
     const yieldNum =
       typeof metrics?.overallYield === 'number'
         ? metrics.overallYield
-        : parseFloat(String(metrics?.overallYield || '96.2')) || 96
-    const totalCarat = metrics?.totalCarat || 1
+        : parseFloat(String(metrics?.overallYield || '0')) || 0
+    const totalCarat = metrics?.totalCarat || 0
     const packetCarat = metrics?.totalPacketCarat || 0
-    const allocRatio = Math.min(100, Math.round((packetCarat / totalCarat) * 100)) || 85
+    const allocRatio = totalCarat > 0 ? Math.min(100, Math.round((packetCarat / totalCarat) * 100)) : 0
+    const activeRatio = metrics?.totalLots ? Math.round(((metrics.activeLots || 0) / metrics.totalLots) * 100) : 0
 
-    return [
+    const items = [
       { name: '4P Recovery Yield', value: Math.min(100, Math.round(yieldNum)), fill: '#10b981' },
       { name: 'Assortment Allocation', value: allocRatio, fill: '#3b82f6' },
-      {
-        name: 'Active Lots Ratio',
-        value: metrics?.totalLots ? Math.round(((metrics.activeLots || 0) / metrics.totalLots) * 100) : 80,
-        fill: '#f59e0b',
-      },
-      { name: 'Factory Capacity', value: 85, fill: '#8b5cf6' },
+      { name: 'Active Lots Ratio', value: activeRatio, fill: '#f59e0b' },
     ]
+    return items.filter((item) => item.value > 0)
   }, [metrics])
 
   const [focusedRadialKey, setFocusedRadialKey] = useState<string | null>(null)
 
   // 1. Straight Angle Pie Chart Data (Lot Management)
   const straightAngleLotsData = useMemo(() => {
-    const active = metrics?.activeLots || 16
-    const closed = Math.max(metrics?.closedLots || 0, 1)
+    const active = metrics?.activeLots || 0
+    const closed = metrics?.closedLots || 0
+    if (active === 0 && closed === 0) return []
     return [
       { name: 'Active Lots', value: active, fill: '#3b82f6' },
       { name: 'Closed Lots', value: closed, fill: '#10b981' },
-    ]
+    ].filter((item) => item.value > 0)
   }, [metrics?.activeLots, metrics?.closedLots])
 
   // 2. Pie Chart with gap and rounded corners (Packet Creation)
   const roundedGapPieData = useMemo(() => {
-    const totalCarat = metrics?.totalPacketCarat || 11096
-    const totalPackets = metrics?.totalPackets || 385
-    return [
-      { name: 'Grade A', value: Math.round(totalCarat * 0.44), packets: Math.round(totalPackets * 0.42), fill: '#3b82f6' },
-      { name: 'Grade B', value: Math.round(totalCarat * 0.31), packets: Math.round(totalPackets * 0.31), fill: '#10b981' },
-      { name: 'Grade C', value: Math.round(totalCarat * 0.17), packets: Math.round(totalPackets * 0.19), fill: '#f59e0b' },
-      { name: 'Grade D', value: Math.round(totalCarat * 0.08), packets: Math.round(totalPackets * 0.08), fill: '#8b5cf6' },
-    ]
-  }, [metrics?.totalPacketCarat, metrics?.totalPackets])
+    if (data?.assortmentAnalytics?.gradeDistribution && data.assortmentAnalytics.gradeDistribution.length > 0) {
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
+      return data.assortmentAnalytics.gradeDistribution
+        .filter((g) => g.value > 0 || (g.count && g.count > 0))
+        .map((g, idx) => ({
+          name: g.name,
+          value: g.value,
+          packets: g.count || 0,
+          fill: colors[idx % colors.length],
+        }))
+    }
+    return []
+  }, [data?.assortmentAnalytics?.gradeDistribution])
 
   // 3. Radial Bar Chart with Click to Focus Legend (4P Semi-Polish)
   const clickToFocusRadialData = useMemo(() => {
-    const yieldNum =
-      typeof metrics?.overallYield === 'number'
-        ? metrics.overallYield
-        : parseFloat(String(metrics?.overallYield || '96.2')) || 96
+    const inProcess = metrics?.inProcessCount || 0
+    const completed = metrics?.returnedProcessCount || 0
+    const yieldNum = typeof metrics?.overallYield === 'number' ? metrics.overallYield : 0
+    if (inProcess === 0 && completed === 0 && yieldNum === 0) return []
     return [
       {
         name: 'In Process',
-        value: Math.min(100, Math.max((metrics?.inProcessCount || 3) * 25, 20)),
-        labelValue: `${metrics?.inProcessCount ?? 3} Batches`,
+        value: Math.min(100, inProcess * 10),
+        labelValue: `${inProcess} Batches`,
         fill: '#f59e0b',
       },
       {
         name: 'Completed',
-        value: 85,
-        labelValue: `${metrics?.returnedProcessCount ?? 2} Done`,
+        value: Math.min(100, completed * 10),
+        labelValue: `${completed} Done`,
         fill: '#10b981',
       },
       {
@@ -249,7 +252,7 @@ export function Dashboard() {
         labelValue: `${yieldNum}%`,
         fill: '#3b82f6',
       },
-    ]
+    ].filter((item) => item.value > 0)
   }, [metrics?.inProcessCount, metrics?.overallYield, metrics?.returnedProcessCount])
 
   const focusedClickToFocusRadialData = useMemo(() => {
@@ -259,15 +262,25 @@ export function Dashboard() {
     }))
   }, [clickToFocusRadialData, focusedRadialKey])
 
-  // 4. Simple Radial Bar Chart (Factory Operations)
+  // 4. Simple Radial Bar Chart (Plant Health)
   const simpleRadialData = useMemo(() => {
-    return [
-      { name: 'Rough Inward', value: 92, fill: '#3b82f6' },
-      { name: 'Assortment Yield', value: 88, fill: '#10b981' },
-      { name: '4P Laser Recovery', value: 96, fill: '#f59e0b' },
-      { name: 'Capacity Load', value: 84, fill: '#8b5cf6' },
+    const activeLotsRatio = metrics?.totalLots ? Math.round(((metrics.activeLots || 0) / metrics.totalLots) * 100) : 0
+    const yieldNum = typeof metrics?.overallYield === 'number' ? Math.min(100, Math.round(metrics.overallYield)) : 0
+    const allocRatio = metrics?.totalCarat ? Math.min(100, Math.round(((metrics.totalPacketCarat || 0) / metrics.totalCarat) * 100)) : 0
+
+    const items = [
+      { name: 'Active Lots Ratio', value: activeLotsRatio, fill: '#3b82f6' },
+      { name: '4P Laser Recovery', value: yieldNum, fill: '#10b981' },
+      { name: 'Assortment Yield', value: allocRatio, fill: '#f59e0b' },
     ]
-  }, [])
+    return items.filter((item) => item.value > 0)
+  }, [metrics])
+
+  const simpleRadialAvg = useMemo(() => {
+    if (simpleRadialData.length === 0) return '0%'
+    const avg = Math.round(simpleRadialData.reduce((acc, curr) => acc + curr.value, 0) / simpleRadialData.length)
+    return `${avg}%`
+  }, [simpleRadialData])
 
 
   return (
@@ -402,95 +415,111 @@ export function Dashboard() {
                   <CardTitle>Factory Production Pipeline</CardTitle>
                 </CardHeader>
                 <CardContent className='ps-2'>
-                  <ResponsiveContainer width='100%' height={270}>
-                    <BarChart
-                      data={overviewCustomBarData}
-                      margin={{ top: 22, right: 16, left: -6, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
-                      <XAxis
-                        dataKey='name'
-                        stroke='#888888'
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        stroke='#888888'
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        width={48}
-                        tickFormatter={(val: number) => val.toLocaleString()}
-                      />
-                      <Tooltip content={<OverviewCustomTooltip suffix=' Cts' />} />
-                      <Bar
-                        dataKey='carats'
-                        name='Volume'
-                        shape={<CustomShapeBar />}
-                        maxBarSize={64}
-                        label={{
-                          position: 'top',
-                          fill: 'var(--muted-foreground)',
-                          fontSize: 12,
-                          formatter: (val: any) => `${Number(val).toLocaleString()} Cts`,
-                        }}
-                      >
-                        {overviewCustomBarData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className='flex flex-wrap items-center justify-end gap-3 pt-2 text-xs text-muted-foreground'>
-                    <span className='flex items-center gap-1'>
-                      <span className='size-2 rounded-xs bg-[#3b82f6]' /> Rough Inward
-                    </span>
-                    <span className='flex items-center gap-1'>
-                      <span className='size-2 rounded-xs bg-[#10b981]' /> Assorted Packets
-                    </span>
-                    <span className='flex items-center gap-1'>
-                      <span className='size-2 rounded-xs bg-[#f59e0b]' /> 4P Semi-Polish
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+                  {overviewCustomBarData.length === 0 ? (
+                    <div className='flex h-[280px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                      <p className='font-medium text-sm'>No production carat flow recorded</p>
+                    </div>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width='100%' height={280}>
+                          <BarChart
+                            data={overviewCustomBarData}
+                            margin={{ top: 22, right: 16, left: -6, bottom: 0 }}
+                          >
+                            <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
+                            <XAxis
+                              dataKey='name'
+                              stroke='#888888'
+                              fontSize={12}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              stroke='#888888'
+                              fontSize={12}
+                              tickLine={false}
+                              axisLine={false}
+                              width={48}
+                              tickFormatter={(val: number) => val.toLocaleString()}
+                            />
+                            <Tooltip content={<OverviewCustomTooltip suffix=' Cts' />} />
+                            <Bar
+                              dataKey='carats'
+                              name='Volume'
+                              shape={<CustomShapeBar />}
+                              maxBarSize={64}
+                              label={{
+                                position: 'top',
+                                fill: 'var(--muted-foreground)',
+                                fontSize: 12,
+                                formatter: (val: any) => `${Number(val).toLocaleString()} Cts`,
+                              }}
+                            >
+                              {overviewCustomBarData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                        <div className='flex flex-wrap items-center justify-end gap-3 pt-2 text-xs text-muted-foreground'>
+                          <span className='flex items-center gap-1'>
+                            <span className='size-2 rounded-xs bg-[#3b82f6]' /> Rough Inward
+                          </span>
+                          <span className='flex items-center gap-1'>
+                            <span className='size-2 rounded-xs bg-[#10b981]' /> Assorted Packets
+                          </span>
+                          <span className='flex items-center gap-1'>
+                            <span className='size-2 rounded-xs bg-[#f59e0b]' /> 4P Semi-Polish
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
 
               <Card className='col-span-1 lg:col-span-3'>
                 <CardHeader className='pb-2'>
                   <CardTitle>Plant Operational Attainment</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width='100%' height={240}>
-                    <RadialBarChart
-                      cx='50%'
-                      cy='50%'
-                      innerRadius='20%'
-                      outerRadius='95%'
-                      barSize={12}
-                      data={overviewGaugesData}
-                      startAngle={180}
-                      endAngle={0}
-                    >
-                      <RadialBar
-                        background={{ fill: 'currentColor', opacity: 0.08 }}
-                        dataKey='value'
-                        cornerRadius={6}
-                      />
-                      <Tooltip content={<OverviewCustomTooltip suffix='%' />} />
-                    </RadialBarChart>
-                  </ResponsiveContainer>
-                  <div className='flex flex-wrap items-center justify-center gap-3 border-t border-border/60 pt-2.5 text-xs text-muted-foreground'>
-                    {overviewGaugesData.map((item) => (
-                      <span key={item.name} className='flex items-center gap-1.5'>
-                        <span
-                          className='size-2.5 shrink-0 rounded-full'
-                          style={{ backgroundColor: item.fill }}
-                        />
-                        {item.name}
-                      </span>
-                    ))}
-                  </div>
+                  {overviewGaugesData.length === 0 ? (
+                    <div className='flex h-[240px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                      <p className='font-medium text-sm'>No attainment gauges available</p>
+                    </div>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width='100%' height={240}>
+                        <RadialBarChart
+                          cx='50%'
+                          cy='50%'
+                          innerRadius='20%'
+                          outerRadius='95%'
+                          barSize={12}
+                          data={overviewGaugesData}
+                          startAngle={180}
+                          endAngle={0}
+                        >
+                          <RadialBar
+                            background={{ fill: 'currentColor', opacity: 0.08 }}
+                            dataKey='value'
+                            cornerRadius={6}
+                          />
+                          <Tooltip content={<OverviewCustomTooltip suffix='%' />} />
+                        </RadialBarChart>
+                      </ResponsiveContainer>
+                      <div className='flex flex-wrap items-center justify-center gap-3 border-t border-border/60 pt-2.5 text-xs text-muted-foreground'>
+                        {overviewGaugesData.map((item) => (
+                          <span key={item.name} className='flex items-center gap-1.5'>
+                            <span
+                              className='size-2.5 shrink-0 rounded-full'
+                              style={{ backgroundColor: item.fill }}
+                            />
+                            {item.name}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -506,42 +535,50 @@ export function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='pt-0 pb-4 space-y-2'>
-                  <div className='relative h-64 w-full'>
-                    <ResponsiveContainer width='100%' height='100%'>
-                      <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                        <Pie
-                          data={straightAngleLotsData}
-                          dataKey='value'
-                          nameKey='name'
-                          cx='50%'
-                          cy='80%'
-                          startAngle={180}
-                          endAngle={0}
-                          innerRadius={75}
-                          outerRadius={120}
-                          paddingAngle={4}
-                          cornerRadius={6}
-                        >
-                          {straightAngleLotsData.map((entry, index) => (
-                            <Cell key={`lots-pie-${index}`} fill={entry.fill} stroke='transparent' />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<OverviewCustomTooltip suffix=' Lots' />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className='pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 text-center'>
-                      <span className='text-3xl font-extrabold leading-none'>{metrics?.activeLots ?? 16}</span>
-                      <span className='block text-xs font-medium text-muted-foreground mt-1'>Active Lots</span>
+                  {straightAngleLotsData.length === 0 ? (
+                    <div className='flex h-64 flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                      <p className='font-medium text-sm'>No lot inventory</p>
                     </div>
-                  </div>
-                  <div className='flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground'>
-                    <span className='flex items-center gap-1.5'>
-                      <span className='size-2.5 rounded-full bg-[#3b82f6]' /> Active
-                    </span>
-                    <span className='flex items-center gap-1.5'>
-                      <span className='size-2.5 rounded-full bg-[#10b981]' /> Closed
-                    </span>
-                  </div>
+                  ) : (
+                    <>
+                      <div className='relative h-64 w-full'>
+                        <ResponsiveContainer width='100%' height='100%'>
+                          <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                            <Pie
+                              data={straightAngleLotsData}
+                              dataKey='value'
+                              nameKey='name'
+                              cx='50%'
+                              cy='80%'
+                              startAngle={180}
+                              endAngle={0}
+                              innerRadius={75}
+                              outerRadius={120}
+                              paddingAngle={4}
+                              cornerRadius={6}
+                            >
+                              {straightAngleLotsData.map((entry, index) => (
+                                <Cell key={`lots-pie-${index}`} fill={entry.fill} stroke='transparent' />
+                              ))}
+                            </Pie>
+                            <Tooltip content={<OverviewCustomTooltip suffix=' Lots' />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className='pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 text-center'>
+                          <span className='text-3xl font-extrabold leading-none'>{metrics?.activeLots ?? 0}</span>
+                          <span className='block text-xs font-medium text-muted-foreground mt-1'>Active Lots</span>
+                        </div>
+                      </div>
+                      <div className='flex items-center justify-center gap-4 pt-2 text-xs text-muted-foreground'>
+                        <span className='flex items-center gap-1.5'>
+                          <span className='size-2.5 rounded-full bg-[#3b82f6]' /> Active
+                        </span>
+                        <span className='flex items-center gap-1.5'>
+                          <span className='size-2.5 rounded-full bg-[#10b981]' /> Closed
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -554,40 +591,48 @@ export function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='pt-0 pb-4 space-y-2'>
-                  <div className='relative h-64 w-full'>
-                    <ResponsiveContainer width='100%' height='100%'>
-                      <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                        <Pie
-                          data={roundedGapPieData}
-                          dataKey='value'
-                          nameKey='name'
-                          cx='50%'
-                          cy='50%'
-                          innerRadius={70}
-                          outerRadius={110}
-                          paddingAngle={6}
-                          cornerRadius={6}
-                        >
-                          {roundedGapPieData.map((entry, index) => (
-                            <Cell key={`packet-pie-${index}`} fill={entry.fill} stroke='transparent' />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<OverviewCustomTooltip suffix=' Cts' />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className='pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center'>
-                      <span className='text-3xl font-extrabold leading-none'>{metrics?.totalPackets ?? 385}</span>
-                      <span className='text-xs font-medium text-muted-foreground mt-1'>Packets</span>
+                  {roundedGapPieData.length === 0 ? (
+                    <div className='flex h-64 flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                      <p className='font-medium text-sm'>No packets recorded</p>
                     </div>
-                  </div>
-                  <div className='flex flex-wrap items-center justify-center gap-3 pt-2 text-xs text-muted-foreground'>
-                    {roundedGapPieData.map((g) => (
-                      <span key={g.name} className='flex items-center gap-1.5'>
-                        <span className='size-2.5 rounded-full' style={{ backgroundColor: g.fill }} />
-                        {g.name}
-                      </span>
-                    ))}
-                  </div>
+                  ) : (
+                    <>
+                      <div className='relative h-64 w-full'>
+                        <ResponsiveContainer width='100%' height='100%'>
+                          <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                            <Pie
+                              data={roundedGapPieData}
+                              dataKey='value'
+                              nameKey='name'
+                              cx='50%'
+                              cy='50%'
+                              innerRadius={70}
+                              outerRadius={110}
+                              paddingAngle={6}
+                              cornerRadius={6}
+                            >
+                              {roundedGapPieData.map((entry, index) => (
+                                <Cell key={`packet-pie-${index}`} fill={entry.fill} stroke='transparent' />
+                              ))}
+                            </Pie>
+                            <Tooltip content={<OverviewCustomTooltip suffix=' Cts' />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className='pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center'>
+                          <span className='text-3xl font-extrabold leading-none'>{metrics?.totalPackets ?? 0}</span>
+                          <span className='text-xs font-medium text-muted-foreground mt-1'>Packets</span>
+                        </div>
+                      </div>
+                      <div className='flex flex-wrap items-center justify-center gap-3 pt-2 text-xs text-muted-foreground'>
+                        {roundedGapPieData.map((g) => (
+                          <span key={g.name} className='flex items-center gap-1.5'>
+                            <span className='size-2.5 rounded-full' style={{ backgroundColor: g.fill }} />
+                            {g.name}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -600,62 +645,70 @@ export function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='pt-0 pb-4 space-y-2'>
-                  <div className='relative h-64 w-full'>
-                    <ResponsiveContainer width='100%' height='100%'>
-                      <RadialBarChart
-                        cx='50%'
-                        cy='50%'
-                        innerRadius='35%'
-                        outerRadius='105%'
-                        barSize={11}
-                        data={focusedClickToFocusRadialData}
-                        startAngle={90}
-                        endAngle={-270}
-                      >
-                        <RadialBar
-                          background={{ fill: 'hsl(var(--muted))', opacity: 0.25 }}
-                          dataKey='value'
-                          cornerRadius={6}
-                          onClick={(entry) =>
-                            setFocusedRadialKey((prev) => (prev === (entry.name as string) ? null : ((entry.name as string) || null)))
-                          }
-                          className='cursor-pointer'
-                        />
-                        <Tooltip content={<OverviewCustomTooltip suffix='%' />} />
-                      </RadialBarChart>
-                    </ResponsiveContainer>
-                    <div className='pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center'>
-                      <span className='text-3xl font-extrabold leading-none'>
-                        {metrics ? `${metrics.overallYield}%` : '6.73%'}
-                      </span>
-                      <span className='text-xs font-medium text-muted-foreground mt-1'>
-                        {focusedRadialKey || 'Recovery Yield'}
-                      </span>
+                  {clickToFocusRadialData.length === 0 ? (
+                    <div className='flex h-64 flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                      <p className='font-medium text-sm'>No 4P batches in process</p>
                     </div>
-                  </div>
-                  <div className='flex flex-wrap items-center justify-center gap-2 pt-2 text-xs'>
-                    {clickToFocusRadialData.map((item) => {
-                      const isFocused = focusedRadialKey === item.name
-                      return (
-                        <button
-                          key={item.name}
-                          type='button'
-                          onClick={() => setFocusedRadialKey(isFocused ? null : item.name)}
-                          className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-all ${
-                            isFocused
-                              ? 'bg-primary text-primary-foreground font-semibold shadow-xs ring-2 ring-primary/40'
-                              : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
-                          }`}
-                        >
-                          <span
-                            className='size-2 rounded-full'
-                            style={{ backgroundColor: isFocused ? '#ffffff' : item.fill }}
-                          />
-                          <span>{item.name}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
+                  ) : (
+                    <>
+                      <div className='relative h-64 w-full'>
+                        <ResponsiveContainer width='100%' height='100%'>
+                          <RadialBarChart
+                            cx='50%'
+                            cy='50%'
+                            innerRadius='35%'
+                            outerRadius='105%'
+                            barSize={11}
+                            data={focusedClickToFocusRadialData}
+                            startAngle={90}
+                            endAngle={-270}
+                          >
+                            <RadialBar
+                              background={{ fill: 'hsl(var(--muted))', opacity: 0.25 }}
+                              dataKey='value'
+                              cornerRadius={6}
+                              onClick={(entry) =>
+                                setFocusedRadialKey((prev) => (prev === (entry.name as string) ? null : ((entry.name as string) || null)))
+                              }
+                              className='cursor-pointer'
+                            />
+                            <Tooltip content={<OverviewCustomTooltip suffix='%' />} />
+                          </RadialBarChart>
+                        </ResponsiveContainer>
+                        <div className='pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center'>
+                          <span className='text-3xl font-extrabold leading-none'>
+                            {metrics?.overallYield != null ? `${metrics.overallYield}%` : '0%'}
+                          </span>
+                          <span className='text-xs font-medium text-muted-foreground mt-1'>
+                            {focusedRadialKey || 'Recovery Yield'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className='flex flex-wrap items-center justify-center gap-2 pt-2 text-xs'>
+                        {clickToFocusRadialData.map((item) => {
+                          const isFocused = focusedRadialKey === item.name
+                          return (
+                            <button
+                              key={item.name}
+                              type='button'
+                              onClick={() => setFocusedRadialKey(isFocused ? null : item.name)}
+                              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-all ${
+                                isFocused
+                                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs ring-2 ring-primary/40'
+                                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                              }`}
+                            >
+                              <span
+                                className='size-2 rounded-full'
+                                style={{ backgroundColor: isFocused ? '#ffffff' : item.fill }}
+                              />
+                              <span>{item.name}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -668,39 +721,47 @@ export function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='pt-0 pb-4 space-y-2'>
-                  <div className='relative h-64 w-full'>
-                    <ResponsiveContainer width='100%' height='100%'>
-                      <RadialBarChart
-                        cx='50%'
-                        cy='50%'
-                        innerRadius='32%'
-                        outerRadius='102%'
-                        barSize={10}
-                        data={simpleRadialData}
-                        startAngle={90}
-                        endAngle={-270}
-                      >
-                        <RadialBar
-                          background={{ fill: 'hsl(var(--muted))', opacity: 0.25 }}
-                          dataKey='value'
-                          cornerRadius={5}
-                        />
-                        <Tooltip content={<OverviewCustomTooltip suffix='%' />} />
-                      </RadialBarChart>
-                    </ResponsiveContainer>
-                    <div className='pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center'>
-                      <span className='text-3xl font-extrabold leading-none'>92%</span>
-                      <span className='text-xs font-medium text-muted-foreground mt-1'>Health Index</span>
+                  {simpleRadialData.length === 0 ? (
+                    <div className='flex h-64 flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                      <p className='font-medium text-sm'>No plant health data</p>
                     </div>
-                  </div>
-                  <div className='flex flex-wrap items-center justify-center gap-3 pt-2 text-xs text-muted-foreground'>
-                    {simpleRadialData.map((item) => (
-                      <span key={item.name} className='flex items-center gap-1.5'>
-                        <span className='size-2.5 rounded-full' style={{ backgroundColor: item.fill }} />
-                        {item.name}
-                      </span>
-                    ))}
-                  </div>
+                  ) : (
+                    <>
+                      <div className='relative h-64 w-full'>
+                        <ResponsiveContainer width='100%' height='100%'>
+                          <RadialBarChart
+                            cx='50%'
+                            cy='50%'
+                            innerRadius='32%'
+                            outerRadius='102%'
+                            barSize={10}
+                            data={simpleRadialData}
+                            startAngle={90}
+                            endAngle={-270}
+                          >
+                            <RadialBar
+                              background={{ fill: 'hsl(var(--muted))', opacity: 0.25 }}
+                              dataKey='value'
+                              cornerRadius={5}
+                            />
+                            <Tooltip content={<OverviewCustomTooltip suffix='%' />} />
+                          </RadialBarChart>
+                        </ResponsiveContainer>
+                        <div className='pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center'>
+                          <span className='text-3xl font-extrabold leading-none'>{simpleRadialAvg}</span>
+                          <span className='text-xs font-medium text-muted-foreground mt-1'>Health Index</span>
+                        </div>
+                      </div>
+                      <div className='flex flex-wrap items-center justify-center gap-3 pt-2 text-xs text-muted-foreground'>
+                        {simpleRadialData.map((item) => (
+                          <span key={item.name} className='flex items-center gap-1.5'>
+                            <span className='size-2.5 rounded-full' style={{ backgroundColor: item.fill }} />
+                            {item.name}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>

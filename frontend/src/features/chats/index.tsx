@@ -954,11 +954,7 @@ export function Chats() {
                         )}
                       />
                       <span>
-                        {selectedIsOnline
-                          ? 'Online now'
-                          : selectedUser.lastLogin
-                            ? `Last seen ${format(new Date(selectedUser.lastLogin), 'dd/MM/yyyy h:mm a')}`
-                            : 'Offline'}
+                        {selectedIsOnline ? 'Online' : 'Offline'}
                       </span>
                       <span>•</span>
                       <span>@{selectedUser.username}</span>

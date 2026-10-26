@@ -220,72 +220,33 @@ export function AssortmentReport({ metrics, assortmentData }: AssortmentReportPr
   // 1. Grade / Allocation Distribution for Donut / Pie Chart
   const pieData = useMemo(() => {
     if (assortmentData?.gradeDistribution && assortmentData.gradeDistribution.length > 0) {
-      return assortmentData.gradeDistribution
+      return assortmentData.gradeDistribution.filter((d) => d.value > 0 || (d.count && d.count > 0))
     }
-    const tCarat = totalPacketCarat || 1000
-    const tPackets = totalPackets || 100
-    return [
-      { name: 'Grade A', value: Math.round(tCarat * 0.44 * 100) / 100, count: Math.round(tPackets * 0.42) },
-      { name: 'Grade B', value: Math.round(tCarat * 0.31 * 100) / 100, count: Math.round(tPackets * 0.31) },
-      { name: 'Grade C', value: Math.round(tCarat * 0.17 * 100) / 100, count: Math.round(tPackets * 0.19) },
-      { name: 'Grade D', value: Math.round(tCarat * 0.08 * 100) / 100, count: Math.round(tPackets * 0.08) },
-    ]
-  }, [assortmentData?.gradeDistribution, totalPacketCarat, totalPackets])
+    return []
+  }, [assortmentData?.gradeDistribution])
 
   // 2. RadialBarChart Data (Radial Gauge Rings for Grades & Allocation Benchmark)
   const radialData = useMemo(() => {
+    if (allocationPercent === 0) return []
     return [
       { name: 'Rough Allocation', value: allocationPercent, fill: '#3b82f6' },
-      { name: 'Grade A Share', value: 44, fill: '#10b981' },
-      { name: 'Grade B Share', value: 31, fill: '#f59e0b' },
-      { name: 'Calibrated Yield', value: Math.min(100, Math.round(allocationPercent * 0.96)), fill: '#8b5cf6' },
     ]
   }, [allocationPercent])
 
   // 3. Custom Shape Bar Chart Data (Packet Inventory by Diamond Grade & Sub-type)
   const customBarPacketData = useMemo(() => {
-    const tCarat = totalPacketCarat || 1000
-    return [
-      {
-        name: 'A Heavy',
-        carats: Math.round(tCarat * 0.28),
-        fill: '#3b82f6',
-        grade: 'Grade A',
-      },
-      {
-        name: 'A Calibrated',
-        carats: Math.round(tCarat * 0.16),
-        fill: '#2563eb',
-        grade: 'Grade A',
-      },
-      {
-        name: 'B Standard',
-        carats: Math.round(tCarat * 0.22),
-        fill: '#10b981',
-        grade: 'Grade B',
-      },
-      {
-        name: 'B Small',
-        carats: Math.round(tCarat * 0.09),
-        fill: '#059669',
-        grade: 'Grade B',
-      },
-      {
-        name: 'C Commercial',
-        carats: Math.round(tCarat * 0.17),
-        fill: '#f59e0b',
-        grade: 'Grade C',
-      },
-      {
-        name: 'D Industrial',
-        carats: Math.round(tCarat * 0.08),
-        fill: '#8b5cf6',
-        grade: 'Grade D',
-      },
-    ]
-  }, [totalPacketCarat])
+    if (assortmentData?.gradeDistribution && assortmentData.gradeDistribution.length > 0) {
+      return assortmentData.gradeDistribution.map((item, idx) => ({
+        name: item.name,
+        carats: item.value,
+        fill: GRADE_COLORS[idx % GRADE_COLORS.length],
+        grade: item.name,
+      }))
+    }
+    return []
+  }, [assortmentData?.gradeDistribution])
 
-  // 4. Composed Chart (Area + Bar + Line - Exactly like Recharts Composed Responsive Container!)
+  // 4. Composed Chart (Area + Bar + Line)
   const composedData = useMemo(() => {
     if (assortmentData?.lotAssortmentComparison && assortmentData.lotAssortmentComparison.length > 0) {
       return assortmentData.lotAssortmentComparison.map((item) => ({
@@ -295,54 +256,24 @@ export function AssortmentReport({ metrics, assortmentData }: AssortmentReportPr
         conversionYield: item.conversionPct,
       }))
     }
-    return [
-      { name: 'Lot 101', roughCapacity: 2474, assortedCarats: 2280, conversionYield: 92 },
-      { name: 'Lot 102', roughCapacity: 1980, assortedCarats: 1840, conversionYield: 93 },
-      { name: 'Lot 103', roughCapacity: 3120, assortedCarats: 2950, conversionYield: 95 },
-      { name: 'Lot 104', roughCapacity: 1850, assortedCarats: 1690, conversionYield: 91 },
-      { name: 'Lot 105', roughCapacity: 2479, assortedCarats: 2336, conversionYield: 94 },
-      { name: 'Lot 106', roughCapacity: 2150, assortedCarats: 2020, conversionYield: 94 },
-    ]
+    return []
   }, [assortmentData?.lotAssortmentComparison])
 
   // 5. Size category brackets for Grouped Bar Chart
   const barData = useMemo(() => {
     if (assortmentData?.sizeBrackets && assortmentData.sizeBrackets.length > 0) {
-      return assortmentData.sizeBrackets
+      return assortmentData.sizeBrackets.filter((b) => b.count > 0 || b.carats > 0)
     }
-    const tCarat = totalPacketCarat || 1000
-    const tPackets = totalPackets || 100
-    return [
-      { range: '< 5 Cts', count: Math.round(tPackets * 0.22), carats: Math.round(tCarat * 0.09) },
-      { range: '5-15 Cts', count: Math.round(tPackets * 0.37), carats: Math.round(tCarat * 0.27) },
-      { range: '15-30 Cts', count: Math.round(tPackets * 0.25), carats: Math.round(tCarat * 0.35) },
-      { range: '30-50 Cts', count: Math.round(tPackets * 0.12), carats: Math.round(tCarat * 0.20) },
-      { range: '> 50 Cts', count: Math.round(tPackets * 0.04), carats: Math.round(tCarat * 0.09) },
-    ]
-  }, [assortmentData?.sizeBrackets, totalPacketCarat, totalPackets])
+    return []
+  }, [assortmentData?.sizeBrackets])
 
   // 6. Scatter Plot Data (Packet Weight Dispersion)
   const scatterData = useMemo(() => {
     if (assortmentData?.scatterData && assortmentData.scatterData.length > 0) {
       return assortmentData.scatterData
     }
-    const tCarat = totalPacketCarat || 1000
-    const tPackets = totalPackets || 30
-    const avg = tCarat / Math.max(tPackets, 1)
-
-    return Array.from({ length: 28 }, (_, i) => {
-      const srNo = i + 1
-      const factor = 0.4 + ((i * 17 + 5) % 13) * 0.12
-      const carat = Math.round(avg * factor * 100) / 100
-      return {
-        x: srNo,
-        y: carat,
-        z: Math.min(Math.max(carat * 8, 40), 280),
-        name: `Packet #${srNo}`,
-        grade: ['A', 'A', 'B', 'B', 'C', 'D'][i % 6],
-      }
-    })
-  }, [assortmentData?.scatterData, totalPacketCarat, totalPackets])
+    return []
+  }, [assortmentData?.scatterData])
 
   return (
     <div className='space-y-4'>
@@ -421,73 +352,79 @@ export function AssortmentReport({ metrics, assortmentData }: AssortmentReportPr
             </div>
           </CardHeader>
           <CardContent className='ps-2'>
-            <ResponsiveContainer width='100%' height={320}>
-              <ComposedChart
-                data={composedData}
-                margin={{ top: 12, right: 16, left: 0, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id='composedAreaGrad' x1='0' y1='0' x2='0' y2='1'>
-                    <stop offset='5%' stopColor='#3b82f6' stopOpacity={0.3} />
-                    <stop offset='95%' stopColor='#3b82f6' stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
-                <XAxis
-                  dataKey='name'
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  yAxisId='left'
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  width={48}
-                  tickFormatter={(val: number) => val.toLocaleString()}
-                />
-                <YAxis
-                  yAxisId='right'
-                  orientation='right'
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  width={42}
-                  tickFormatter={(val: number) => `${val}%`}
-                />
-                <Tooltip content={<CustomChartTooltip />} />
-                <Area
-                  yAxisId='left'
-                  type='monotone'
-                  dataKey='roughCapacity'
-                  name='Rough Capacity (CT)'
-                  fill='url(#composedAreaGrad)'
-                  stroke='#3b82f6'
-                  strokeWidth={2}
-                />
-                <Bar
-                  yAxisId='left'
-                  dataKey='assortedCarats'
-                  name='Assorted Packets (CT)'
-                  barSize={24}
-                  fill='#10b981'
-                  radius={[4, 4, 0, 0]}
-                />
-                <Line
-                  yAxisId='right'
-                  type='monotone'
-                  dataKey='conversionYield'
-                  name='Conversion Yield %'
-                  stroke='#f59e0b'
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#ffffff' }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+            {composedData.length === 0 ? (
+              <div className='flex h-[320px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                <p className='font-medium text-sm'>No lot conversion data</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width='100%' height={320}>
+                <ComposedChart
+                  data={composedData}
+                  margin={{ top: 12, right: 16, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id='composedAreaGrad' x1='0' y1='0' x2='0' y2='1'>
+                      <stop offset='5%' stopColor='#3b82f6' stopOpacity={0.3} />
+                      <stop offset='95%' stopColor='#3b82f6' stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
+                  <XAxis
+                    dataKey='name'
+                    stroke='#888888'
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    yAxisId='left'
+                    stroke='#888888'
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    width={48}
+                    tickFormatter={(val: number) => val.toLocaleString()}
+                  />
+                  <YAxis
+                    yAxisId='right'
+                    orientation='right'
+                    stroke='#888888'
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    width={42}
+                    tickFormatter={(val: number) => `${val}%`}
+                  />
+                  <Tooltip content={<CustomChartTooltip />} />
+                  <Area
+                    yAxisId='left'
+                    type='monotone'
+                    dataKey='roughCapacity'
+                    name='Rough Capacity (CT)'
+                    fill='url(#composedAreaGrad)'
+                    stroke='#3b82f6'
+                    strokeWidth={2}
+                  />
+                  <Bar
+                    yAxisId='left'
+                    dataKey='assortedCarats'
+                    name='Assorted Packets (CT)'
+                    barSize={24}
+                    fill='#10b981'
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Line
+                    yAxisId='right'
+                    type='monotone'
+                    dataKey='conversionYield'
+                    name='Conversion Yield %'
+                    stroke='#f59e0b'
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#ffffff' }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -497,39 +434,47 @@ export function AssortmentReport({ metrics, assortmentData }: AssortmentReportPr
             <CardTitle>Assortment Efficiency Benchmarks</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width='100%' height={250}>
-              <RadialBarChart
-                cx='50%'
-                cy='50%'
-                innerRadius='20%'
-                outerRadius='95%'
-                barSize={12}
-                data={radialData}
-                startAngle={180}
-                endAngle={0}
-              >
-                <RadialBar
-                  background={{ fill: 'currentColor', opacity: 0.08 }}
-                  dataKey='value'
-                  cornerRadius={6}
-                />
-                <Tooltip content={<CustomChartTooltip suffix='%' />} />
-              </RadialBarChart>
-            </ResponsiveContainer>
-            <div className='grid grid-cols-2 gap-2 border-t border-border/60 pt-3'>
-              {radialData.map((item) => (
-                <div key={item.name} className='flex items-center justify-between text-xs'>
-                  <div className='flex items-center gap-1.5 truncate'>
-                    <span
-                      className='size-2.5 shrink-0 rounded-full'
-                      style={{ backgroundColor: item.fill }}
+            {radialData.length === 0 ? (
+              <div className='flex h-[250px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                <p className='font-medium text-sm'>No efficiency benchmarks yet</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width='100%' height={250}>
+                  <RadialBarChart
+                    cx='50%'
+                    cy='50%'
+                    innerRadius='20%'
+                    outerRadius='95%'
+                    barSize={12}
+                    data={radialData}
+                    startAngle={180}
+                    endAngle={0}
+                  >
+                    <RadialBar
+                      background={{ fill: 'currentColor', opacity: 0.08 }}
+                      dataKey='value'
+                      cornerRadius={6}
                     />
-                    <span className='truncate text-muted-foreground'>{item.name}</span>
-                  </div>
-                  <span className='font-semibold tabular-nums'>{item.value}%</span>
+                    <Tooltip content={<CustomChartTooltip suffix='%' />} />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+                <div className='grid grid-cols-2 gap-2 border-t border-border/60 pt-3'>
+                  {radialData.map((item) => (
+                    <div key={item.name} className='flex items-center justify-between text-xs'>
+                      <div className='flex items-center gap-1.5 truncate'>
+                        <span
+                          className='size-2.5 shrink-0 rounded-full'
+                          style={{ backgroundColor: item.fill }}
+                        />
+                        <span className='truncate text-muted-foreground'>{item.name}</span>
+                      </div>
+                      <span className='font-semibold tabular-nums'>{item.value}%</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -542,60 +487,61 @@ export function AssortmentReport({ metrics, assortmentData }: AssortmentReportPr
             <CardTitle>Assortment Quality Classifications</CardTitle>
           </CardHeader>
           <CardContent className='ps-2'>
-            <ResponsiveContainer width='100%' height={280}>
-              <BarChart
-                data={customBarPacketData}
-                margin={{ top: 22, right: 16, left: -6, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
-                <XAxis
-                  dataKey='name'
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  width={48}
-                  tickFormatter={(val: number) => val.toLocaleString()}
-                />
-                <Tooltip content={<CustomChartTooltip suffix=' Cts' />} />
-                <Bar
-                  dataKey='carats'
-                  name='Assorted Carats'
-                  shape={<CustomShapeBar />}
-                  maxBarSize={52}
-                  label={{
-                    position: 'top',
-                    fill: 'var(--muted-foreground)',
-                    fontSize: 12,
-                    formatter: (val: any) => `${val} Cts`,
-                  }}
-                >
-                  {customBarPacketData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+            {customBarPacketData.length === 0 ? (
+              <div className='flex h-[280px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                <p className='font-medium text-sm'>No grade classifications</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width='100%' height={280}>
+                  <BarChart
+                    data={customBarPacketData}
+                    margin={{ top: 22, right: 16, left: -6, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
+                    <XAxis
+                      dataKey='name'
+                      stroke='#888888'
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke='#888888'
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      width={48}
+                      tickFormatter={(val: number) => val.toLocaleString()}
+                    />
+                    <Tooltip content={<CustomChartTooltip suffix=' Cts' />} />
+                    <Bar
+                      dataKey='carats'
+                      name='Assorted Carats'
+                      shape={<CustomShapeBar />}
+                      maxBarSize={52}
+                      label={{
+                        position: 'top',
+                        fill: 'var(--muted-foreground)',
+                        fontSize: 12,
+                        formatter: (val: any) => `${val} Cts`,
+                      }}
+                    >
+                      {customBarPacketData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className='flex flex-wrap items-center justify-end gap-3 pt-2 text-xs text-muted-foreground'>
+                  {customBarPacketData.map((entry) => (
+                    <span key={entry.name} className='flex items-center gap-1'>
+                      <span className='size-2 rounded-xs' style={{ backgroundColor: entry.fill }} /> {entry.name}
+                    </span>
                   ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <div className='flex flex-wrap items-center justify-end gap-3 pt-2 text-xs text-muted-foreground'>
-              <span className='flex items-center gap-1'>
-                <span className='size-2 rounded-xs bg-[#3b82f6]' /> Grade A
-              </span>
-              <span className='flex items-center gap-1'>
-                <span className='size-2 rounded-xs bg-[#10b981]' /> Grade B
-              </span>
-              <span className='flex items-center gap-1'>
-                <span className='size-2 rounded-xs bg-[#f59e0b]' /> Grade C
-              </span>
-              <span className='flex items-center gap-1'>
-                <span className='size-2 rounded-xs bg-[#8b5cf6]' /> Grade D
-              </span>
-            </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -605,71 +551,79 @@ export function AssortmentReport({ metrics, assortmentData }: AssortmentReportPr
             <CardTitle>Quality Grade Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width='100%' height={230}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx='50%'
-                  cy='50%'
-                  innerRadius={58}
-                  outerRadius={88}
-                  paddingAngle={3}
-                  dataKey='value'
-                >
-                  {pieData.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={GRADE_COLORS[index % GRADE_COLORS.length]}
+            {pieData.length === 0 ? (
+              <div className='flex h-[230px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                <p className='font-medium text-sm'>No grade distribution</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width='100%' height={230}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx='50%'
+                      cy='50%'
+                      innerRadius={58}
+                      outerRadius={88}
+                      paddingAngle={3}
+                      dataKey='value'
+                    >
+                      {pieData.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={GRADE_COLORS[index % GRADE_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null
+                        const item = payload[0].payload as { name: string; value: number; count?: number }
+                        const percent =
+                          totalPacketCarat > 0
+                            ? Math.round((item.value / totalPacketCarat) * 100)
+                            : 0
+                        return (
+                          <div className='min-w-36 rounded-lg border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-xl'>
+                            <p className='font-semibold text-foreground mb-1'>{item.name}</p>
+                            <div className='flex justify-between gap-3 text-muted-foreground'>
+                              <span>Weight:</span>
+                              <span className='font-mono font-semibold text-foreground'>{item.value.toLocaleString()} Cts ({percent}%)</span>
+                            </div>
+                            {item.count != null && (
+                              <div className='flex justify-between gap-3 text-muted-foreground'>
+                                <span>Packets:</span>
+                                <span className='font-mono font-semibold text-foreground'>{item.count} Pkt</span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }}
                     />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null
-                    const item = payload[0].payload as { name: string; value: number; count?: number }
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className='grid grid-cols-2 gap-2 border-t border-border/60 pt-2'>
+                  {pieData.map((item, idx) => {
                     const percent =
                       totalPacketCarat > 0
                         ? Math.round((item.value / totalPacketCarat) * 100)
                         : 0
                     return (
-                      <div className='min-w-36 rounded-lg border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-xl'>
-                        <p className='font-semibold text-foreground mb-1'>{item.name}</p>
-                        <div className='flex justify-between gap-3 text-muted-foreground'>
-                          <span>Weight:</span>
-                          <span className='font-mono font-semibold text-foreground'>{item.value.toLocaleString()} Cts ({percent}%)</span>
+                      <div key={item.name} className='flex items-center justify-between text-xs'>
+                        <div className='flex items-center gap-1.5 truncate'>
+                          <span
+                            className='size-2.5 shrink-0 rounded-full'
+                            style={{ backgroundColor: GRADE_COLORS[idx % GRADE_COLORS.length] }}
+                          />
+                          <span className='text-muted-foreground truncate'>{item.name}</span>
                         </div>
-                        {item.count != null && (
-                          <div className='flex justify-between gap-3 text-muted-foreground'>
-                            <span>Packets:</span>
-                            <span className='font-mono font-semibold text-foreground'>{item.count} Pkt</span>
-                          </div>
-                        )}
+                        <span className='font-semibold tabular-nums ps-1'>{percent}%</span>
                       </div>
                     )
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className='grid grid-cols-2 gap-2 border-t border-border/60 pt-2'>
-              {pieData.map((item, idx) => {
-                const percent =
-                  totalPacketCarat > 0
-                    ? Math.round((item.value / totalPacketCarat) * 100)
-                    : 0
-                return (
-                  <div key={item.name} className='flex items-center justify-between text-xs'>
-                    <div className='flex items-center gap-1.5 truncate'>
-                      <span
-                        className='size-2.5 shrink-0 rounded-full'
-                        style={{ backgroundColor: GRADE_COLORS[idx % GRADE_COLORS.length] }}
-                      />
-                      <span className='text-muted-foreground truncate'>{item.name}</span>
-                    </div>
-                    <span className='font-semibold tabular-nums ps-1'>{percent}%</span>
-                  </div>
-                )
-              })}
-            </div>
+                  })}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -682,42 +636,48 @@ export function AssortmentReport({ metrics, assortmentData }: AssortmentReportPr
             <CardTitle>Packet Weight Dispersion (Scatter Plot)</CardTitle>
           </CardHeader>
           <CardContent className='ps-2'>
-            <ResponsiveContainer width='100%' height={290}>
-              <ScatterChart
-                margin={{ top: 12, right: 20, bottom: 10, left: 0 }}
-              >
-                <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' />
-                <XAxis
-                  type='number'
-                  dataKey='x'
-                  name='Packet Sequence'
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(val: number) => `#${val}`}
-                />
-                <YAxis
-                  type='number'
-                  dataKey='y'
-                  name='Carats'
-                  unit=' Cts'
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  width={52}
-                />
-                <ZAxis type='number' dataKey='z' range={[50, 260]} />
-                <Tooltip content={<ScatterCustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
-                <Scatter
-                  name='Diamond Packets'
-                  data={scatterData}
-                  fill='#3b82f6'
-                  shape='circle'
-                />
-              </ScatterChart>
-            </ResponsiveContainer>
+            {scatterData.length === 0 ? (
+              <div className='flex h-[290px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                <p className='font-medium text-sm'>No packet samples available</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width='100%' height={290}>
+                <ScatterChart
+                  margin={{ top: 12, right: 20, bottom: 10, left: 0 }}
+                >
+                  <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' />
+                  <XAxis
+                    type='number'
+                    dataKey='x'
+                    name='Packet Sequence'
+                    stroke='#888888'
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(val: number) => `#${val}`}
+                  />
+                  <YAxis
+                    type='number'
+                    dataKey='y'
+                    name='Carats'
+                    unit=' Cts'
+                    stroke='#888888'
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    width={52}
+                  />
+                  <ZAxis type='number' dataKey='z' range={[50, 260]} />
+                  <Tooltip content={<ScatterCustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                  <Scatter
+                    name='Diamond Packets'
+                    data={scatterData}
+                    fill='#3b82f6'
+                    shape='circle'
+                  />
+                </ScatterChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -737,57 +697,63 @@ export function AssortmentReport({ metrics, assortmentData }: AssortmentReportPr
             </div>
           </CardHeader>
           <CardContent className='ps-2'>
-            <ResponsiveContainer width='100%' height={270}>
-              <BarChart
-                data={barData}
-                margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
-                <XAxis
-                  dataKey='range'
-                  stroke='#888888'
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  yAxisId='left'
-                  stroke='#888888'
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  width={34}
-                  tickFormatter={(val: number) => val.toLocaleString()}
-                />
-                <YAxis
-                  yAxisId='right'
-                  orientation='right'
-                  stroke='#888888'
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  width={38}
-                  tickFormatter={(val: number) => `${val}`}
-                />
-                <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.05 }} />
-                <Bar
-                  yAxisId='left'
-                  dataKey='count'
-                  name='Packets'
-                  fill='var(--chart-1)'
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={28}
-                />
-                <Bar
-                  yAxisId='right'
-                  dataKey='carats'
-                  name='Carats'
-                  fill='var(--chart-2)'
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={28}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {barData.length === 0 ? (
+              <div className='flex h-[270px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                <p className='font-medium text-sm'>No size distribution data</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width='100%' height={270}>
+                <BarChart
+                  data={barData}
+                  margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
+                  <XAxis
+                    dataKey='range'
+                    stroke='#888888'
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    yAxisId='left'
+                    stroke='#888888'
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    width={34}
+                    tickFormatter={(val: number) => val.toLocaleString()}
+                  />
+                  <YAxis
+                    yAxisId='right'
+                    orientation='right'
+                    stroke='#888888'
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    width={38}
+                    tickFormatter={(val: number) => `${val}`}
+                  />
+                  <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.05 }} />
+                  <Bar
+                    yAxisId='left'
+                    dataKey='count'
+                    name='Packets'
+                    fill='var(--chart-1)'
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={28}
+                  />
+                  <Bar
+                    yAxisId='right'
+                    dataKey='carats'
+                    name='Carats'
+                    fill='var(--chart-2)'
+                    radius={[3, 3, 0, 0]}
+                    maxBarSize={28}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>

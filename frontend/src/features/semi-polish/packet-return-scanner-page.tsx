@@ -79,7 +79,6 @@ export function SemiPolishPacketReturnScannerPage() {
   const [lookupResult, setLookupResult] =
     useState<SemiPolishPacketLookup | null>(null)
   const [drafts, setDrafts] = useState<Record<number, DiamondDraft>>({})
-  const lastKeyAtRef = useRef<number>(0)
 
   const focusScanner = () => {
     inputRef.current?.focus()
@@ -199,12 +198,13 @@ export function SemiPolishPacketReturnScannerPage() {
   })
 
   const findPacket = (customCode?: string) => {
-    const value = (customCode ?? packetCode).trim()
+    const value = (customCode ?? packetCode).trim().toUpperCase()
     if (!value) {
       toast.error('Scan a packet QR or enter a packet number.')
       focusScanner()
       return
     }
+    setPacketCode(value)
     inputRef.current?.select()
     lookupMutation.mutate(value)
   }
@@ -218,29 +218,11 @@ export function SemiPolishPacketReturnScannerPage() {
       clearPacket()
       return
     }
-
-    if (event.ctrlKey || event.altKey || event.metaKey) return
-
-    if (event.key.length === 1) {
-      const now = Date.now()
-      const timeSinceLastKey = now - lastKeyAtRef.current
-      lastKeyAtRef.current = now
-
-      // If text already exists and this is the start of a new scan/entry (>250ms gap),
-      // replace the old value with the new character rather than appending to it.
-      if (packetCode && timeSinceLastKey > 250) {
-        const input = inputRef.current
-        if (input && input.selectionStart === input.selectionEnd) {
-          event.preventDefault()
-          setPacketCode(event.key)
-        }
-      }
-    }
   }
 
   const handleInputPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
     event.preventDefault()
-    const text = event.clipboardData.getData('text').trim()
+    const text = event.clipboardData.getData('text').trim().toUpperCase()
     if (text) {
       setPacketCode(text)
       findPacket(text)
@@ -414,7 +396,9 @@ export function SemiPolishPacketReturnScannerPage() {
                     autoComplete='off'
                     placeholder='Scan or enter packet number'
                     className='h-12 bg-background pl-10 pr-16 text-base shadow-xs'
-                    onChange={(event) => setPacketCode(event.target.value)}
+                    onChange={(event) =>
+                      setPacketCode(event.target.value.toUpperCase())
+                    }
                     onKeyDown={handleInputKeyDown}
                     onPaste={handleInputPaste}
                     onFocus={(event) => event.target.select()}

@@ -162,23 +162,18 @@ export function LotsReport({ metrics, recentLots, chartData }: LotsReportProps) 
 
   // 1. RadialBarChart Data for Lot Lifecycle Gauges
   const radialLotsData = useMemo(() => {
+    if (totalLots === 0) return []
     return [
       { name: 'Active Lots Ratio', value: activeRatio, fill: '#3b82f6' },
       { name: 'Closed Lots Ratio', value: closedRatio, fill: '#10b981' },
-      {
-        name: 'Rough Inward Target',
-        value: Math.min(100, Math.round((totalCarat / 15000) * 100)),
-        fill: '#f59e0b',
-      },
-      { name: 'Pieces Capacity', value: 85, fill: '#8b5cf6' },
     ]
-  }, [activeRatio, closedRatio, totalCarat])
+  }, [activeRatio, closedRatio, totalLots])
 
   // 2. Custom Shape Bar Chart Data: Kapan Lots by Rough Carat
   const customBarLotsData = useMemo(() => {
     if (recentLots && recentLots.length > 0) {
       return recentLots.map((lot, idx) => {
-        const carats = parseInt(lot.amount.replace(/[^0-9]/g, ''), 10) || 1500
+        const carats = parseFloat(lot.amount.replace(/[^0-9.]/g, '')) || 0
         const isActive = lot.detail.includes('Active')
         return {
           name: lot.name,
@@ -190,20 +185,14 @@ export function LotsReport({ metrics, recentLots, chartData }: LotsReportProps) 
         }
       })
     }
-    return [
-      { name: 'Kapan 101', carats: 2474, fill: '#3b82f6', status: 'Active' },
-      { name: 'Kapan 102', carats: 1980, fill: '#10b981', status: 'Active' },
-      { name: 'Kapan 103', carats: 3120, fill: '#2563eb', status: 'Active' },
-      { name: 'Kapan 104', carats: 1850, fill: '#64748b', status: 'Closed' },
-      { name: 'Kapan 105', carats: 2479, fill: '#f59e0b', status: 'Active' },
-    ]
+    return []
   }, [recentLots])
 
   // 3. Composed Chart Data (Area + Bar + Line) for Monthly Inward Trends
   const composedMonthlyData = useMemo(() => {
     if (!chartData || chartData.length === 0) return []
     return chartData.map((item) => {
-      const pieces = item.pieces || Math.round(item.total * 0.06)
+      const pieces = item.pieces || 0
       const avgPcsSize = pieces > 0 ? Math.round((item.total / pieces) * 10) / 10 : 0
       return {
         name: item.name,
@@ -378,54 +367,62 @@ export function LotsReport({ metrics, recentLots, chartData }: LotsReportProps) 
             <CardTitle>Rough Inventory by Kapan Lot</CardTitle>
           </CardHeader>
           <CardContent className='ps-2'>
-            <ResponsiveContainer width='100%' height={270}>
-              <BarChart
-                data={customBarLotsData}
-                margin={{ top: 22, right: 16, left: -6, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
-                <XAxis
-                  dataKey='name'
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke='#888888'
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  width={48}
-                  tickFormatter={(val: number) => val.toLocaleString()}
-                />
-                <Tooltip content={<CustomChartTooltip suffix=' Cts' />} />
-                <Bar
-                  dataKey='carats'
-                  name='Rough Carats'
-                  shape={<CustomShapeBar />}
-                  maxBarSize={56}
-                  label={{
-                    position: 'top',
-                    fill: 'var(--muted-foreground)',
-                    fontSize: 12,
-                    formatter: (val: any) => `${val} Cts`,
-                  }}
-                >
-                  {customBarLotsData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <div className='flex flex-wrap items-center justify-end gap-3 pt-2 text-xs text-muted-foreground'>
-              <span className='flex items-center gap-1'>
-                <span className='size-2 rounded-xs bg-[#3b82f6]' /> Active Lots
-              </span>
-              <span className='flex items-center gap-1'>
-                <span className='size-2 rounded-xs bg-[#64748b]' /> Closed Lots
-              </span>
-            </div>
+            {customBarLotsData.length === 0 ? (
+              <div className='flex h-[270px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                <p className='font-medium text-sm'>No lot inventory data recorded</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width='100%' height={270}>
+                  <BarChart
+                    data={customBarLotsData}
+                    margin={{ top: 22, right: 16, left: -6, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray='3 3' className='stroke-muted/40' vertical={false} />
+                    <XAxis
+                      dataKey='name'
+                      stroke='#888888'
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke='#888888'
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      width={48}
+                      tickFormatter={(val: number) => val.toLocaleString()}
+                    />
+                    <Tooltip content={<CustomChartTooltip suffix=' Cts' />} />
+                    <Bar
+                      dataKey='carats'
+                      name='Rough Carats'
+                      shape={<CustomShapeBar />}
+                      maxBarSize={56}
+                      label={{
+                        position: 'top',
+                        fill: 'var(--muted-foreground)',
+                        fontSize: 12,
+                        formatter: (val: any) => `${val} Cts`,
+                      }}
+                    >
+                      {customBarLotsData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className='flex flex-wrap items-center justify-end gap-3 pt-2 text-xs text-muted-foreground'>
+                  <span className='flex items-center gap-1'>
+                    <span className='size-2 rounded-xs bg-[#3b82f6]' /> Active Lots
+                  </span>
+                  <span className='flex items-center gap-1'>
+                    <span className='size-2 rounded-xs bg-[#64748b]' /> Closed Lots
+                  </span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -435,39 +432,47 @@ export function LotsReport({ metrics, recentLots, chartData }: LotsReportProps) 
             <CardTitle>Lot Pipeline Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width='100%' height={250}>
-              <RadialBarChart
-                cx='50%'
-                cy='50%'
-                innerRadius='20%'
-                outerRadius='95%'
-                barSize={12}
-                data={radialLotsData}
-                startAngle={180}
-                endAngle={0}
-              >
-                <RadialBar
-                  background={{ fill: 'currentColor', opacity: 0.08 }}
-                  dataKey='value'
-                  cornerRadius={6}
-                />
-                <Tooltip content={<CustomChartTooltip suffix='%' />} />
-              </RadialBarChart>
-            </ResponsiveContainer>
-            <div className='grid grid-cols-2 gap-2 border-t border-border/60 pt-3'>
-              {radialLotsData.map((item) => (
-                <div key={item.name} className='flex items-center justify-between text-xs'>
-                  <div className='flex items-center gap-1.5 truncate'>
-                    <span
-                      className='size-2.5 shrink-0 rounded-full'
-                      style={{ backgroundColor: item.fill }}
+            {radialLotsData.length === 0 ? (
+              <div className='flex h-[250px] flex-col items-center justify-center text-center text-xs text-muted-foreground'>
+                <p className='font-medium text-sm'>No lot lifecycle data recorded</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width='100%' height={250}>
+                  <RadialBarChart
+                    cx='50%'
+                    cy='50%'
+                    innerRadius='20%'
+                    outerRadius='95%'
+                    barSize={12}
+                    data={radialLotsData}
+                    startAngle={180}
+                    endAngle={0}
+                  >
+                    <RadialBar
+                      background={{ fill: 'currentColor', opacity: 0.08 }}
+                      dataKey='value'
+                      cornerRadius={6}
                     />
-                    <span className='truncate text-muted-foreground'>{item.name}</span>
-                  </div>
-                  <span className='font-semibold tabular-nums'>{item.value}%</span>
+                    <Tooltip content={<CustomChartTooltip suffix='%' />} />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+                <div className='grid grid-cols-2 gap-2 border-t border-border/60 pt-3'>
+                  {radialLotsData.map((item) => (
+                    <div key={item.name} className='flex items-center justify-between text-xs'>
+                      <div className='flex items-center gap-1.5 truncate'>
+                        <span
+                          className='size-2.5 shrink-0 rounded-full'
+                          style={{ backgroundColor: item.fill }}
+                        />
+                        <span className='truncate text-muted-foreground'>{item.name}</span>
+                      </div>
+                      <span className='font-semibold tabular-nums'>{item.value}%</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
