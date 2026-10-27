@@ -71,7 +71,7 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
     setVariant,
   }
 
-  return <LayoutContext value={contextValue}>{children}</LayoutContext>
+  return <LayoutContext.Provider value={contextValue}>{children}</LayoutContext.Provider>
 }
 
 // Define the hook for the provider

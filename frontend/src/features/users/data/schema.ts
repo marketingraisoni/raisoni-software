@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { PERMISSION_ACTIONS, PERMISSION_MODULE } from '@/constants/permissions'
+import { PERMISSION_ACTIONS, PERMISSION_MODULES } from '@/constants/permissions'
 import { USER_TYPE } from '@/constants/user-types'
 
 export const USER_STATUS = {
@@ -22,7 +22,7 @@ export const userTypeSchema = z.union([
 export type UserType = z.infer<typeof userTypeSchema>
 
 export const permissionGrantSchema = z.object({
-  module: z.enum(PERMISSION_MODULE),
+  module: z.enum(PERMISSION_MODULES),
   actions: z.array(z.enum(PERMISSION_ACTIONS)),
 })
 

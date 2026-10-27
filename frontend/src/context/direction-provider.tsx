@@ -38,7 +38,7 @@ export function DirectionProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <DirectionContext
+    <DirectionContext.Provider
       value={{
         defaultDir: DEFAULT_DIRECTION,
         dir,
@@ -47,7 +47,7 @@ export function DirectionProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       <RdxDirProvider dir={dir}>{children}</RdxDirProvider>
-    </DirectionContext>
+    </DirectionContext.Provider>
   )
 }
 

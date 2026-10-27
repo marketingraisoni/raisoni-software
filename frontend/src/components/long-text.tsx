@@ -23,7 +23,7 @@ export function LongText({
   className = '',
   contentClassName = '',
 }: LongTextProps) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLDivElement | null>(null)
   const [isOverflown, setIsOverflown] = useState(false)
 
   // Use ref callback to check overflow when element is mounted

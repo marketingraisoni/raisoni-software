@@ -1,4 +1,4 @@
-import type { SubmitEvent } from 'react'
+import type { FormEvent } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
@@ -130,7 +130,7 @@ describe('ConfirmDialog', () => {
   })
 
   it('submits the desc form when confirm is clicked (form prop, no handleConfirm)', async () => {
-    const handleFormSubmit = vi.fn((e: SubmitEvent<HTMLFormElement>) => {
+    const handleFormSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => {
       e.preventDefault()
     })
 
@@ -160,7 +160,7 @@ describe('ConfirmDialog', () => {
   })
 
   it('submits the form when Enter key is pressed', async () => {
-    const handleFormSubmit = vi.fn((e: SubmitEvent<HTMLFormElement>) => {
+    const handleFormSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => {
       e.preventDefault()
     })
 
@@ -190,7 +190,7 @@ describe('ConfirmDialog', () => {
   })
 
   it('does not submit the form when confirm is disabled (typed confirmation mismatch)', async () => {
-    const handleFormSubmit = vi.fn((e: SubmitEvent<HTMLFormElement>) => {
+    const handleFormSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => {
       e.preventDefault()
     })
 

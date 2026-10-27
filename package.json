@@ -1,6 +1,6 @@
 {
   "name": "raisoni-erp",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "Offline-capable Windows desktop business management application for shared LAN",
   "main": "desktop/main.cjs",
   "type": "module",

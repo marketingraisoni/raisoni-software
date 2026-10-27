@@ -115,7 +115,7 @@ export function Permissions() {
   const updateMutation = useMutation({
     mutationFn: () => updateUserPermissions(activeUserId, permissions),
     onSuccess: async (response) => {
-      setPermissions(response.user.permissions ?? [])
+      setPermissions((response.user.permissions ?? []) as PermissionGrant[])
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: usersQueryKey }),
         queryClient.invalidateQueries({

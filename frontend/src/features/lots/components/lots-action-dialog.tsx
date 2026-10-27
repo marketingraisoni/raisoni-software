@@ -33,8 +33,8 @@ const formSchema = z.object({
     .trim()
     .length(2, 'Kapan No must contain exactly 2 letters.')
     .regex(/^[A-Z]{2}$/, 'Only letters from A to Z are allowed.'),
-  totalCarat: z.number({ error: 'Total Carat is required.' }).positive('Total Carat must be greater than 0.').multipleOf(0.001, 'Use up to 3 decimal places.'),
-  totalPcs: z.number({ error: 'Total Pkt is required.' }).int('Total Pkt must be a whole number.').positive('Total Pkt must be at least 1.'),
+  totalCarat: z.number({ required_error: 'Total Carat is required.', invalid_type_error: 'Total Carat is required.' }).positive('Total Carat must be greater than 0.').multipleOf(0.001, 'Use up to 3 decimal places.'),
+  totalPcs: z.number({ required_error: 'Total Pkt is required.', invalid_type_error: 'Total Pkt is required.' }).int('Total Pkt must be a whole number.').positive('Total Pkt must be at least 1.'),
   entryDate: z.date(),
 })
 

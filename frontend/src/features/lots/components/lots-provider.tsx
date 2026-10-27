@@ -18,9 +18,9 @@ export function LotsProvider({ children }: { children: React.ReactNode }) {
   const [currentRow, setCurrentRow] = useState<Lot | null>(null)
 
   return (
-    <LotsContext value={{ open, setOpen, currentRow, setCurrentRow }}>
+    <LotsContext.Provider value={{ open, setOpen, currentRow, setCurrentRow }}>
       {children}
-    </LotsContext>
+    </LotsContext.Provider>
   )
 }
 

@@ -31,7 +31,7 @@ export const PERMISSION_MODULE = {
 
 export type PermissionModule =
   (typeof PERMISSION_MODULE)[keyof typeof PERMISSION_MODULE]
-const PERMISSION_MODULES = Object.values(PERMISSION_MODULE) as [
+export const PERMISSION_MODULES = Object.values(PERMISSION_MODULE) as [
   PermissionModule,
   ...PermissionModule[],
 ]

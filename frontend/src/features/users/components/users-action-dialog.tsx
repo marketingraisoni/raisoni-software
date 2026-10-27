@@ -47,7 +47,7 @@ const formSchema = z
       .trim()
       .min(3, 'Username must be at least 3 characters.')
       .max(30, 'Username cannot exceed 30 characters.'),
-    email: z.email('Please enter a valid email address.'),
+    email: z.string().email('Please enter a valid email address.'),
     password: z.string(),
     confirmPassword: z.string(),
     userType: userTypeSchema,
