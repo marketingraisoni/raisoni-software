@@ -60,7 +60,7 @@ function createIssueFormSchema(entryDate?: string | Date) {
   return z
     .object({
       vendorId: z.string().min(1, 'Select a 4P vendor.'),
-      issueDate: z.date({ required_error: 'Issue date is required.', invalid_type_error: 'Issue date is required.' }),
+      issueDate: z.date({ message: 'Issue date is required.' }),
       expectedReturnDate: z.date().optional(),
       notes: z.string().trim().max(500, 'Instructions cannot exceed 500 characters.'),
     })

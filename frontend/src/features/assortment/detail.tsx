@@ -63,7 +63,7 @@ import { AssortmentExcelButton } from './components/assortment-excel-button'
 
 const caratFormSchema = z.object({
   carat: z
-    .number({ required_error: 'Carat is required.', invalid_type_error: 'Carat is required.' })
+    .number({ message: 'Carat is required.' })
     .positive('Carat must be greater than 0.')
     .multipleOf(0.001, 'Use up to 3 decimal places.'),
 })
