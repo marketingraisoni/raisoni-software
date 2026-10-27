@@ -49,6 +49,12 @@ async function connectEmbeddedDatabase() {
   try {
     fs.mkdirSync(persistentDbDir, { recursive: true });
 
+    const bundledMongoBinary = path.resolve(config.dataDir, '../../resources/mongodb/mongod.exe');
+    if (!process.env.MONGOMS_SYSTEM_BINARY && fs.existsSync(bundledMongoBinary)) {
+      process.env.MONGOMS_SYSTEM_BINARY = bundledMongoBinary;
+      process.env.MONGOMS_SYSTEM_BINARY_VERSION_CHECK = 'false';
+    }
+
     const { MongoMemoryServer } = await import('mongodb-memory-server');
     embeddedMongoServer = await MongoMemoryServer.create({
       instance: {
