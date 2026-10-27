@@ -15,6 +15,21 @@ let stopBackend = null;
 let isStopping = false;
 let applicationOrigin = null;
 
+const supportedEnvironments = new Set(['development', 'staging', 'production']);
+
+function getApplicationEnvironment() {
+  const requestedEnvironment = app.isPackaged
+    ? require(path.join(app.getAppPath(), 'package.json')).buildEnvironment
+    : process.env.APP_ENV;
+  const environment = String(requestedEnvironment || 'development').toLowerCase();
+
+  if (!supportedEnvironments.has(environment)) {
+    throw new Error(`Unsupported desktop environment: ${environment}`);
+  }
+
+  return environment;
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -47,9 +62,7 @@ function getOrCreateDesktopJwtSecret(environment) {
 }
 
 async function startBundledBackend() {
-  const appEnvironment = app.isPackaged
-    ? 'production'
-    : (process.env.APP_ENV || 'development');
+  const appEnvironment = getApplicationEnvironment();
   const dataDir = path.join(app.getPath('userData'), 'data', appEnvironment);
   const mongoBinary = app.isPackaged
     ? path.join(process.resourcesPath, 'mongodb', 'mongod.exe')
@@ -59,6 +72,7 @@ async function startBundledBackend() {
 
   process.env.APP_ENV = appEnvironment;
   process.env.NODE_ENV = appEnvironment === 'development' ? 'development' : 'production';
+  process.env.APP_VERSION = app.getVersion();
   process.env.RAISONI_DATA_DIR = dataDir;
   process.env.JWT_SECRET =
     process.env.JWT_SECRET || getOrCreateDesktopJwtSecret(appEnvironment);

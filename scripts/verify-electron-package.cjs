@@ -5,7 +5,15 @@ const asar = require('@electron/asar');
 process.noAsar = true;
 
 const rootDir = path.resolve(__dirname, '..');
-const unpackedDir = path.join(rootDir, 'release', 'win-unpacked');
+const expectedVersion = require(path.join(rootDir, 'package.json')).version;
+const environment = (process.argv[2] || 'production').toLowerCase();
+const supportedEnvironments = new Set(['development', 'staging', 'production']);
+
+if (!supportedEnvironments.has(environment)) {
+  throw new Error(`Unknown environment "${environment}".`);
+}
+
+const unpackedDir = path.join(rootDir, 'release', environment, 'win-unpacked');
 const archivePath = path.join(unpackedDir, 'resources', 'app.asar');
 const mongoPath = path.join(unpackedDir, 'resources', 'mongodb', 'mongod.exe');
 
@@ -35,8 +43,20 @@ if (missingEntries.length > 0) {
   throw new Error(`Packaged application is missing:\n${missingEntries.join('\n')}`);
 }
 
+const packagedMetadata = JSON.parse(asar.extractFile(archivePath, 'package.json').toString('utf8'));
+if (packagedMetadata.buildEnvironment !== environment) {
+  throw new Error(
+    `Packaged environment is "${packagedMetadata.buildEnvironment}"; expected "${environment}".`
+  );
+}
+if (packagedMetadata.version !== expectedVersion) {
+  throw new Error(
+    `Packaged version is "${packagedMetadata.version}"; expected "${expectedVersion}".`
+  );
+}
+
 if (!fs.existsSync(mongoPath) || fs.statSync(mongoPath).size < 10 * 1024 * 1024) {
   throw new Error(`Bundled MongoDB executable is missing or invalid: ${mongoPath}`);
 }
 
-console.log('Electron package verification passed.');
+console.log(`Electron ${environment} package v${expectedVersion} verification passed.`);

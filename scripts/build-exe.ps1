@@ -1,7 +1,7 @@
 # ==============================================================================
 # Raisoni ERP - Windows Desktop Installer Packaging Script
-# Runs automated tests, builds the production frontend, validates Electron
-# configuration, and invokes electron-builder to generate the Windows NSIS installer.
+# Runs automated tests, validates Electron prerequisites, and generates separate
+# development, staging, and production Windows NSIS installers.
 # ==============================================================================
 
 $ErrorActionPreference = "Stop"
@@ -27,23 +27,9 @@ try {
     exit 1
 }
 
-# 2. Build Frontend Production Assets
+# 2. Prepare the bundled MongoDB runtime
 Write-Host ""
-Write-Host "[2/5] Compiling optimized React frontend bundle..." -ForegroundColor Yellow
-try {
-    npm run frontend:build
-    if ($LASTEXITCODE -ne 0) {
-        throw "Frontend compilation failed."
-    }
-    Write-Host "  [OK] Production frontend bundle compiled into frontend/dist/." -ForegroundColor Green
-} catch {
-    Write-Error "Build aborted: $_"
-    exit 1
-}
-
-# 3. Prepare the bundled MongoDB runtime
-Write-Host ""
-Write-Host "[3/5] Preparing bundled MongoDB runtime..." -ForegroundColor Yellow
+Write-Host "[2/4] Preparing bundled MongoDB runtime..." -ForegroundColor Yellow
 try {
     npm run desktop:mongodb
     if ($LASTEXITCODE -ne 0) {
@@ -55,38 +41,41 @@ try {
     exit 1
 }
 
-# 4. Validate Desktop Files
+# 3. Validate Desktop Files
 Write-Host ""
-Write-Host "[4/5] Validating Electron configuration..." -ForegroundColor Yellow
+Write-Host "[3/4] Validating Electron configuration..." -ForegroundColor Yellow
 $mainScript = Join-Path $rootDir "desktop\main.cjs"
 $preloadScript = Join-Path $rootDir "desktop\preload.cjs"
-$distIndex = Join-Path $rootDir "frontend\dist\index.html"
 $mongoBinary = Join-Path $rootDir "resources\mongodb\mongod.exe"
 
-if (-not (Test-Path $mainScript) -or -not (Test-Path $preloadScript) -or -not (Test-Path $distIndex) -or -not (Test-Path $mongoBinary)) {
-    Write-Error "Missing required desktop runtime files. Verify Electron, frontend, and MongoDB build assets."
+if (-not (Test-Path $mainScript) -or -not (Test-Path $preloadScript) -or -not (Test-Path $mongoBinary)) {
+    Write-Error "Missing required desktop runtime files. Verify Electron and MongoDB build assets."
     exit 1
 }
-Write-Host "  [OK] Verified Electron, frontend, and database runtime files." -ForegroundColor Green
+Write-Host "  [OK] Verified Electron and database runtime files." -ForegroundColor Green
 
-# 5. Packaging with Electron Builder
+# 4. Build each frontend and package each installer
 Write-Host ""
-Write-Host "[5/5] Generating Windows NSIS Installer..." -ForegroundColor Yellow
+Write-Host "[4/4] Generating development, staging, and production installers..." -ForegroundColor Yellow
 try {
-    node scripts/package-electron.cjs
+    node scripts/package-electron.cjs all --bump-version
     if ($LASTEXITCODE -ne 0) {
         throw "electron-builder encountered an error during packaging."
     }
 
     $releaseDir = Join-Path $rootDir "release"
-    $installer = Get-ChildItem -Path $releaseDir -Filter "*.exe" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $installers = Get-ChildItem -Path $releaseDir -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "Raisoni-ERP-*-Setup-*.exe" } |
+        Sort-Object FullName
 
     Write-Host ""
     Write-Host "==========================================================" -ForegroundColor Green
-    Write-Host " Build Successful! Windows Installer Created:" -ForegroundColor White
-    if ($installer) {
-        Write-Host " Output File: $($installer.FullName)" -ForegroundColor Cyan
-        Write-Host " File Size:   $([math]::Round($installer.Length / 1MB, 2)) MB" -ForegroundColor White
+    Write-Host " Build Successful! Windows Installers Created:" -ForegroundColor White
+    if ($installers) {
+        foreach ($installer in $installers) {
+            Write-Host " Output File: $($installer.FullName)" -ForegroundColor Cyan
+            Write-Host " File Size:   $([math]::Round($installer.Length / 1MB, 2)) MB" -ForegroundColor White
+        }
     } else {
         Write-Host " Output Folder: $releaseDir" -ForegroundColor Cyan
     }
