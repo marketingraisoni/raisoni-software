@@ -29,6 +29,10 @@ import {
   startDatabaseBackupScheduler,
   stopDatabaseBackupScheduler,
 } from './src/services/databaseBackupService.js';
+import {
+  startDiscoveryResponder,
+  stopDiscoveryResponder,
+} from './src/services/discoveryService.js';
 
 // Route imports
 import healthRoutes from './src/routes/healthRoutes.js';
@@ -158,6 +162,7 @@ export async function startServer(port = config.port) {
       const handleListening = () => {
         httpServer.off('error', handleStartupError);
         startDatabaseBackupScheduler();
+        startDiscoveryResponder();
         const primaryLanIp = getPrimaryLanIp();
         const lanIps = getLocalIpAddresses();
 
@@ -195,6 +200,7 @@ export function stopServer() {
   if (stopPromise) return stopPromise;
   logger.info('Shutting down server gracefully...');
   stopPromise = (async () => {
+    stopDiscoveryResponder();
     await stopDatabaseBackupScheduler();
     if (httpServer.listening) {
       await new Promise((resolve) => httpServer.close(() => resolve()));

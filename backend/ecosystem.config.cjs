@@ -18,7 +18,8 @@ const bundledMongoEnv = fs.existsSync(bundledMongoBinary)
 // JWT_SECRET, ...) comes from the .env files in the project root.
 const sharedEnv = {
   USE_EMBEDDED_MONGODB_FALLBACK: 'true',
-  // After a reboot PM2 can start before the MongoDB service; wait ~70s before falling back.
+  // After a reboot PM2 can start before the MongoDB service; wait up to ~70s for it.
+  // Ignored when no MongoDB service is installed: the bundled database starts immediately.
   MONGODB_CONNECT_RETRIES: '10',
   ...bundledMongoEnv,
 };

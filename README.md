@@ -32,7 +32,7 @@ copy .env.production.example .env.production   # then set a random JWT_SECRET
 npm run mongodb:download                         # only if the MongoDB service is not installed
 npm run pm2:deploy                               # build UI + start backend on port 2000
 npm run pm2:autostart                            # restart PM2 when this user logs on
-npm run server:firewall                          # Administrator PowerShell: allow port 2000 from LAN
+npm run server:firewall                          # Administrator PowerShell: allow TCP 2000 + UDP 47800 (discovery)
 ```
 
 Every update:
@@ -55,9 +55,17 @@ node scripts/package-electron.cjs --server=http://<ip>:2000   # different server
 ```
 
 The installer contains no backend or database; it opens the server's UI, so server updates reach every PC without
-reinstalling. If the server is unreachable it shows a waiting screen and reconnects automatically.
+reinstalling.
 
-To point an installed app at another server without rebuilding, create `%APPDATA%\Raisoni ERP\server.json`:
+How it finds the server:
+
+1. Tries the last address that worked (first run: http://192.168.1.125:2000).
+2. If that fails, searches the office network (UDP broadcast on port 47800). The production server answers with its
+   address, which the app saves for next time, so a changed server IP needs no configuration.
+3. Otherwise it shows a waiting screen with **Retry now** and keeps retrying every 5 seconds.
+
+Discovery only works within the same office network/subnet. To set the address by hand, edit
+`%APPDATA%\Raisoni ERP\server.json`:
 
 ```json
 { "serverUrl": "http://192.168.1.50:2000" }

@@ -1,6 +1,11 @@
 const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const dgram = require('dgram');
+
+// Same settings folder whether installed or started with "npm run desktop".
+app.setPath('userData', path.join(app.getPath('appData'), 'Raisoni ERP'));
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -13,9 +18,17 @@ if (!gotTheLock) {
 const DEFAULT_SERVER_URL = 'http://192.168.1.125:2000';
 const HEALTH_TIMEOUT_MS = 4000;
 const RETRY_DELAY_MS = 5000;
+// Must match backend/src/services/discoveryService.js.
+const DISCOVERY_PORT = 47800;
+const DISCOVERY_REQUEST = 'RAISONI_ERP_DISCOVER_V1';
+const DISCOVERY_SERVICE = 'raisoni-erp';
+const DISCOVERY_TIMEOUT_MS = 2000;
+// "Retry now" link on the waiting screen; intercepted in will-navigate, never actually loaded.
+const ACTION_RETRY = 'raisoni-action://retry';
 
 let mainWindow = null;
 let serverUrl = null;
+let isServerUrlForced = false;
 let retryTimer = null;
 let isConnecting = false;
 
@@ -28,10 +41,13 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function inlinePage(title, message) {
+function inlinePage(title, message, actions = []) {
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message);
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f8fafc;color:#0f172a;font:16px/1.5 system-ui,sans-serif}.card{width:min(620px,calc(100% - 48px));padding:32px;border:1px solid #e2e8f0;border-radius:16px;background:white;box-shadow:0 16px 40px #0f172a12}h1{margin:0 0 12px;font-size:24px}p{margin:0;color:#475569;white-space:pre-wrap}</style></head><body><main class="card"><h1>${safeTitle}</h1><p>${safeMessage}</p></main></body></html>`;
+  const buttons = actions
+    .map(({ href, label }) => `<a class="button" href="${escapeHtml(href)}">${escapeHtml(label)}</a>`)
+    .join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f8fafc;color:#0f172a;font:16px/1.5 system-ui,sans-serif}.card{width:min(620px,calc(100% - 48px));padding:32px;border:1px solid #e2e8f0;border-radius:16px;background:white;box-shadow:0 16px 40px #0f172a12}h1{margin:0 0 12px;font-size:24px}p{margin:0;color:#475569;white-space:pre-wrap}.actions{display:flex;gap:12px;margin-top:24px}.button{padding:10px 18px;border-radius:10px;background:#0f172a;color:white;text-decoration:none;font-weight:600}.button+.button{background:#e2e8f0;color:#0f172a}</style></head><body><main class="card"><h1>${safeTitle}</h1><p>${safeMessage}</p>${buttons ? `<div class="actions">${buttons}</div>` : ''}</main></body></html>`;
   return `data:text/html;charset=UTF-8,${encodeURIComponent(html)}`;
 }
 
@@ -63,7 +79,17 @@ function readPackagedServerUrl() {
   }
 }
 
-// Precedence: RAISONI_SERVER_URL env > %APPDATA%\<app>\server.json > URL baked in at build > default.
+function saveUserServerUrl(url) {
+  try {
+    fs.mkdirSync(path.dirname(getUserConfigPath()), { recursive: true });
+    fs.writeFileSync(getUserConfigPath(), `${JSON.stringify({ serverUrl: url }, null, 2)}
+`, 'utf8');
+  } catch (error) {
+    console.warn('Unable to remember the server address:', error);
+  }
+}
+
+// Precedence: RAISONI_SERVER_URL env > %APPDATA%Raisoni ERPserver.json > URL baked in at build > default.
 function resolveServerUrl() {
   const candidates = [
     process.env.RAISONI_SERVER_URL,
@@ -83,9 +109,9 @@ function resolveServerUrl() {
   return DEFAULT_SERVER_URL;
 }
 
-async function isServerReachable() {
+async function isServerReachable(url) {
   try {
-    const response = await net.fetch(`${serverUrl}/api/health`, {
+    const response = await net.fetch(`${url}/api/health`, {
       signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
       cache: 'no-store'
     });
@@ -93,6 +119,59 @@ async function isServerReachable() {
   } catch {
     return false;
   }
+}
+
+function getBroadcastAddresses() {
+  const addresses = new Set(['255.255.255.255']);
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries || []) {
+      if (entry.family !== 'IPv4' || entry.internal || !entry.netmask) continue;
+      const ip = entry.address.split('.').map(Number);
+      const mask = entry.netmask.split('.').map(Number);
+      // Directed broadcast (e.g. 192.168.1.255) reaches every adapter, not just the primary one.
+      addresses.add(ip.map((part, index) => part | (~mask[index] & 255)).join('.'));
+    }
+  }
+  return [...addresses];
+}
+
+// Broadcasts on the LAN and resolves with the first server that answers, or null.
+function discoverServer() {
+  return new Promise((resolve) => {
+    const socket = dgram.createSocket('udp4');
+    let settled = false;
+    const finish = (url) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        socket.close();
+      } catch {
+        // Already closed
+      }
+      resolve(url);
+    };
+    const timer = setTimeout(() => finish(null), DISCOVERY_TIMEOUT_MS);
+
+    socket.on('error', () => finish(null));
+    socket.on('message', (message, remote) => {
+      try {
+        const reply = JSON.parse(message.toString('utf8'));
+        if (reply.service === DISCOVERY_SERVICE && Number.isInteger(reply.port)) {
+          finish(`http://${remote.address}:${reply.port}`);
+        }
+      } catch {
+        // Not a Raisoni reply
+      }
+    });
+    socket.bind(() => {
+      socket.setBroadcast(true);
+      const request = Buffer.from(DISCOVERY_REQUEST);
+      for (const address of getBroadcastAddresses()) {
+        socket.send(request, DISCOVERY_PORT, address, () => {});
+      }
+    });
+  });
 }
 
 function scheduleReconnect() {
@@ -105,14 +184,16 @@ function scheduleReconnect() {
 
 async function showOfflinePage() {
   if (!mainWindow) return;
+  const searchNote = isServerUrlForced ? '' : ' and searches the office network for the server';
   await mainWindow.loadURL(
     inlinePage(
       'Waiting for the Raisoni ERP server',
-      `Cannot reach the server at ${serverUrl}.\n\n` +
+      `Cannot reach the server at ${serverUrl}.
+
+` +
         'Check that this PC is connected to the office network and that the server PC is switched on. ' +
-        `This screen retries automatically every ${RETRY_DELAY_MS / 1000} seconds.\n\n` +
-        `To use a different server address, create ${getUserConfigPath()} containing:\n` +
-        '{ "serverUrl": "http://<server-ip>:2000" }'
+        `This screen retries automatically every ${RETRY_DELAY_MS / 1000} seconds${searchNote}.`,
+      [{ href: ACTION_RETRY, label: 'Retry now' }]
     )
   );
 }
@@ -120,8 +201,23 @@ async function showOfflinePage() {
 async function connectToServer() {
   if (!mainWindow || isConnecting) return;
   isConnecting = true;
+  clearTimeout(retryTimer);
+  retryTimer = null;
   try {
-    if (await isServerReachable()) {
+    let reachable = await isServerReachable(serverUrl);
+
+    // Saved address failed: the server may have a new IP. Find it and remember it.
+    if (!reachable && !isServerUrlForced) {
+      const discoveredUrl = await discoverServer();
+      if (discoveredUrl && discoveredUrl !== serverUrl && (await isServerReachable(discoveredUrl))) {
+        console.log(`Found the Raisoni ERP server at ${discoveredUrl}`);
+        serverUrl = discoveredUrl;
+        saveUserServerUrl(discoveredUrl);
+        reachable = true;
+      }
+    }
+
+    if (reachable) {
       await mainWindow.loadURL(serverUrl);
       return;
     }
@@ -180,6 +276,15 @@ async function createWindow() {
   });
 
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    if (navigationUrl.startsWith(ACTION_RETRY)) {
+      event.preventDefault();
+      // Always give feedback; if an automatic check is already running it finishes and updates the screen.
+      mainWindow
+        .loadURL(inlinePage('Connecting to Raisoni ERP', 'Looking for the server…'))
+        .then(() => connectToServer())
+        .catch(console.error);
+      return;
+    }
     if (!navigationUrl.startsWith(serverUrl) && !navigationUrl.startsWith('data:text/html')) {
       event.preventDefault();
     }
@@ -200,6 +305,7 @@ async function createWindow() {
     mainWindow = null;
   });
 
+  isServerUrlForced = Boolean(process.env.RAISONI_SERVER_URL);
   serverUrl = resolveServerUrl();
   await mainWindow.loadURL(inlinePage('Starting Raisoni ERP', `Connecting to ${serverUrl}…`));
   mainWindow.show();

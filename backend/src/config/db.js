@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { spawnSync } from 'child_process';
 import mongoose from 'mongoose';
 import { config } from './env.js';
 import { logger } from '../utils/logger.js';
@@ -18,8 +19,16 @@ export async function connectDB() {
     return connectEmbeddedDatabase();
   }
 
+  // A bundled mongod left running by the previous process is the fastest path back.
+  if (config.useEmbeddedFallback) {
+    const reused = await reuseRunningEmbeddedDatabase();
+    if (reused) return reused;
+  }
+
   const uri = config.mongoUri;
-  const attempts = config.mongoConnectRetries + 1;
+  // Retrying only helps when a MongoDB service exists and may still be booting. On a PC that
+  // relies on the bundled database, waiting would just delay every start by ~70 seconds.
+  const attempts = isMongoServiceInstalled(uri) ? config.mongoConnectRetries + 1 : 1;
   let lastError = null;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -53,6 +62,15 @@ export async function connectDB() {
     '(services.msc or "net start MongoDB"), or set USE_EMBEDDED_MONGODB_FALLBACK=true to use the bundled database.'
   );
   throw lastError;
+}
+
+function isMongoServiceInstalled(uri) {
+  const isLocalUri = /^mongodb:\/\/(127\.0\.0\.1|localhost)[:/]/i.test(uri);
+  // Remote URIs, or non-Windows hosts: we cannot tell, so honour the configured retries.
+  if (!isLocalUri || process.platform !== 'win32') return true;
+
+  const result = spawnSync('sc.exe', ['query', 'MongoDB'], { timeout: 3000, windowsHide: true });
+  return result.status === 0;
 }
 
 // Remembers where the bundled mongod is listening. If the backend was killed without a

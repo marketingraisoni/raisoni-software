@@ -61,6 +61,12 @@ export const config = Object.freeze({
   corsOrigin: process.env.CORS_ORIGIN || '*',
   appName: process.env.APP_NAME || 'Raisoni ERP',
   appVersion: process.env.APP_VERSION || '1.0.0',
+  // LAN discovery lets desktop apps find this server without a configured IP.
+  // On by default only in production so dev backends never answer client searches.
+  discoveryEnabled: process.env.DISCOVERY_ENABLED
+    ? process.env.DISCOVERY_ENABLED === 'true'
+    : environment === 'production',
+  discoveryPort: parseInteger(process.env.DISCOVERY_PORT, 47800, 'DISCOVERY_PORT'),
   autoBackupEnabled: process.env.AUTO_BACKUP_ENABLED === 'true',
   backupIntervalHours,
   backupRetentionDays
