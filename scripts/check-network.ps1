@@ -5,7 +5,7 @@
 # ==============================================================================
 
 param (
-    [string]$TargetUrl = "http://127.0.0.1:3000/api"
+    [string]$TargetUrl = "http://127.0.0.1:2000/api"
 )
 
 $ErrorActionPreference = "Continue"
@@ -57,8 +57,8 @@ if (-not $probeSuccess) {
     Write-Host " Common Causes and Troubleshooting Recommendations:" -ForegroundColor White
     Write-Host "----------------------------------------------------------" -ForegroundColor Yellow
     Write-Host "1. Is the Central Server running? Ensure the server host PC has run './scripts/start-server.ps1'." -ForegroundColor Gray
-    Write-Host "2. Windows Firewall: On the Server PC, ensure incoming TCP Port 3000 is allowed:" -ForegroundColor Gray
-    Write-Host "   New-NetFirewallRule -DisplayName 'Raisoni ERP Server' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow" -ForegroundColor Gray
+    Write-Host "2. Windows Firewall: On the Server PC, ensure incoming TCP Port 2000 is allowed:" -ForegroundColor Gray
+    Write-Host "   New-NetFirewallRule -DisplayName 'Raisoni ERP Server' -Direction Inbound -LocalPort 2000 -Protocol TCP -Action Allow" -ForegroundColor Gray
     Write-Host "3. Windows Network Profile: Change Wi-Fi connection from 'Public' to 'Private' on both PCs." -ForegroundColor Gray
     Write-Host "4. Wi-Fi Router AP Isolation: Some office/guest Wi-Fi routers prevent client-to-client traffic." -ForegroundColor Gray
     Write-Host "   Ensure 'AP Isolation' / 'Client Isolation' is turned OFF in your Wi-Fi router settings." -ForegroundColor Gray

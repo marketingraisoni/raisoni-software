@@ -15,7 +15,7 @@ test('environment defaults use isolated databases and fixed ports', () => {
 
   assert.deepEqual(
     Object.values(ENVIRONMENT_DEFAULTS).map(({ port }) => port),
-    [3001, 3002, 3000]
+    [9090, 7039, 2000]
   );
   assert.equal(
     new Set(Object.values(ENVIRONMENT_DEFAULTS).map(({ port }) => port)).size,

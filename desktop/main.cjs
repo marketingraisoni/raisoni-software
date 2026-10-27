@@ -121,7 +121,7 @@ async function createWindow() {
   });
 
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    const allowedDevelopmentUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:9090';
+    const allowedDevelopmentUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:9091';
     if (
       !navigationUrl.startsWith(applicationOrigin || allowedDevelopmentUrl) &&
       !navigationUrl.startsWith('data:text/html')
