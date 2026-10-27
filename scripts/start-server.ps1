@@ -1,5 +1,5 @@
 param (
-    [ValidateSet("development", "staging", "production")]
+    [ValidateSet("development", "production")]
     [string]$Environment = "production"
 )
 
@@ -9,7 +9,6 @@ Set-Location $rootDir
 
 $ports = @{
     development = 9090
-    staging = 7039
     production = 2000
 }
 $port = $ports[$Environment]

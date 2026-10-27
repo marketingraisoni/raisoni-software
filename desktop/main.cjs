@@ -1,8 +1,6 @@
-const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
-const { pathToFileURL } = require('url');
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -10,25 +8,16 @@ if (!gotTheLock) {
   process.exit(0);
 }
 
+// The desktop app is a thin client: all data lives on the LAN server, which serves
+// both the UI and the API. Nothing (backend, database, UI build) is bundled here.
+const DEFAULT_SERVER_URL = 'http://192.168.1.125:2000';
+const HEALTH_TIMEOUT_MS = 4000;
+const RETRY_DELAY_MS = 5000;
+
 let mainWindow = null;
-let stopBackend = null;
-let isStopping = false;
-let applicationOrigin = null;
-
-const supportedEnvironments = new Set(['development', 'staging', 'production']);
-
-function getApplicationEnvironment() {
-  const requestedEnvironment = app.isPackaged
-    ? require(path.join(app.getAppPath(), 'package.json')).buildEnvironment
-    : process.env.APP_ENV;
-  const environment = String(requestedEnvironment || 'development').toLowerCase();
-
-  if (!supportedEnvironments.has(environment)) {
-    throw new Error(`Unsupported desktop environment: ${environment}`);
-  }
-
-  return environment;
-}
+let serverUrl = null;
+let retryTimer = null;
+let isConnecting = false;
 
 function escapeHtml(value) {
   return String(value)
@@ -46,53 +35,105 @@ function inlinePage(title, message) {
   return `data:text/html;charset=UTF-8,${encodeURIComponent(html)}`;
 }
 
-function getOrCreateDesktopJwtSecret(environment) {
-  const configDir = path.join(app.getPath('userData'), 'config');
-  const secretPath = path.join(configDir, `${environment}-jwt-secret`);
-  fs.mkdirSync(configDir, { recursive: true });
-
-  if (fs.existsSync(secretPath)) {
-    const existingSecret = fs.readFileSync(secretPath, 'utf8').trim();
-    if (existingSecret.length >= 32) return existingSecret;
-  }
-
-  const newSecret = crypto.randomBytes(32).toString('hex');
-  fs.writeFileSync(secretPath, newSecret, { encoding: 'utf8', mode: 0o600 });
-  return newSecret;
+function getUserConfigPath() {
+  return path.join(app.getPath('userData'), 'server.json');
 }
 
-async function startBundledBackend() {
-  const appEnvironment = getApplicationEnvironment();
-  const dataDir = path.join(app.getPath('userData'), 'data', appEnvironment);
-  const mongoBinary = app.isPackaged
-    ? path.join(process.resourcesPath, 'mongodb', 'mongod.exe')
-    : path.join(__dirname, '..', 'resources', 'mongodb', 'mongod.exe');
-
-  fs.mkdirSync(dataDir, { recursive: true });
-
-  process.env.APP_ENV = appEnvironment;
-  process.env.NODE_ENV = appEnvironment === 'development' ? 'development' : 'production';
-  process.env.APP_VERSION = app.getVersion();
-  process.env.RAISONI_DATA_DIR = dataDir;
-  process.env.JWT_SECRET =
-    process.env.JWT_SECRET || getOrCreateDesktopJwtSecret(appEnvironment);
-  process.env.MONGOMS_SYSTEM_BINARY = mongoBinary;
-  process.env.MONGOMS_SYSTEM_BINARY_VERSION_CHECK = 'false';
-  // Packaged builds ship no .env files: use an installed MongoDB service if present,
-  // otherwise start the bundled mongod immediately instead of failing on 127.0.0.1:27017.
-  process.env.USE_EMBEDDED_MONGODB_FALLBACK = process.env.USE_EMBEDDED_MONGODB_FALLBACK || 'true';
-  process.env.MONGODB_CONNECT_RETRIES = process.env.MONGODB_CONNECT_RETRIES || '0';
-
-  if (!fs.existsSync(mongoBinary)) {
-    throw new Error(`The bundled database executable is missing at ${mongoBinary}. Rebuild the installer with npm run dist.`);
+function normalizeServerUrl(value) {
+  const url = new URL(String(value).trim());
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error(`Unsupported protocol ${url.protocol}`);
   }
+  return url.origin;
+}
 
-  const serverEntry = path.join(__dirname, '..', 'backend', 'server.js');
-  const backend = await import(pathToFileURL(serverEntry).href);
-  const started = await backend.startServer();
-  stopBackend = backend.stopServer;
-  applicationOrigin = `http://127.0.0.1:${started.port}`;
-  return applicationOrigin;
+function readUserServerUrl() {
+  try {
+    return JSON.parse(fs.readFileSync(getUserConfigPath(), 'utf8')).serverUrl;
+  } catch {
+    return undefined;
+  }
+}
+
+function readPackagedServerUrl() {
+  try {
+    return require(path.join(app.getAppPath(), 'package.json')).serverUrl;
+  } catch {
+    return undefined;
+  }
+}
+
+// Precedence: RAISONI_SERVER_URL env > %APPDATA%\<app>\server.json > URL baked in at build > default.
+function resolveServerUrl() {
+  const candidates = [
+    process.env.RAISONI_SERVER_URL,
+    readUserServerUrl(),
+    readPackagedServerUrl(),
+    DEFAULT_SERVER_URL
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      return normalizeServerUrl(candidate);
+    } catch {
+      console.warn(`Ignoring invalid server URL: ${candidate}`);
+    }
+  }
+  return DEFAULT_SERVER_URL;
+}
+
+async function isServerReachable() {
+  try {
+    const response = await net.fetch(`${serverUrl}/api/health`, {
+      signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+      cache: 'no-store'
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function scheduleReconnect() {
+  if (retryTimer || !mainWindow) return;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    connectToServer().catch(console.error);
+  }, RETRY_DELAY_MS);
+}
+
+async function showOfflinePage() {
+  if (!mainWindow) return;
+  await mainWindow.loadURL(
+    inlinePage(
+      'Waiting for the Raisoni ERP server',
+      `Cannot reach the server at ${serverUrl}.\n\n` +
+        'Check that this PC is connected to the office network and that the server PC is switched on. ' +
+        `This screen retries automatically every ${RETRY_DELAY_MS / 1000} seconds.\n\n` +
+        `To use a different server address, create ${getUserConfigPath()} containing:\n` +
+        '{ "serverUrl": "http://<server-ip>:2000" }'
+    )
+  );
+}
+
+async function connectToServer() {
+  if (!mainWindow || isConnecting) return;
+  isConnecting = true;
+  try {
+    if (await isServerReachable()) {
+      await mainWindow.loadURL(serverUrl);
+      return;
+    }
+    await showOfflinePage();
+    scheduleReconnect();
+  } catch (error) {
+    console.error('Unable to load the server UI:', error);
+    await showOfflinePage().catch(() => {});
+    scheduleReconnect();
+  } finally {
+    isConnecting = false;
+  }
 }
 
 async function createWindow() {
@@ -113,7 +154,7 @@ async function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
-      devTools: false
+      devTools: !app.isPackaged
     }
   });
 
@@ -128,7 +169,7 @@ async function createWindow() {
       ((input.control || input.meta) && input.shift && ['i', 'j', 'c'].includes(key)) ||
       (input.meta && input.alt && ['i', 'j', 'c'].includes(key));
 
-    if (isDevToolsShortcut) event.preventDefault();
+    if (isDevToolsShortcut && app.isPackaged) event.preventDefault();
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -139,48 +180,34 @@ async function createWindow() {
   });
 
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    const allowedDevelopmentUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:9091';
-    if (
-      !navigationUrl.startsWith(applicationOrigin || allowedDevelopmentUrl) &&
-      !navigationUrl.startsWith('data:text/html')
-    ) {
+    if (!navigationUrl.startsWith(serverUrl) && !navigationUrl.startsWith('data:text/html')) {
       event.preventDefault();
     }
   });
 
+  // Server went away (reboot, network drop) while the user reloads or navigates.
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, _description, validatedUrl, isMainFrame) => {
+    const isAborted = errorCode === -3;
+    if (isConnecting || !isMainFrame || isAborted || !validatedUrl.startsWith(serverUrl)) return;
+    showOfflinePage().catch(() => {});
+    scheduleReconnect();
+  });
+
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   mainWindow.on('closed', () => {
+    clearTimeout(retryTimer);
+    retryTimer = null;
     mainWindow = null;
   });
 
-  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
-  const isViteDevelopment = !app.isPackaged && Boolean(devServerUrl);
-
-  if (isViteDevelopment) {
-    applicationOrigin = devServerUrl;
-    await mainWindow.loadURL(devServerUrl);
-    return;
-  }
-
-  await mainWindow.loadURL(inlinePage('Starting Raisoni ERP', 'Preparing the local database and application…'));
+  serverUrl = resolveServerUrl();
+  await mainWindow.loadURL(inlinePage('Starting Raisoni ERP', `Connecting to ${serverUrl}…`));
   mainWindow.show();
-
-  try {
-    const appUrl = await startBundledBackend();
-    await mainWindow.loadURL(appUrl);
-  } catch (error) {
-    const details = error instanceof Error ? error.message : String(error);
-    console.error('Desktop startup failed:', error);
-    await mainWindow.loadURL(
-      inlinePage(
-        'Raisoni ERP could not start',
-        `${details}\n\nClose the application and run it again. If the problem continues, reinstall the software.`
-      )
-    );
-  }
+  await connectToServer();
 }
 
 ipcMain.handle('app:version', () => app.getVersion());
+ipcMain.handle('app:server-url', () => serverUrl);
 
 app.whenReady().then(createWindow).catch((error) => {
   console.error('Unable to create the desktop window:', error);
@@ -198,19 +225,6 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow().catch(console.error);
   }
-});
-
-app.on('before-quit', (event) => {
-  if (!stopBackend || isStopping) return;
-
-  event.preventDefault();
-  isStopping = true;
-  Promise.resolve(stopBackend())
-    .catch((error) => console.error('Backend shutdown failed:', error))
-    .finally(() => {
-      stopBackend = null;
-      app.quit();
-    });
 });
 
 app.on('window-all-closed', () => {

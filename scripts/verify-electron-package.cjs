@@ -6,48 +6,36 @@ process.noAsar = true;
 
 const rootDir = path.resolve(__dirname, '..');
 const expectedVersion = require(path.join(rootDir, 'package.json')).version;
-const environment = (process.argv[2] || 'production').toLowerCase();
-const supportedEnvironments = new Set(['development', 'staging', 'production']);
+const archivePath = path.join(rootDir, 'release', 'win-unpacked', 'resources', 'app.asar');
 
-if (!supportedEnvironments.has(environment)) {
-  throw new Error(`Unknown environment "${environment}".`);
-}
-
-const unpackedDir = path.join(rootDir, 'release', environment, 'win-unpacked');
-const archivePath = path.join(unpackedDir, 'resources', 'app.asar');
-const mongoPath = path.join(unpackedDir, 'resources', 'mongodb', 'mongod.exe');
-
-const requiredArchiveEntries = [
-  '/desktop/main.cjs',
-  '/desktop/preload.cjs',
-  '/backend/server.js',
-  '/backend/src/config/environments.js',
-  '/frontend/dist/index.html',
-  '/node_modules/express/package.json',
-  '/node_modules/mongoose/package.json',
-  '/node_modules/mongodb-memory-server/package.json',
-  '/node_modules/socket.io/package.json'
-];
+const requiredArchiveEntries = ['/desktop/main.cjs', '/desktop/preload.cjs', '/package.json'];
+// The desktop app is a thin client; anything below means the server code leaked into the installer.
+const forbiddenArchivePrefixes = ['/backend/', '/frontend/', '/node_modules/'];
 
 if (!fs.existsSync(archivePath)) {
-  throw new Error(`Packaged application archive not found: ${archivePath}`);
+  throw new Error(`Packaged application archive not found: ${archivePath}. Run "npm run pack" first.`);
 }
 
-const listedEntries = asar.listPackage(archivePath);
-const archiveEntries = new Set(
-  listedEntries.map((entry) => `/${entry.replaceAll('\\', '/').replace(/^\/+/, '')}`)
-);
-const missingEntries = requiredArchiveEntries.filter((entry) => !archiveEntries.has(entry));
+const archiveEntries = asar
+  .listPackage(archivePath)
+  .map((entry) => `/${entry.replaceAll('\\', '/').replace(/^\/+/, '')}`);
+const entrySet = new Set(archiveEntries);
 
+const missingEntries = requiredArchiveEntries.filter((entry) => !entrySet.has(entry));
 if (missingEntries.length > 0) {
   throw new Error(`Packaged application is missing:\n${missingEntries.join('\n')}`);
 }
 
+const leakedEntries = archiveEntries.filter((entry) =>
+  forbiddenArchivePrefixes.some((prefix) => entry.startsWith(prefix))
+);
+if (leakedEntries.length > 0) {
+  throw new Error(`Packaged application should not contain:\n${leakedEntries.slice(0, 20).join('\n')}`);
+}
+
 const packagedMetadata = JSON.parse(asar.extractFile(archivePath, 'package.json').toString('utf8'));
-if (packagedMetadata.buildEnvironment !== environment) {
-  throw new Error(
-    `Packaged environment is "${packagedMetadata.buildEnvironment}"; expected "${environment}".`
-  );
+if (!packagedMetadata.serverUrl) {
+  throw new Error('Packaged package.json has no serverUrl.');
 }
 if (packagedMetadata.version !== expectedVersion) {
   throw new Error(
@@ -55,8 +43,6 @@ if (packagedMetadata.version !== expectedVersion) {
   );
 }
 
-if (!fs.existsSync(mongoPath) || fs.statSync(mongoPath).size < 10 * 1024 * 1024) {
-  throw new Error(`Bundled MongoDB executable is missing or invalid: ${mongoPath}`);
-}
-
-console.log(`Electron ${environment} package v${expectedVersion} verification passed.`);
+console.log(
+  `Electron package v${expectedVersion} verification passed (server: ${packagedMetadata.serverUrl}).`
+);

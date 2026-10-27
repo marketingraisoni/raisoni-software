@@ -7,32 +7,24 @@ import {
 } from '../src/config/environments.js';
 
 test('environment defaults use isolated databases and fixed ports', () => {
-  assert.deepEqual(ENVIRONMENT_NAMES, [
-    'development',
-    'staging',
-    'production'
-  ]);
+  assert.deepEqual(ENVIRONMENT_NAMES, ['development', 'production']);
 
   assert.deepEqual(
     Object.values(ENVIRONMENT_DEFAULTS).map(({ port }) => port),
-    [9090, 7039, 2000]
-  );
-  assert.equal(
-    new Set(Object.values(ENVIRONMENT_DEFAULTS).map(({ port }) => port)).size,
-    3
+    [9090, 2000]
   );
   assert.equal(
     new Set(
       Object.values(ENVIRONMENT_DEFAULTS).map(({ databaseName }) => databaseName)
     ).size,
-    3
+    2
   );
 });
 
 test('environment names are normalized and invalid values fail fast', () => {
-  assert.equal(resolveEnvironmentName(' STAGING '), 'staging');
+  assert.equal(resolveEnvironmentName(' PRODUCTION '), 'production');
   assert.throws(
-    () => resolveEnvironmentName('qa'),
-    /Expected one of: development, staging, production/
+    () => resolveEnvironmentName('staging'),
+    /Expected one of: development, production/
   );
 });

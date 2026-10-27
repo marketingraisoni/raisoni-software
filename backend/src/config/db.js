@@ -100,7 +100,7 @@ async function connectEmbeddedDatabase() {
     }
     if (process.env.MONGOMS_SYSTEM_BINARY && !fs.existsSync(process.env.MONGOMS_SYSTEM_BINARY)) {
       throw new Error(
-        `Bundled mongod.exe not found at ${process.env.MONGOMS_SYSTEM_BINARY}. Run "npm run desktop:mongodb" once to download it.`
+        `Bundled mongod.exe not found at ${process.env.MONGOMS_SYSTEM_BINARY}. Run "npm run mongodb:download" once to download it.`
       );
     }
 

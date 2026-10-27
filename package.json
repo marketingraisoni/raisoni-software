@@ -1,7 +1,7 @@
 {
   "name": "raisoni-erp",
   "version": "1.0.6",
-  "description": "Offline-capable Windows desktop business management application for shared LAN",
+  "description": "Windows desktop business management application with a shared LAN server",
   "main": "desktop/main.cjs",
   "type": "module",
   "workspaces": [
@@ -12,7 +12,6 @@
     "dev": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"cross-env APP_ENV=development NODE_ENV=development node --watch backend/server.js\" \"npm --prefix frontend run dev -- --mode development\"",
     "dev:backend": "cross-env APP_ENV=development NODE_ENV=development node --watch backend/server.js",
     "dev:frontend": "npm --prefix frontend run dev -- --mode development",
-    "dev:staging": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"cross-env APP_ENV=staging NODE_ENV=production node --watch backend/server.js\" \"npm --prefix frontend run dev -- --mode staging\"",
     "pm2:start": "pm2 startOrReload backend/ecosystem.config.cjs --update-env && pm2 save --force",
     "pm2:restart": "pm2 startOrReload backend/ecosystem.config.cjs --update-env && pm2 save --force",
     "pm2:stop": "pm2 stop raisoni-backend",
@@ -24,19 +23,15 @@
     "production": "npm run frontend:build && npm run start:production",
     "start": "npm run start:production",
     "start:development": "cross-env APP_ENV=development NODE_ENV=development node backend/server.js",
-    "start:staging": "cross-env APP_ENV=staging NODE_ENV=production node backend/server.js",
     "start:production": "cross-env APP_ENV=production NODE_ENV=production node backend/server.js",
     "server": "cross-env APP_ENV=development NODE_ENV=development node --watch backend/server.js",
     "seed": "npm run seed:development",
     "seed:development": "cross-env APP_ENV=development NODE_ENV=development node backend/scripts/seed.js",
-    "seed:staging": "cross-env APP_ENV=staging NODE_ENV=production node backend/scripts/seed.js",
     "seed:production": "cross-env APP_ENV=production NODE_ENV=production node backend/scripts/seed.js",
     "backup": "npm run backup:production",
     "backup:development": "cross-env APP_ENV=development NODE_ENV=development node backend/scripts/backup.js",
-    "backup:staging": "cross-env APP_ENV=staging NODE_ENV=production node backend/scripts/backup.js",
     "backup:production": "cross-env APP_ENV=production NODE_ENV=production node backend/scripts/backup.js",
     "env:development": "cross-env APP_ENV=development NODE_ENV=development node backend/scripts/show-environment.js",
-    "env:staging": "cross-env APP_ENV=staging NODE_ENV=production node backend/scripts/show-environment.js",
     "env:production": "cross-env APP_ENV=production NODE_ENV=production node backend/scripts/show-environment.js",
     "test": "node --test backend/tests/*.test.js",
     "frontend": "npm run frontend:dev",
@@ -44,19 +39,14 @@
     "frontend:build": "npm run frontend:build:production",
     "production:build": "npm run frontend:build",
     "frontend:build:development": "npm --prefix frontend run build -- --mode development",
-    "frontend:build:staging": "npm --prefix frontend run build -- --mode staging",
     "frontend:build:production": "npm --prefix frontend run build -- --mode production",
-    "desktop": "cross-env APP_ENV=production NODE_ENV=production electron desktop/main.cjs",
-    "desktop:development": "cross-env APP_ENV=development NODE_ENV=development electron desktop/main.cjs",
-    "desktop:staging": "cross-env APP_ENV=staging NODE_ENV=production electron desktop/main.cjs",
-    "pack": "electron-builder --dir",
-    "desktop:mongodb": "node scripts/download-mongodb.cjs",
-    "desktop:verify": "node scripts/verify-electron-package.cjs",
-    "dist": "npm run dist:all",
-    "dist:all": "npm run desktop:mongodb && node scripts/package-electron.cjs all --bump-version",
-    "dist:development": "npm run desktop:mongodb && node scripts/package-electron.cjs development",
-    "dist:staging": "npm run desktop:mongodb && node scripts/package-electron.cjs staging",
-    "dist:production": "npm run desktop:mongodb && node scripts/package-electron.cjs production"
+    "mongodb:download": "node scripts/download-mongodb.cjs",
+    "server:firewall": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/server-firewall.ps1",
+    "desktop": "electron desktop/main.cjs",
+    "desktop:dev": "cross-env RAISONI_SERVER_URL=http://localhost:9091 electron desktop/main.cjs",
+    "pack": "node scripts/package-electron.cjs --dir",
+    "dist": "node scripts/package-electron.cjs --bump-version",
+    "dist:verify": "node scripts/verify-electron-package.cjs"
   },
   "keywords": [
     "electron",
@@ -96,15 +86,8 @@
     },
     "files": [
       "desktop/**/*",
-      "backend/**/*",
-      "frontend/dist/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "resources/mongodb/mongod.exe",
-        "to": "mongodb/mongod.exe"
-      }
+      "package.json",
+      "!node_modules/**/*"
     ],
     "win": {
       "icon": "frontend/public/images/logo.png",

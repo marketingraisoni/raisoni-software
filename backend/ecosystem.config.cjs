@@ -34,17 +34,11 @@ module.exports = {
       exec_mode: 'fork',
       watch: false,
 
-      // Default environment (pm2 start backend/ecosystem.config.cjs)
+      // Production server: serves the UI and API on 0.0.0.0:2000 for every LAN PC and desktop app.
       env: {
         ...sharedEnv,
         NODE_ENV: 'production',
         APP_ENV: 'production',
-      },
-      // pm2 start backend/ecosystem.config.cjs --env staging
-      env_staging: {
-        ...sharedEnv,
-        NODE_ENV: 'production',
-        APP_ENV: 'staging',
       },
 
       // Restart policy: back off instead of burning through max_restarts while

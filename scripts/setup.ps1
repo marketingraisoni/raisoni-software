@@ -21,7 +21,7 @@ $mongoService = Get-Service -Name "MongoDB" -ErrorAction SilentlyContinue
 if ($mongoService -and $mongoService.Status -eq "Running") {
     Write-Host "  [OK] MongoDB Windows service is running." -ForegroundColor Green
 } else {
-    Write-Host "  [INFO] MongoDB service is not running. Development and staging can use the embedded fallback; the Electron production build includes MongoDB." -ForegroundColor Cyan
+    Write-Host "  [INFO] MongoDB service is not running. The backend falls back to the bundled database (npm run mongodb:download)." -ForegroundColor Cyan
 }
 
 Write-Host "[3/5] Creating environment files..." -ForegroundColor Yellow
@@ -31,7 +31,7 @@ if (-not (Test-Path $sharedEnvironmentPath)) {
     Write-Host "  [OK] Created shared .env settings." -ForegroundColor Green
 }
 
-foreach ($environment in @("development", "staging", "production")) {
+foreach ($environment in @("development", "production")) {
     $environmentPath = Join-Path $rootDir ".env.$environment"
     if (Test-Path $environmentPath) {
         Write-Host "  [OK] Preserved .env.$environment." -ForegroundColor Green
@@ -66,7 +66,6 @@ try {
 
 Write-Host ""
 Write-Host "Setup complete." -ForegroundColor Green
-Write-Host "  Development: npm run start:development (LAN port 9090)" -ForegroundColor Cyan
-Write-Host "  Staging:     npm run start:staging     (LAN port 7039)" -ForegroundColor Cyan
-Write-Host "  Production:  npm run start:production  (LAN port 2000)" -ForegroundColor Cyan
-Write-Host "  Desktop EXE: powershell -ExecutionPolicy Bypass -File scripts/build-exe.ps1" -ForegroundColor Cyan
+Write-Host "  Development: npm run dev               (backend 9090 + frontend 9091)" -ForegroundColor Cyan
+Write-Host "  Production:  npm run pm2:deploy        (LAN port 2000, server PC)" -ForegroundColor Cyan
+Write-Host "  Desktop EXE: npm run dist  (thin client for the server)" -ForegroundColor Cyan

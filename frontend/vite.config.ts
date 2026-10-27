@@ -9,7 +9,6 @@ import { playwright } from '@vitest/browser-playwright'
 // https://vite.dev/config/
 const environmentPorts: Record<string, number> = {
   development: 9090,
-  staging: 7039,
   production: 2000,
 }
 

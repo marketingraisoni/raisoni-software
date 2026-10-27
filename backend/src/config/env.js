@@ -37,7 +37,6 @@ const dataDir = path.resolve(
 export const config = Object.freeze({
   env: environment,
   isDevelopment: environment === 'development',
-  isStaging: environment === 'staging',
   isProduction: environment === 'production',
   port,
   host: process.env.HOST || '0.0.0.0',
