@@ -1,0 +1,17 @@
+# Normalize line endings so every PC produces identical diffs.
+* text=auto eol=lf
+
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.bmp binary
+*.gif binary
+*.woff binary
+*.woff2 binary
+*.exe binary
+*.xlsx binary

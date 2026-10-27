@@ -19,40 +19,89 @@ export async function connectDB() {
   }
 
   const uri = config.mongoUri;
-  
-  try {
-    logger.info(`Attempting connection to MongoDB at: ${sanitizeMongoUri(uri)}`);
-    // Connect with a 4s timeout for fast failover to embedded fallback if local service isn't running
-    await mongoose.connect(uri, {
-      dbName: config.databaseName,
-      serverSelectionTimeoutMS: 4000,
-      connectTimeoutMS: 4000
-    });
-    
-    isUsingEmbedded = false;
-    logger.success(`MongoDB Connected successfully to: ${mongoose.connection.host}:${mongoose.connection.port}/${mongoose.connection.name}`);
-    return mongoose.connection;
-  } catch (err) {
-    logger.warn(`Could not connect to external MongoDB: ${err.message}`);
+  const attempts = config.mongoConnectRetries + 1;
+  let lastError = null;
 
-    if (config.useEmbeddedFallback) {
-      return connectEmbeddedDatabase();
-    } else {
-      throw err;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      logger.info(`Attempting connection to MongoDB at: ${sanitizeMongoUri(uri)} (attempt ${attempt}/${attempts})`);
+      // Short per-attempt timeout; the retry loop covers a MongoDB service that is still booting.
+      await mongoose.connect(uri, {
+        dbName: config.databaseName,
+        serverSelectionTimeoutMS: 4000,
+        connectTimeoutMS: 4000
+      });
+
+      isUsingEmbedded = false;
+      logger.success(`MongoDB Connected successfully to: ${mongoose.connection.host}:${mongoose.connection.port}/${mongoose.connection.name}`);
+      return mongoose.connection;
+    } catch (err) {
+      lastError = err;
+      logger.warn(`Could not connect to MongoDB: ${err.message}`);
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, config.mongoRetryDelayMs));
+      }
     }
+  }
+
+  if (config.useEmbeddedFallback) {
+    return connectEmbeddedDatabase();
+  }
+
+  logger.error(
+    `MongoDB is not reachable at ${sanitizeMongoUri(uri)}. Start the "MongoDB" Windows service ` +
+    '(services.msc or "net start MongoDB"), or set USE_EMBEDDED_MONGODB_FALLBACK=true to use the bundled database.'
+  );
+  throw lastError;
+}
+
+// Remembers where the bundled mongod is listening. If the backend was killed without a
+// graceful shutdown (common with PM2 on Windows), mongod.exe keeps running and holds the
+// data-folder lock, so a fresh start must reconnect to it instead of failing with DBPathInUse.
+const embeddedStatePath = path.resolve(config.dataDir, 'embedded-mongod.json');
+
+async function reuseRunningEmbeddedDatabase() {
+  let state;
+  try {
+    state = JSON.parse(fs.readFileSync(embeddedStatePath, 'utf8'));
+  } catch {
+    return null;
+  }
+  if (!state?.uri) return null;
+
+  try {
+    await mongoose.connect(state.uri, {
+      dbName: config.databaseName,
+      serverSelectionTimeoutMS: 2000,
+      connectTimeoutMS: 2000
+    });
+    isUsingEmbedded = true;
+    logger.success(`Reconnected to the bundled MongoDB already running at: ${sanitizeMongoUri(state.uri)}`);
+    return mongoose.connection;
+  } catch {
+    fs.rmSync(embeddedStatePath, { force: true });
+    return null;
   }
 }
 
 async function connectEmbeddedDatabase() {
+  const reused = await reuseRunningEmbeddedDatabase();
+  if (reused) return reused;
+
   logger.info('Starting the bundled MongoDB instance with persistent disk storage...');
 
   try {
     fs.mkdirSync(persistentDbDir, { recursive: true });
 
-    const bundledMongoBinary = path.resolve(config.dataDir, '../../resources/mongodb/mongod.exe');
+    const bundledMongoBinary = path.join(config.projectRoot, 'resources', 'mongodb', 'mongod.exe');
     if (!process.env.MONGOMS_SYSTEM_BINARY && fs.existsSync(bundledMongoBinary)) {
       process.env.MONGOMS_SYSTEM_BINARY = bundledMongoBinary;
       process.env.MONGOMS_SYSTEM_BINARY_VERSION_CHECK = 'false';
+    }
+    if (process.env.MONGOMS_SYSTEM_BINARY && !fs.existsSync(process.env.MONGOMS_SYSTEM_BINARY)) {
+      throw new Error(
+        `Bundled mongod.exe not found at ${process.env.MONGOMS_SYSTEM_BINARY}. Run "npm run desktop:mongodb" once to download it.`
+      );
     }
 
     const { MongoMemoryServer } = await import('mongodb-memory-server');
@@ -65,12 +114,19 @@ async function connectEmbeddedDatabase() {
       }
     });
     const embeddedUri = embeddedMongoServer.getUri();
+    fs.writeFileSync(embeddedStatePath, JSON.stringify({ uri: embeddedUri }), 'utf8');
     await mongoose.connect(embeddedUri, { dbName: config.databaseName });
     isUsingEmbedded = true;
     logger.success(`Bundled MongoDB running at: ${sanitizeMongoUri(embeddedUri)} (Persistent disk path: ${persistentDbDir})`);
     return mongoose.connection;
   } catch (err) {
     logger.error(`Bundled MongoDB failed to start: ${err.message}`);
+    if (/DBPathInUse/.test(err.message)) {
+      logger.error(
+        `Another mongod.exe is still using ${persistentDbDir}. Stop the other backend (npm run pm2:status), ` +
+        'or end the leftover "mongod.exe" in Task Manager, then start again.'
+      );
+    }
     throw err;
   }
 }
@@ -83,6 +139,7 @@ export async function disconnectDB() {
     if (embeddedMongoServer) {
       await embeddedMongoServer.stop();
       embeddedMongoServer = null;
+      fs.rmSync(embeddedStatePath, { force: true });
     }
     logger.info('MongoDB disconnected.');
   } catch (err) {

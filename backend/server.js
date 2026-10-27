@@ -148,6 +148,11 @@ export async function startServer(port = config.port) {
     return new Promise((resolve, reject) => {
       const handleStartupError = (error) => {
         httpServer.off('listening', handleListening);
+        if (error.code === 'EADDRINUSE') {
+          error.message =
+            `Port ${port} is already in use on ${config.host}. Another copy of the backend is probably running ` +
+            `(check "npm run pm2:status" or run "netstat -ano | findstr :${port}").`;
+        }
         reject(error);
       };
       const handleListening = () => {
@@ -185,36 +190,44 @@ export async function startServer(port = config.port) {
 /**
  * Graceful shutdown handler
  */
-export async function stopServer() {
+let stopPromise = null;
+export function stopServer() {
+  if (stopPromise) return stopPromise;
   logger.info('Shutting down server gracefully...');
-  await stopDatabaseBackupScheduler();
-  return new Promise((resolve) => {
-    httpServer.close(async () => {
-      await disconnectDB();
-      logger.info('Server and DB stopped.');
-      resolve();
-    });
-  });
+  stopPromise = (async () => {
+    await stopDatabaseBackupScheduler();
+    if (httpServer.listening) {
+      await new Promise((resolve) => httpServer.close(() => resolve()));
+    }
+    await disconnectDB();
+    logger.info('Server and DB stopped.');
+  })();
+  return stopPromise;
 }
 
 // Auto-run if executed directly
 const isDirectExecution = process.argv[1] && path.resolve(process.argv[1]) === __filename;
-const isPm2Execution = process.env.NODE_APP_INSTANCE !== undefined;
+const isPm2Execution = process.env.NODE_APP_INSTANCE !== undefined || process.env.pm_id !== undefined;
 
 if (isDirectExecution || isPm2Execution) {
-  startServer().catch(() => {
-    process.exitCode = 1;
+  startServer().catch(async () => {
+    // Exit for real so PM2 restarts us; an open DB handle would otherwise keep a
+    // non-listening process alive and PM2 would report it as "online".
+    await stopServer();
+    process.exit(1);
   });
 }
 
-process.on('SIGINT', async () => {
+async function shutdownAndExit() {
   await stopServer();
   process.exit(0);
-});
+}
 
-process.on('SIGTERM', async () => {
-  await stopServer();
-  process.exit(0);
+process.on('SIGINT', shutdownAndExit);
+process.on('SIGTERM', shutdownAndExit);
+// PM2 on Windows cannot deliver signals; with shutdown_with_message it sends this instead.
+process.on('message', (message) => {
+  if (message === 'shutdown') shutdownAndExit();
 });
 
 export { app, httpServer };

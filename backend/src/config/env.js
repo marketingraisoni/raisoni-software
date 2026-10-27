@@ -11,11 +11,10 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../../..');
 
 const environment = resolveEnvironmentName(process.env.APP_ENV);
-dotenv.config({ path: path.join(projectRoot, '.env') });
-dotenv.config({
-  path: path.join(projectRoot, `.env.${environment}`),
-  override: true
-});
+// Precedence: real process env (PM2, cross-env, Electron) > .env.<environment> > .env
+// dotenv never overwrites a key that is already set, so load the most specific file first.
+dotenv.config({ path: path.join(projectRoot, `.env.${environment}`), quiet: true });
+dotenv.config({ path: path.join(projectRoot, '.env'), quiet: true });
 
 const defaults = ENVIRONMENT_DEFAULTS[environment];
 
@@ -48,6 +47,10 @@ export const config = Object.freeze({
     `mongodb://127.0.0.1:27017/${databaseName}`,
   useEmbedded: process.env.USE_EMBEDDED_MONGODB === 'true',
   useEmbeddedFallback: process.env.USE_EMBEDDED_MONGODB_FALLBACK === 'true',
+  // MongoDB service may still be starting when the PC boots; keep retrying before giving up.
+  mongoConnectRetries: parseNonNegativeInteger(process.env.MONGODB_CONNECT_RETRIES, 1),
+  mongoRetryDelayMs: parseNonNegativeInteger(process.env.MONGODB_RETRY_DELAY_MS, 3000),
+  projectRoot,
   dataDir,
   jwtSecret:
     process.env.JWT_SECRET ||
@@ -68,4 +71,10 @@ function parseInteger(value, fallback, variableName) {
     throw new Error(`${variableName} must be an integer between 1 and 65535.`);
   }
   return parsed;
+}
+
+function parseNonNegativeInteger(value, fallback) {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }

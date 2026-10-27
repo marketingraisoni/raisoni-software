@@ -78,6 +78,10 @@ async function startBundledBackend() {
     process.env.JWT_SECRET || getOrCreateDesktopJwtSecret(appEnvironment);
   process.env.MONGOMS_SYSTEM_BINARY = mongoBinary;
   process.env.MONGOMS_SYSTEM_BINARY_VERSION_CHECK = 'false';
+  // Packaged builds ship no .env files: use an installed MongoDB service if present,
+  // otherwise start the bundled mongod immediately instead of failing on 127.0.0.1:27017.
+  process.env.USE_EMBEDDED_MONGODB_FALLBACK = process.env.USE_EMBEDDED_MONGODB_FALLBACK || 'true';
+  process.env.MONGODB_CONNECT_RETRIES = process.env.MONGODB_CONNECT_RETRIES || '0';
 
   if (!fs.existsSync(mongoBinary)) {
     throw new Error(`The bundled database executable is missing at ${mongoBinary}. Rebuild the installer with npm run dist.`);
