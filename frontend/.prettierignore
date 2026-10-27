@@ -16,4 +16,6 @@
 !.vscode/
 
 # Ignore auto generated routeTree.gen.ts
+src/routeTree.gen.ts
 /src/routeTree.gen.ts
+**/routeTree.gen.ts
