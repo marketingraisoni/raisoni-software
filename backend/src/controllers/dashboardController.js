@@ -49,6 +49,9 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
     returnedProcessCount,
     processAgg,
     vendorAgg,
+
+    sizeBracketsAgg,
+    dailyLotsAgg,
   ] = await Promise.all([
     User.countDocuments(),
     User.countDocuments({ status: USER_STATUS.ACTIVE }),
