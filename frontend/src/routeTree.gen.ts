@@ -10,59 +10,32 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as AuthenticatedPacketScannerRouteImport } from './routes/_authenticated/packet-scanner'
-import { Route as AuthenticatedPacketReturnRouteImport } from './routes/_authenticated/packet-return'
-import { Route as errors500RouteImport } from './routes/(errors)/500'
-import { Route as errors403RouteImport } from './routes/(errors)/403'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
+import { Route as errors403RouteImport } from './routes/(errors)/403'
+import { Route as errors500RouteImport } from './routes/(errors)/500'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedPacketReturnRouteImport } from './routes/_authenticated/packet-return'
+import { Route as AuthenticatedPacketScannerRouteImport } from './routes/_authenticated/packet-scanner'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
-import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
-import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
-import { Route as AuthenticatedSemiPolishIndexRouteImport } from './routes/_authenticated/semi-polish/index'
-import { Route as AuthenticatedPermissionsIndexRouteImport } from './routes/_authenticated/permissions/index'
-import { Route as AuthenticatedPacketsIndexRouteImport } from './routes/_authenticated/packets/index'
-import { Route as AuthenticatedLotsIndexRouteImport } from './routes/_authenticated/lots/index'
-import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
-import { Route as AuthenticatedSettingsPasswordRouteImport } from './routes/_authenticated/settings/password'
-import { Route as AuthenticatedSemiPolishReadyForIssueRouteImport } from './routes/_authenticated/semi-polish/ready-for-issue'
-import { Route as AuthenticatedSemiPolishPacketScannerRouteImport } from './routes/_authenticated/semi-polish/packet-scanner'
-import { Route as AuthenticatedSemiPolishPacketReturnRouteImport } from './routes/_authenticated/semi-polish/packet-return'
-import { Route as AuthenticatedSemiPolishHistoryRouteImport } from './routes/_authenticated/semi-polish/history'
-import { Route as AuthenticatedSemiPolishProcessIdRouteImport } from './routes/_authenticated/semi-polish/$processId'
+import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
+import { Route as AuthenticatedLotsIndexRouteImport } from './routes/_authenticated/lots/index'
+import { Route as AuthenticatedPacketsIndexRouteImport } from './routes/_authenticated/packets/index'
 import { Route as AuthenticatedPacketsLotIdRouteImport } from './routes/_authenticated/packets/$lotId'
+import { Route as AuthenticatedPermissionsIndexRouteImport } from './routes/_authenticated/permissions/index'
+import { Route as AuthenticatedSemiPolishIndexRouteImport } from './routes/_authenticated/semi-polish/index'
+import { Route as AuthenticatedSemiPolishProcessIdRouteImport } from './routes/_authenticated/semi-polish/$processId'
+import { Route as AuthenticatedSemiPolishHistoryRouteImport } from './routes/_authenticated/semi-polish/history'
+import { Route as AuthenticatedSemiPolishPacketReturnRouteImport } from './routes/_authenticated/semi-polish/packet-return'
+import { Route as AuthenticatedSemiPolishPacketScannerRouteImport } from './routes/_authenticated/semi-polish/packet-scanner'
+import { Route as AuthenticatedSemiPolishReadyForIssueRouteImport } from './routes/_authenticated/semi-polish/ready-for-issue'
+import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedSettingsPasswordRouteImport } from './routes/_authenticated/settings/password'
+import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedSemiPolishPlanningReturnsProcessIdRouteImport } from './routes/_authenticated/semi-polish/planning-returns.$processId'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPacketScannerRoute =
-  AuthenticatedPacketScannerRouteImport.update({
-    id: '/packet-scanner',
-    path: '/packet-scanner',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedPacketReturnRoute =
-  AuthenticatedPacketReturnRouteImport.update({
-    id: '/packet-return',
-    path: '/packet-return',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const errors500Route = errors500RouteImport.update({
-  id: '/(errors)/500',
-  path: '/500',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors403Route = errors403RouteImport.update({
-  id: '/(errors)/403',
-  path: '/403',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authSignInRoute = authSignInRouteImport.update({
@@ -70,44 +43,42 @@ const authSignInRoute = authSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const errors403Route = errors403RouteImport.update({
+  id: '/(errors)/403',
+  path: '/403',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors500Route = errors500RouteImport.update({
+  id: '/(errors)/500',
+  path: '/500',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPacketReturnRoute =
+  AuthenticatedPacketReturnRouteImport.update({
+    id: '/packet-return',
+    path: '/packet-return',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPacketScannerRoute =
+  AuthenticatedPacketScannerRouteImport.update({
+    id: '/packet-scanner',
+    path: '/packet-scanner',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsRouteRoute =
   AuthenticatedSettingsRouteRouteImport.update({
     id: '/settings',
     path: '/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
-  id: '/users/',
-  path: '/users/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedSettingsIndexRoute =
-  AuthenticatedSettingsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedSemiPolishIndexRoute =
-  AuthenticatedSemiPolishIndexRouteImport.update({
-    id: '/semi-polish/',
-    path: '/semi-polish/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedPermissionsIndexRoute =
-  AuthenticatedPermissionsIndexRouteImport.update({
-    id: '/permissions/',
-    path: '/permissions/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedPacketsIndexRoute =
-  AuthenticatedPacketsIndexRouteImport.update({
-    id: '/packets/',
-    path: '/packets/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedLotsIndexRoute = AuthenticatedLotsIndexRouteImport.update({
-  id: '/lots/',
-  path: '/lots/',
+const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
+  id: '/chats/',
+  path: '/chats/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedHelpCenterIndexRoute =
@@ -116,45 +87,15 @@ const AuthenticatedHelpCenterIndexRoute =
     path: '/help-center/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
-  id: '/chats/',
-  path: '/chats/',
+const AuthenticatedLotsIndexRoute = AuthenticatedLotsIndexRouteImport.update({
+  id: '/lots/',
+  path: '/lots/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedSettingsPasswordRoute =
-  AuthenticatedSettingsPasswordRouteImport.update({
-    id: '/password',
-    path: '/password',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedSemiPolishReadyForIssueRoute =
-  AuthenticatedSemiPolishReadyForIssueRouteImport.update({
-    id: '/semi-polish/ready-for-issue',
-    path: '/semi-polish/ready-for-issue',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedSemiPolishPacketScannerRoute =
-  AuthenticatedSemiPolishPacketScannerRouteImport.update({
-    id: '/semi-polish/packet-scanner',
-    path: '/semi-polish/packet-scanner',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedSemiPolishPacketReturnRoute =
-  AuthenticatedSemiPolishPacketReturnRouteImport.update({
-    id: '/semi-polish/packet-return',
-    path: '/semi-polish/packet-return',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedSemiPolishHistoryRoute =
-  AuthenticatedSemiPolishHistoryRouteImport.update({
-    id: '/semi-polish/history',
-    path: '/semi-polish/history',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedSemiPolishProcessIdRoute =
-  AuthenticatedSemiPolishProcessIdRouteImport.update({
-    id: '/semi-polish/$processId',
-    path: '/semi-polish/$processId',
+const AuthenticatedPacketsIndexRoute =
+  AuthenticatedPacketsIndexRouteImport.update({
+    id: '/packets/',
+    path: '/packets/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedPacketsLotIdRoute =
@@ -163,6 +104,65 @@ const AuthenticatedPacketsLotIdRoute =
     path: '/packets/$lotId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPermissionsIndexRoute =
+  AuthenticatedPermissionsIndexRouteImport.update({
+    id: '/permissions/',
+    path: '/permissions/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishIndexRoute =
+  AuthenticatedSemiPolishIndexRouteImport.update({
+    id: '/semi-polish/',
+    path: '/semi-polish/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishProcessIdRoute =
+  AuthenticatedSemiPolishProcessIdRouteImport.update({
+    id: '/semi-polish/$processId',
+    path: '/semi-polish/$processId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishHistoryRoute =
+  AuthenticatedSemiPolishHistoryRouteImport.update({
+    id: '/semi-polish/history',
+    path: '/semi-polish/history',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishPacketReturnRoute =
+  AuthenticatedSemiPolishPacketReturnRouteImport.update({
+    id: '/semi-polish/packet-return',
+    path: '/semi-polish/packet-return',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishPacketScannerRoute =
+  AuthenticatedSemiPolishPacketScannerRouteImport.update({
+    id: '/semi-polish/packet-scanner',
+    path: '/semi-polish/packet-scanner',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSemiPolishReadyForIssueRoute =
+  AuthenticatedSemiPolishReadyForIssueRouteImport.update({
+    id: '/semi-polish/ready-for-issue',
+    path: '/semi-polish/ready-for-issue',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedSettingsPasswordRoute =
+  AuthenticatedSettingsPasswordRouteImport.update({
+    id: '/password',
+    path: '/password',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSemiPolishPlanningReturnsProcessIdRoute =
   AuthenticatedSemiPolishPlanningReturnsProcessIdRouteImport.update({
     id: '/semi-polish/planning-returns/$processId',
@@ -340,32 +340,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/': {
-      id: '/_authenticated/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/packet-scanner': {
-      id: '/_authenticated/packet-scanner'
-      path: '/packet-scanner'
-      fullPath: '/packet-scanner'
-      preLoaderRoute: typeof AuthenticatedPacketScannerRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/packet-return': {
-      id: '/_authenticated/packet-return'
-      path: '/packet-return'
-      fullPath: '/packet-return'
-      preLoaderRoute: typeof AuthenticatedPacketReturnRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/(errors)/500': {
-      id: '/(errors)/500'
-      path: '/500'
-      fullPath: '/500'
-      preLoaderRoute: typeof errors500RouteImport
+    '/(auth)/sign-in': {
+      id: '/(auth)/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof authSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(errors)/403': {
@@ -375,67 +354,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof errors403RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(auth)/sign-in': {
-      id: '/(auth)/sign-in'
-      path: '/sign-in'
-      fullPath: '/sign-in'
-      preLoaderRoute: typeof authSignInRouteImport
+    '/(errors)/500': {
+      id: '/(errors)/500'
+      path: '/500'
+      fullPath: '/500'
+      preLoaderRoute: typeof errors500RouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/packet-return': {
+      id: '/_authenticated/packet-return'
+      path: '/packet-return'
+      fullPath: '/packet-return'
+      preLoaderRoute: typeof AuthenticatedPacketReturnRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/packet-scanner': {
+      id: '/_authenticated/packet-scanner'
+      path: '/packet-scanner'
+      fullPath: '/packet-scanner'
+      preLoaderRoute: typeof AuthenticatedPacketScannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/users/': {
-      id: '/_authenticated/users/'
-      path: '/users'
-      fullPath: '/users/'
-      preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/settings/': {
-      id: '/_authenticated/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/semi-polish/': {
-      id: '/_authenticated/semi-polish/'
-      path: '/semi-polish'
-      fullPath: '/semi-polish/'
-      preLoaderRoute: typeof AuthenticatedSemiPolishIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/permissions/': {
-      id: '/_authenticated/permissions/'
-      path: '/permissions'
-      fullPath: '/permissions/'
-      preLoaderRoute: typeof AuthenticatedPermissionsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/packets/': {
-      id: '/_authenticated/packets/'
-      path: '/packets'
-      fullPath: '/packets/'
-      preLoaderRoute: typeof AuthenticatedPacketsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/lots/': {
-      id: '/_authenticated/lots/'
-      path: '/lots'
-      fullPath: '/lots/'
-      preLoaderRoute: typeof AuthenticatedLotsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/help-center/': {
-      id: '/_authenticated/help-center/'
-      path: '/help-center'
-      fullPath: '/help-center/'
-      preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/chats/': {
@@ -445,39 +396,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChatsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/settings/password': {
-      id: '/_authenticated/settings/password'
-      path: '/password'
-      fullPath: '/settings/password'
-      preLoaderRoute: typeof AuthenticatedSettingsPasswordRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/semi-polish/ready-for-issue': {
-      id: '/_authenticated/semi-polish/ready-for-issue'
-      path: '/semi-polish/ready-for-issue'
-      fullPath: '/semi-polish/ready-for-issue'
-      preLoaderRoute: typeof AuthenticatedSemiPolishReadyForIssueRouteImport
+    '/_authenticated/help-center/': {
+      id: '/_authenticated/help-center/'
+      path: '/help-center'
+      fullPath: '/help-center/'
+      preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/semi-polish/packet-scanner': {
-      id: '/_authenticated/semi-polish/packet-scanner'
-      path: '/semi-polish/packet-scanner'
-      fullPath: '/semi-polish/packet-scanner'
-      preLoaderRoute: typeof AuthenticatedSemiPolishPacketScannerRouteImport
+    '/_authenticated/lots/': {
+      id: '/_authenticated/lots/'
+      path: '/lots'
+      fullPath: '/lots/'
+      preLoaderRoute: typeof AuthenticatedLotsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/semi-polish/packet-return': {
-      id: '/_authenticated/semi-polish/packet-return'
-      path: '/semi-polish/packet-return'
-      fullPath: '/semi-polish/packet-return'
-      preLoaderRoute: typeof AuthenticatedSemiPolishPacketReturnRouteImport
+    '/_authenticated/packets/': {
+      id: '/_authenticated/packets/'
+      path: '/packets'
+      fullPath: '/packets/'
+      preLoaderRoute: typeof AuthenticatedPacketsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/semi-polish/history': {
-      id: '/_authenticated/semi-polish/history'
-      path: '/semi-polish/history'
-      fullPath: '/semi-polish/history'
-      preLoaderRoute: typeof AuthenticatedSemiPolishHistoryRouteImport
+    '/_authenticated/packets/$lotId': {
+      id: '/_authenticated/packets/$lotId'
+      path: '/packets/$lotId'
+      fullPath: '/packets/$lotId'
+      preLoaderRoute: typeof AuthenticatedPacketsLotIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/permissions/': {
+      id: '/_authenticated/permissions/'
+      path: '/permissions'
+      fullPath: '/permissions/'
+      preLoaderRoute: typeof AuthenticatedPermissionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/semi-polish/': {
+      id: '/_authenticated/semi-polish/'
+      path: '/semi-polish'
+      fullPath: '/semi-polish/'
+      preLoaderRoute: typeof AuthenticatedSemiPolishIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/semi-polish/$processId': {
@@ -487,11 +445,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSemiPolishProcessIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/packets/$lotId': {
-      id: '/_authenticated/packets/$lotId'
-      path: '/packets/$lotId'
-      fullPath: '/packets/$lotId'
-      preLoaderRoute: typeof AuthenticatedPacketsLotIdRouteImport
+    '/_authenticated/semi-polish/history': {
+      id: '/_authenticated/semi-polish/history'
+      path: '/semi-polish/history'
+      fullPath: '/semi-polish/history'
+      preLoaderRoute: typeof AuthenticatedSemiPolishHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/semi-polish/packet-return': {
+      id: '/_authenticated/semi-polish/packet-return'
+      path: '/semi-polish/packet-return'
+      fullPath: '/semi-polish/packet-return'
+      preLoaderRoute: typeof AuthenticatedSemiPolishPacketReturnRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/semi-polish/packet-scanner': {
+      id: '/_authenticated/semi-polish/packet-scanner'
+      path: '/semi-polish/packet-scanner'
+      fullPath: '/semi-polish/packet-scanner'
+      preLoaderRoute: typeof AuthenticatedSemiPolishPacketScannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/semi-polish/ready-for-issue': {
+      id: '/_authenticated/semi-polish/ready-for-issue'
+      path: '/semi-polish/ready-for-issue'
+      fullPath: '/semi-polish/ready-for-issue'
+      preLoaderRoute: typeof AuthenticatedSemiPolishReadyForIssueRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings/': {
+      id: '/_authenticated/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
+    '/_authenticated/settings/password': {
+      id: '/_authenticated/settings/password'
+      path: '/password'
+      fullPath: '/settings/password'
+      preLoaderRoute: typeof AuthenticatedSettingsPasswordRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
+    '/_authenticated/users/': {
+      id: '/_authenticated/users/'
+      path: '/users'
+      fullPath: '/users/'
+      preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/semi-polish/planning-returns/$processId': {
