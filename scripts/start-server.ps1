@@ -8,9 +8,9 @@ $rootDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $rootDir
 
 $ports = @{
-    development = 3001
-    staging = 3002
-    production = 3000
+    development = 9090
+    staging = 7039
+    production = 2000
 }
 $port = $ports[$Environment]
 

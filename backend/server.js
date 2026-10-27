@@ -94,7 +94,7 @@ app.use('/uploads', express.static(uploadsDir));
 // 6. 404 Route handler for API endpoints
 app.use('/api/*', apiNotFound);
 
-// 7. Serve frontend static build on port 3000 for LAN office access
+// 7. Serve frontend static build on configured port (port 2000 in production) for LAN office access
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
   app.get('*', (req, res, next) => {

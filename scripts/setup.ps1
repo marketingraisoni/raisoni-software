@@ -66,7 +66,7 @@ try {
 
 Write-Host ""
 Write-Host "Setup complete." -ForegroundColor Green
-Write-Host "  Development: npm run start:development (LAN port 3001)" -ForegroundColor Cyan
-Write-Host "  Staging:     npm run start:staging     (LAN port 3002)" -ForegroundColor Cyan
-Write-Host "  Production:  npm run start:production  (LAN port 3000)" -ForegroundColor Cyan
+Write-Host "  Development: npm run start:development (LAN port 9090)" -ForegroundColor Cyan
+Write-Host "  Staging:     npm run start:staging     (LAN port 7039)" -ForegroundColor Cyan
+Write-Host "  Production:  npm run start:production  (LAN port 2000)" -ForegroundColor Cyan
 Write-Host "  Desktop EXE: powershell -ExecutionPolicy Bypass -File scripts/build-exe.ps1" -ForegroundColor Cyan

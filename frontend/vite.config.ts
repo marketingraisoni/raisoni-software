@@ -8,8 +8,8 @@ import { playwright } from '@vitest/browser-playwright'
 
 // https://vite.dev/config/
 const environmentPorts: Record<string, number> = {
-  development: 3000,
-  staging: 3002,
+  development: 9090,
+  staging: 7039,
   production: 2000,
 }
 
@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => {
           ws: true,
         },
       },
-      port: 9090,
+      port: 9091,
     },
     test: {
       silent: 'passed-only',
