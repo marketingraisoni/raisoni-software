@@ -46,7 +46,10 @@ export const config = Object.freeze({
     process.env.MONGODB_URI ||
     `mongodb://127.0.0.1:27017/${databaseName}`,
   useEmbedded: process.env.USE_EMBEDDED_MONGODB === 'true',
-  useEmbeddedFallback: process.env.USE_EMBEDDED_MONGODB_FALLBACK === 'true',
+  useEmbeddedFallback:
+    Boolean(process.versions.electron) ||
+    process.env.USE_EMBEDDED_MONGODB_FALLBACK === 'true' ||
+    process.env.USE_EMBEDDED_MONGODB_FALLBACK === undefined,
   // MongoDB service may still be starting when the PC boots; keep retrying before giving up.
   mongoConnectRetries: parseNonNegativeInteger(process.env.MONGODB_CONNECT_RETRIES, 1),
   mongoRetryDelayMs: parseNonNegativeInteger(process.env.MONGODB_RETRY_DELAY_MS, 3000),
