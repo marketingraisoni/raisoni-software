@@ -199,8 +199,9 @@ export async function stopServer() {
 
 // Auto-run if executed directly
 const isDirectExecution = process.argv[1] && path.resolve(process.argv[1]) === __filename;
+const isPm2Execution = process.env.NODE_APP_INSTANCE !== undefined;
 
-if (isDirectExecution) {
+if (isDirectExecution || isPm2Execution) {
   startServer().catch(() => {
     process.exitCode = 1;
   });
