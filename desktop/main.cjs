@@ -16,8 +16,10 @@ if (!gotTheLock) {
 // The desktop app is a thin client: all data lives on the LAN server, which serves
 // both the UI and the API. Nothing (backend, database, UI build) is bundled here.
 const DEFAULT_SERVER_URL = 'http://192.168.1.125:2000';
-const HEALTH_TIMEOUT_MS = 4000;
-const RETRY_DELAY_MS = 5000;
+const HEALTH_TIMEOUT_MS = 1500;
+const RETRY_DELAY_MS = 3000;
+const FAST_POLL_MS = 600;       // Rapid polling while the splash is up
+const INITIAL_GRACE_PERIOD_MS = 15000; // Grace period before showing offline error screen
 // Must match backend/src/services/discoveryService.js.
 const DISCOVERY_PORT = 47800;
 const DISCOVERY_REQUEST = 'RAISONI_ERP_DISCOVER_V1';
@@ -31,6 +33,7 @@ let serverUrl = null;
 let isServerUrlForced = false;
 let retryTimer = null;
 let isConnecting = false;
+let connectionStartTime = 0;  // tracks when we first started trying
 
 function escapeHtml(value) {
   return String(value)
@@ -176,10 +179,12 @@ function discoverServer() {
 
 function scheduleReconnect() {
   if (retryTimer || !mainWindow) return;
+  const elapsed = Date.now() - connectionStartTime;
+  const delay = elapsed < INITIAL_GRACE_PERIOD_MS ? FAST_POLL_MS : RETRY_DELAY_MS;
   retryTimer = setTimeout(() => {
     retryTimer = null;
     connectToServer().catch(console.error);
-  }, RETRY_DELAY_MS);
+  }, delay);
 }
 
 async function showOfflinePage() {
@@ -201,6 +206,7 @@ async function showOfflinePage() {
 async function connectToServer() {
   if (!mainWindow || isConnecting) return;
   isConnecting = true;
+  if (!connectionStartTime) connectionStartTime = Date.now();
   clearTimeout(retryTimer);
   retryTimer = null;
   try {
@@ -218,14 +224,22 @@ async function connectToServer() {
     }
 
     if (reachable) {
+      connectionStartTime = 0;
       await mainWindow.loadURL(serverUrl);
       return;
     }
-    await showOfflinePage();
+
+    const elapsed = Date.now() - connectionStartTime;
+    if (elapsed >= INITIAL_GRACE_PERIOD_MS) {
+      await showOfflinePage();
+    }
     scheduleReconnect();
   } catch (error) {
     console.error('Unable to load the server UI:', error);
-    await showOfflinePage().catch(() => {});
+    const elapsed = Date.now() - connectionStartTime;
+    if (elapsed >= INITIAL_GRACE_PERIOD_MS) {
+      await showOfflinePage().catch(() => {});
+    }
     scheduleReconnect();
   } finally {
     isConnecting = false;

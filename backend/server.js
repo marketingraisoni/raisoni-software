@@ -125,18 +125,17 @@ initSocketIO(httpServer);
 export async function startServer(port = config.port) {
   try {
     await connectDB();
-    // Replace the former global Kapan uniqueness index with the active-only
-    // index required by soft deletion and Kapan reuse.
-    await Lot.syncIndexes();
-    // Explicitly create packet sequence and idempotency indexes before serving
-    // traffic so concurrent assortment writes have database-level guarantees.
-    await AssortmentPacket.createIndexes();
-    await AssortmentWriteLock.createIndexes();
-    await migrateLegacyUserTypes();
-    await Setting.updateOne(
-      { key: 'appName', value: 'Raisoni Software Demo' },
-      { $set: { value: 'Raisoni ERP' } }
-    );
+    // Synchronize active-only Kapan index, assortment write locks, and migrations concurrently
+    await Promise.all([
+      Lot.syncIndexes(),
+      AssortmentPacket.createIndexes(),
+      AssortmentWriteLock.createIndexes(),
+      migrateLegacyUserTypes(),
+      Setting.updateOne(
+        { key: 'appName', value: 'Raisoni Software Demo' },
+        { $set: { value: 'Raisoni ERP' } }
+      ),
+    ]);
 
     // Auto-seed initial accounts if database is empty
     try {

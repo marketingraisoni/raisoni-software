@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import net from 'net';
 import { spawnSync } from 'child_process';
 import mongoose from 'mongoose';
 import { config } from './env.js';
@@ -9,6 +10,24 @@ export const persistentDbDir = path.resolve(config.dataDir, 'db');
 
 let embeddedMongoServer = null;
 let isUsingEmbedded = false;
+
+function isTcpPortOpen(host, port, timeoutMs = 400) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port, timeout: timeoutMs });
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
+}
 
 export async function connectDB() {
   if (mongoose.connection.readyState === 1) {
@@ -26,9 +45,19 @@ export async function connectDB() {
   }
 
   const uri = config.mongoUri;
-  // Retrying only helps when a MongoDB service exists and may still be booting. On a PC that
-  // relies on the bundled database, waiting would just delay every start by ~70 seconds.
-  const attempts = isMongoServiceInstalled(uri) ? config.mongoConnectRetries + 1 : 1;
+  const isServiceInstalled = isMongoServiceInstalled(uri);
+  const attempts = isServiceInstalled ? config.mongoConnectRetries + 1 : 1;
+
+  // If pointing to localhost with fallback enabled and neither the Windows service
+  // nor port 27017 is responsive, bypass the 4-second connection timeout directly.
+  if (config.useEmbeddedFallback && !isServiceInstalled && /^mongodb:\/\/(127\.0\.0\.1|localhost)[:/]/i.test(uri)) {
+    const portOpen = await isTcpPortOpen('127.0.0.1', 27017, 300);
+    if (!portOpen) {
+      logger.info('External MongoDB not detected on 127.0.0.1:27017. Starting bundled MongoDB directly...');
+      return connectEmbeddedDatabase();
+    }
+  }
+
   let lastError = null;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {

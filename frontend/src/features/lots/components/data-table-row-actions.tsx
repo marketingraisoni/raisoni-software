@@ -46,7 +46,7 @@ export function DataTableRowActions({ row }: { row: Row<Lot> }) {
         />
       )}
       {canDelete && (
-        <DropdownMenu modal={false}>
+        <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant='ghost' className='flex h-8 w-8 p-0'>
               <DotsHorizontalIcon className='h-4 w-4' />
@@ -56,6 +56,10 @@ export function DataTableRowActions({ row }: { row: Row<Lot> }) {
           <DropdownMenuContent align='end' className='w-40'>
             <DropdownMenuItem
               className='text-red-500!'
+              onSelect={() => {
+                setCurrentRow(row.original)
+                setOpen('delete')
+              }}
               onClick={() => {
                 setCurrentRow(row.original)
                 setOpen('delete')

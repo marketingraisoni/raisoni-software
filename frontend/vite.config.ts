@@ -31,12 +31,30 @@ export default defineConfig(({ mode }) => {
     ],
     build: {
       sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('@radix-ui') || id.includes('@floating-ui')) {
+              return 'vendor-radix'
+            }
+          },
+        },
+      },
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
-      dedupe: ['react', 'react-dom'],
+      dedupe: [
+        'react',
+        'react-dom',
+        '@radix-ui/react-context',
+        '@radix-ui/react-popper',
+        '@radix-ui/react-portal',
+        '@radix-ui/react-slot',
+        '@radix-ui/react-compose-refs',
+        '@radix-ui/react-use-callback-ref',
+      ],
     },
     server: {
       host: true,
