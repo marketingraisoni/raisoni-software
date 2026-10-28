@@ -48,6 +48,48 @@ type StoredSession = {
   rememberMe: boolean
 }
 
+type ElectronRememberedSessionState = {
+  initialized: boolean
+  session: StoredSession | null
+}
+
+type ElectronAuthApi = {
+  getRememberedSession?: () => ElectronRememberedSessionState
+  setRememberedSession?: (session: StoredSession) => boolean
+  clearRememberedSession?: () => boolean
+}
+
+function getElectronAuthApi(): ElectronAuthApi | undefined {
+  if (typeof window === 'undefined') return undefined
+  return (window as Window & { electronAPI?: ElectronAuthApi }).electronAPI
+}
+
+function readElectronRememberedSession():
+  | ElectronRememberedSessionState
+  | undefined {
+  try {
+    return getElectronAuthApi()?.getRememberedSession?.()
+  } catch {
+    return undefined
+  }
+}
+
+function saveElectronRememberedSession(session: StoredSession) {
+  try {
+    getElectronAuthApi()?.setRememberedSession?.(session)
+  } catch {
+    // Browser storage remains available if Electron secure storage fails.
+  }
+}
+
+function clearElectronRememberedSession() {
+  try {
+    getElectronAuthApi()?.clearRememberedSession?.()
+  } catch {
+    // Browser storage is still cleared below.
+  }
+}
+
 function readUser(storage: Storage): AuthUser | null {
   try {
     const raw = storage.getItem(AUTH_USER)
@@ -83,8 +125,16 @@ function getStoredSession(): StoredSession {
   const session = readSession(window.sessionStorage, false)
   if (session) return session
 
+  const electronSessionState = readElectronRememberedSession()
+  if (electronSessionState?.initialized) {
+    return electronSessionState.session || emptySession
+  }
+
   const rememberedSession = readSession(window.localStorage, true)
-  if (rememberedSession) return rememberedSession
+  if (rememberedSession) {
+    saveElectronRememberedSession(rememberedSession)
+    return rememberedSession
+  }
 
   // Migrate the cookie used by older releases into the remembered-session flow.
   const cookieState = getCookie(ACCESS_TOKEN)
@@ -142,7 +192,14 @@ function persistSession(
     }
   }
 
-  // Tokens are now stored in Web Storage only. Always remove a legacy token cookie.
+  if (rememberMe && accessToken) {
+    saveElectronRememberedSession({ user, accessToken, rememberMe: true })
+  } else {
+    clearElectronRememberedSession()
+  }
+
+  // Browsers use Web Storage; Electron also keeps remembered sessions encrypted.
+  // Always remove the legacy token cookie.
   removeCookie(ACCESS_TOKEN)
 }
 
@@ -183,6 +240,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
             clearStorage(window.localStorage)
             clearStorage(window.sessionStorage)
           }
+          clearElectronRememberedSession()
           removeCookie(ACCESS_TOKEN)
           return {
             ...state,

@@ -8,10 +8,26 @@ const FORM_MESSAGES = {
   passwordEmpty: 'Please enter your password.',
 } as const
 
-const { navigate, setSessionMock, loginMock } = vi.hoisted(() => ({
+const {
+  navigate,
+  setSessionMock,
+  loginMock,
+  clearRememberedCredentialsMock,
+  loadRememberedCredentialsMock,
+  saveRememberedCredentialsMock,
+} = vi.hoisted(() => ({
   navigate: vi.fn(),
   setSessionMock: vi.fn(),
   loginMock: vi.fn(),
+  clearRememberedCredentialsMock: vi.fn(),
+  loadRememberedCredentialsMock: vi.fn(),
+  saveRememberedCredentialsMock: vi.fn(),
+}))
+
+vi.mock('./remembered-credentials', () => ({
+  clearRememberedCredentials: clearRememberedCredentialsMock,
+  loadRememberedCredentials: loadRememberedCredentialsMock,
+  saveRememberedCredentials: saveRememberedCredentialsMock,
 }))
 
 vi.mock('@/stores/auth-store', () => ({
@@ -50,6 +66,12 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 })
 
 describe('UserAuthForm', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    loadRememberedCredentialsMock.mockResolvedValue(null)
+    saveRememberedCredentialsMock.mockResolvedValue(undefined)
+  })
+
   describe('Rendering without redirectTo', () => {
     let screen: RenderResult
     let usernameInput: Locator
@@ -57,7 +79,6 @@ describe('UserAuthForm', () => {
     let signInButton: Locator
 
     beforeEach(async () => {
-      vi.clearAllMocks()
       loginMock.mockResolvedValue({
         success: true,
         message: 'Login successful',
@@ -116,11 +137,13 @@ describe('UserAuthForm', () => {
     })
 
     it('creates a persistent session when Remember me is selected', async () => {
+      const rememberMeCheckbox = screen.getByRole('checkbox', {
+        name: /Remember me/i,
+      })
+
       await userEvent.fill(usernameInput, 'admin')
       await userEvent.fill(passwordInput, '123456')
-      await userEvent.click(
-        screen.getByRole('checkbox', { name: /Remember me on this device/i })
-      )
+      await userEvent.click(rememberMeCheckbox)
 
       await userEvent.click(signInButton)
 
@@ -132,7 +155,36 @@ describe('UserAuthForm', () => {
         'real-jwt-token',
         true
       )
+      expect(saveRememberedCredentialsMock).toHaveBeenCalledWith({
+        username: 'admin',
+        password: '123456',
+      })
+      await expect.element(rememberMeCheckbox).toBeChecked()
+
+      await userEvent.click(rememberMeCheckbox)
+      expect(clearRememberedCredentialsMock).toHaveBeenCalledOnce()
+      await expect.element(rememberMeCheckbox).not.toBeChecked()
     })
+  })
+
+  it('fills saved credentials and keeps Remember me checked', async () => {
+    vi.clearAllMocks()
+    loadRememberedCredentialsMock.mockResolvedValue({
+      username: 'remembered.user',
+      password: 'SavedPassword@123',
+    })
+
+    const screen = await render(<UserAuthForm />)
+
+    await expect
+      .element(
+        screen.getByRole('textbox', { name: /^Username or email$/i })
+      )
+      .toHaveValue('remembered.user')
+    await expect
+      .element(screen.getByLabelText(/^Password$/i))
+      .toHaveValue('SavedPassword@123')
+    await expect.element(screen.getByRole('checkbox')).toBeChecked()
   })
 
   it('navigates to redirectTo when provided', async () => {

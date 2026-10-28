@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, ipcMain, net } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain, net, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -54,6 +54,73 @@ function inlinePage(title, message, actions = []) {
 
 function getUserConfigPath() {
   return path.join(app.getPath('userData'), 'server.json');
+}
+
+function getRememberedSessionPath() {
+  return path.join(app.getPath('userData'), 'remembered-session.bin');
+}
+
+function readRememberedSession() {
+  const sessionPath = getRememberedSessionPath();
+  if (!fs.existsSync(sessionPath)) {
+    return { initialized: false, session: null };
+  }
+
+  try {
+    const stored = fs.readFileSync(sessionPath);
+    if (stored.toString('utf8') === 'CLEARED') {
+      return { initialized: true, session: null };
+    }
+    if (!safeStorage.isEncryptionAvailable()) {
+      return { initialized: false, session: null };
+    }
+
+    const session = JSON.parse(safeStorage.decryptString(stored));
+    if (
+      !session ||
+      typeof session.accessToken !== 'string' ||
+      !session.accessToken ||
+      (session.user !== null && typeof session.user !== 'object')
+    ) {
+      throw new Error('Invalid remembered session');
+    }
+
+    return {
+      initialized: true,
+      session: { ...session, rememberMe: true }
+    };
+  } catch (error) {
+    console.warn('Unable to read the remembered session:', error);
+    return { initialized: true, session: null };
+  }
+}
+
+function writeRememberedSession(session) {
+  try {
+    fs.mkdirSync(path.dirname(getRememberedSessionPath()), { recursive: true });
+    if (!session) {
+      fs.writeFileSync(getRememberedSessionPath(), 'CLEARED', 'utf8');
+      return true;
+    }
+    if (
+      !safeStorage.isEncryptionAvailable() ||
+      typeof session.accessToken !== 'string' ||
+      !session.accessToken ||
+      (session.user !== null && typeof session.user !== 'object')
+    ) {
+      return false;
+    }
+
+    const encrypted = safeStorage.encryptString(JSON.stringify({
+      user: session.user,
+      accessToken: session.accessToken
+    }));
+    fs.writeFileSync(getRememberedSessionPath(), encrypted);
+    return true;
+  } catch (error) {
+    console.warn('Unable to save the remembered session:', error);
+    return false;
+  }
 }
 
 function normalizeServerUrl(value) {
@@ -342,6 +409,12 @@ async function createWindow() {
 
 ipcMain.handle('app:version', () => app.getVersion());
 ipcMain.handle('app:server-url', () => serverUrl);
+ipcMain.on('auth:remembered-session:get', (event) => {
+  event.returnValue = readRememberedSession();
+});
+ipcMain.on('auth:remembered-session:set', (event, session) => {
+  event.returnValue = writeRememberedSession(session);
+});
 
 app.whenReady().then(createWindow).catch((error) => {
   console.error('Unable to create the desktop window:', error);

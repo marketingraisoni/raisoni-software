@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -20,6 +20,11 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import {
+  clearRememberedCredentials,
+  loadRememberedCredentials,
+  saveRememberedCredentials,
+} from './remembered-credentials'
 
 const formSchema = z.object({
   username: z.string().trim().min(1, 'Please enter your username or email.'),
@@ -49,6 +54,21 @@ export function UserAuthForm({
     },
   })
 
+  useEffect(() => {
+    let active = true
+
+    void loadRememberedCredentials().then((credentials) => {
+      if (!active || !credentials) return
+      form.setValue('username', credentials.username)
+      form.setValue('password', credentials.password)
+      form.setValue('rememberMe', true)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [form])
+
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
@@ -59,6 +79,12 @@ export function UserAuthForm({
         data.rememberMe
       )
       auth.setSession(response.user, response.token, data.rememberMe)
+      if (data.rememberMe) {
+        await saveRememberedCredentials({
+          username: data.username,
+          password: data.password,
+        }).catch(() => undefined)
+      }
 
       await navigate({
         to: getSafeRedirectPath(redirectTo),
@@ -122,16 +148,18 @@ export function UserAuthForm({
                 <Checkbox
                   id='remember-me'
                   checked={field.value}
-                  onCheckedChange={(checked) =>
-                    field.onChange(checked === true)
-                  }
+                  onCheckedChange={(checked) => {
+                    const shouldRemember = checked === true
+                    field.onChange(shouldRemember)
+                    if (!shouldRemember) clearRememberedCredentials()
+                  }}
                 />
               </FormControl>
               <FormLabel
                 htmlFor='remember-me'
                 className='cursor-pointer font-normal'
               >
-                Remember me on this device
+                Remember me
               </FormLabel>
             </FormItem>
           )}

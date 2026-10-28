@@ -22,6 +22,7 @@ describe('useAuthStore', () => {
     localStorage.clear()
     sessionStorage.clear()
     clearCookies()
+    Reflect.deleteProperty(window, 'electronAPI')
     vi.resetModules()
   })
 
@@ -90,6 +91,52 @@ describe('useAuthStore', () => {
       'remembered-token'
     )
     expect(useAuthStoreAfterRestart.getState().auth.rememberMe).toBe(true)
+  })
+
+  it('keeps an Electron remembered session when the server origin changes', async () => {
+    let electronState: {
+      initialized: boolean
+      session: {
+        user: typeof sampleUser
+        accessToken: string
+        rememberMe: boolean
+      } | null
+    } = { initialized: false, session: null }
+
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        getRememberedSession: () => electronState,
+        setRememberedSession: (session: typeof electronState.session) => {
+          electronState = { initialized: true, session }
+          return true
+        },
+        clearRememberedSession: () => {
+          electronState = { initialized: true, session: null }
+          return true
+        },
+      },
+    })
+
+    const useAuthStore = await importAuthStore()
+    useAuthStore
+      .getState()
+      .auth.setSession(sampleUser, 'electron-token', true)
+
+    localStorage.clear()
+    sessionStorage.clear()
+    vi.resetModules()
+    const useAuthStoreAfterOriginChange = await importAuthStore()
+
+    expect(useAuthStoreAfterOriginChange.getState().auth.user).toEqual(
+      sampleUser
+    )
+    expect(useAuthStoreAfterOriginChange.getState().auth.accessToken).toBe(
+      'electron-token'
+    )
+
+    useAuthStoreAfterOriginChange.getState().auth.reset()
+    expect(electronState).toEqual({ initialized: true, session: null })
   })
 
   it('stores a non-remembered session only in session storage', async () => {
