@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import http from 'http';
+import path from 'node:path';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import express from 'express';
@@ -32,6 +34,7 @@ import {
   PERMISSION_MODULE,
 } from '../src/constants/permissions.js';
 import { getDefaultPermissions } from '../src/services/permissionService.js';
+import { config } from '../src/config/env.js';
 
 let mongod;
 let testServer;
@@ -136,24 +139,65 @@ test('1. API Health Check endpoint returns valid status', async () => {
 });
 
 test('1a. Public branding returns the saved login image without authentication', async () => {
-  const updateRes = await request('/api/settings', {
-    method: 'POST',
-    token: adminToken,
-    body: {
-      key: 'loginImageUrl',
-      value: '/uploads/branding/login.webp',
-    },
-  });
-  assert.equal(updateRes.status, 200);
-
   const res = await request('/api/settings/public/branding');
 
   assert.equal(res.status, 200);
-  assert.equal(
-    res.body.data.branding.loginImageUrl,
-    '/uploads/branding/login.webp',
-  );
+  assert.equal(res.body.data.branding.loginImageUrl, '');
   assert.equal(res.body.data.branding.appName, 'Raisoni ERP');
+
+  const directUpdateRes = await request('/api/settings', {
+    method: 'POST',
+    token: adminToken,
+    body: { key: 'loginImageUrl', value: '' },
+  });
+  assert.equal(directUpdateRes.status, 400);
+});
+
+test('1b. Login branding image upload requires Settings Update', async () => {
+  const pngHeader = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ]);
+  const uploadUrl = new URL('/api/settings/branding/image', baseUrl);
+
+  const forbiddenRes = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${staffToken}`,
+      'Content-Type': 'image/png',
+    },
+    body: pngHeader,
+  });
+  assert.equal(forbiddenRes.status, 403);
+
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+      'Content-Type': 'image/png',
+    },
+    body: pngHeader,
+  });
+  const uploadBody = await uploadRes.json();
+  assert.equal(uploadRes.status, 200);
+  assert.match(
+    uploadBody.data.branding.loginImageUrl,
+    /^\/uploads\/branding\/login-[a-f0-9]+\.png$/,
+  );
+
+  const publicRes = await request('/api/settings/public/branding');
+  assert.equal(
+    publicRes.body.data.branding.loginImageUrl,
+    uploadBody.data.branding.loginImageUrl,
+  );
+
+  await fs.promises.rm(
+    path.resolve(
+      config.dataDir,
+      'uploads/branding',
+      path.basename(uploadBody.data.branding.loginImageUrl),
+    ),
+    { force: true },
+  );
 });
 
 test('2. Authentication - Reject invalid login credentials', async () => {

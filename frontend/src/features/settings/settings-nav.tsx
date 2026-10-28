@@ -6,7 +6,7 @@ import { buttonVariants } from '@/components/ui/button'
 type SettingsNavProps = {
   items: readonly {
     title: string
-    href: '/settings' | '/settings/password'
+    href: '/settings' | '/settings/password' | '/settings/branding'
     icon: LucideIcon
   }[]
 }

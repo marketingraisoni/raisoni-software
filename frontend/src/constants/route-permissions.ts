@@ -17,6 +17,12 @@ type RoutePermissionRule = AuthenticatedRoutePermission & {
 
 const AUTHENTICATED_ROUTE_PERMISSIONS: readonly RoutePermissionRule[] = [
   {
+    path: '/settings/branding',
+    module: PERMISSION_MODULE.SETTINGS,
+    action: PERMISSION_ACTION.UPDATE,
+    exact: true,
+  },
+  {
     path: '/semi-polish/packet-scanner',
     module: PERMISSION_MODULE.SEMI_POLISH,
     action: PERMISSION_ACTION.UPDATE,

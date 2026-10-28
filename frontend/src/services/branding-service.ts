@@ -6,12 +6,27 @@ export type PublicBranding = {
   loginImageUrl: string
 }
 
+export const publicBrandingQueryKey = ['settings', 'public-branding'] as const
+
 export async function getPublicBranding() {
   const { data: response } = await apiClient.get<
     ApiResponse<{ branding: PublicBranding }>
   >('/settings/public/branding', { timeout: 4_000 })
 
   return response.data.branding
+}
+
+export async function uploadLoginBrandingImage(file: File) {
+  const { data: response } = await apiClient.post<
+    ApiResponse<{ branding: PublicBranding }>
+  >('/settings/branding/image', file, {
+    headers: { 'Content-Type': file.type },
+  })
+
+  return {
+    message: response.message,
+    branding: response.data.branding,
+  }
 }
 
 export function resolveBrandingImageUrl(value: string) {

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import * as settingController from '../controllers/settingController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
 import { permit } from '../middleware/permissionMiddleware.js';
@@ -16,6 +16,16 @@ router.get('/public/branding', settingController.getPublicBranding);
 router.use(authenticate);
 
 router.get('/support', settingController.getSupportContacts);
+
+router.post(
+  '/branding/image',
+  permit(PERMISSION_MODULE.SETTINGS, PERMISSION_ACTION.UPDATE),
+  express.raw({
+    type: ['image/jpeg', 'image/png', 'image/webp'],
+    limit: '9mb',
+  }),
+  settingController.uploadLoginImage,
+);
 
 router.get(
   '/',

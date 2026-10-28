@@ -28,6 +28,11 @@ describe('authenticated route permissions', () => {
       PERMISSION_ACTION.READ,
     ],
     ['/permissions', PERMISSION_MODULE.PERMISSIONS, PERMISSION_ACTION.READ],
+    [
+      '/settings/branding',
+      PERMISSION_MODULE.SETTINGS,
+      PERMISSION_ACTION.UPDATE,
+    ],
     ['/chats', PERMISSION_MODULE.CHAT, PERMISSION_ACTION.READ],
   ])('maps %s to %s:%s', (path, module, action) => {
     expect(getAuthenticatedRoutePermission(path)).toEqual({ module, action })
