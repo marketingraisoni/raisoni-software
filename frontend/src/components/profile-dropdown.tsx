@@ -30,14 +30,14 @@ export function ProfileDropdown() {
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant='ghost' className='relative h-8 w-8 rounded-full'>
+          <Button aria-label='Open profile menu' variant='ghost' className='relative h-8 w-8 rounded-full'>
             <Avatar className='h-8 w-8'>
               <AvatarImage src={user?.avatarUrl || ''} alt={user?.name || ''} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className='w-56' align='end' forceMount>
+        <DropdownMenuContent className='w-56' align='end'>
           <DropdownMenuLabel className='font-normal'>
             <div className='flex flex-col gap-1.5'>
               <p className='text-sm leading-none font-medium'>
@@ -99,7 +99,7 @@ export function ProfileDropdown() {
             </Tabs>
           </div>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
+          <DropdownMenuItem variant='destructive' onSelect={() => setOpen(true)}>
             <LogOut className='size-4' />
             Sign out
           </DropdownMenuItem>

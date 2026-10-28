@@ -1,6 +1,6 @@
 {
   "name": "raisoni-erp",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Windows desktop business management application with a shared LAN server",
   "main": "desktop/main.cjs",
   "type": "module",
@@ -44,8 +44,8 @@
     "server:firewall": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/server-firewall.ps1",
     "desktop": "electron desktop/main.cjs",
     "desktop:dev": "cross-env RAISONI_SERVER_URL=http://localhost:9091 electron desktop/main.cjs",
-    "pack": "node scripts/package-electron.cjs --dir",
-    "dist": "node scripts/package-electron.cjs --bump-version",
+    "pack": "npm run frontend:build:production && node scripts/package-electron.cjs --dir",
+    "dist": "npm run frontend:build:production && node scripts/package-electron.cjs --bump-version",
     "dist:verify": "node scripts/verify-electron-package.cjs"
   },
   "keywords": [

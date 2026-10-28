@@ -34,6 +34,9 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
       watch: false,
+      // Report online only after database initialization and HTTP listening.
+      wait_ready: true,
+      listen_timeout: 120000,
 
       // Production server: serves the UI and API on 0.0.0.0:2000 for every LAN PC and desktop app.
       env: {

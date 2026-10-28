@@ -17,7 +17,7 @@ if (!gotTheLock) {
 // both the UI and the API. Nothing (backend, database, UI build) is bundled here.
 const DEFAULT_SERVER_URL = 'http://192.168.1.125:2000';
 const HEALTH_TIMEOUT_MS = 4000;
-const RETRY_DELAY_MS = 5000;
+const RETRY_DELAY_MS = 1000;
 // Must match backend/src/services/discoveryService.js.
 const DISCOVERY_PORT = 47800;
 const DISCOVERY_REQUEST = 'RAISONI_ERP_DISCOVER_V1';
@@ -31,6 +31,7 @@ let serverUrl = null;
 let isServerUrlForced = false;
 let retryTimer = null;
 let isConnecting = false;
+let connectionController = null;
 
 function escapeHtml(value) {
   return String(value)
@@ -109,13 +110,19 @@ function resolveServerUrl() {
   return DEFAULT_SERVER_URL;
 }
 
-async function isServerReachable(url) {
+async function isServerReachable(url, signal) {
   try {
-    const response = await net.fetch(`${url}/api/health`, {
-      signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+    const options = {
+      signal: AbortSignal.any([signal, AbortSignal.timeout(HEALTH_TIMEOUT_MS)]),
       cache: 'no-store'
-    });
-    return response.ok;
+    };
+    let response = await net.fetch(`${url}/api/health/ready`, options);
+    // Older LAN servers do not yet have the lightweight readiness endpoint.
+    if (response.status === 404) response = await net.fetch(`${url}/api/health`, options);
+    if (!response.ok) return false;
+    const health = await response.json();
+    return health.success === true && health.data?.status === 'ok' &&
+      health.data?.database?.connected === true;
   } catch {
     return false;
   }
@@ -136,7 +143,7 @@ function getBroadcastAddresses() {
 }
 
 // Broadcasts on the LAN and resolves with the first server that answers, or null.
-function discoverServer() {
+function discoverServer(signal) {
   return new Promise((resolve) => {
     const socket = dgram.createSocket('udp4');
     let settled = false;
@@ -144,6 +151,7 @@ function discoverServer() {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
       try {
         socket.close();
       } catch {
@@ -152,12 +160,15 @@ function discoverServer() {
       resolve(url);
     };
     const timer = setTimeout(() => finish(null), DISCOVERY_TIMEOUT_MS);
+    const onAbort = () => finish(null);
+    signal.addEventListener('abort', onAbort, { once: true });
+    if (signal.aborted) return finish(null);
 
     socket.on('error', () => finish(null));
     socket.on('message', (message, remote) => {
       try {
         const reply = JSON.parse(message.toString('utf8'));
-        if (reply.service === DISCOVERY_SERVICE && Number.isInteger(reply.port)) {
+        if (reply.service === DISCOVERY_SERVICE && Number.isInteger(reply.port) && reply.port > 0 && reply.port <= 65535) {
           finish(`http://${remote.address}:${reply.port}`);
         }
       } catch {
@@ -203,22 +214,25 @@ async function connectToServer() {
   isConnecting = true;
   clearTimeout(retryTimer);
   retryTimer = null;
+  const window = mainWindow;
+  const controller = new AbortController();
+  connectionController = controller;
   try {
-    let reachable = await isServerReachable(serverUrl);
-
-    // Saved address failed: the server may have a new IP. Find it and remember it.
-    if (!reachable && !isServerUrlForced) {
-      const discoveredUrl = await discoverServer();
-      if (discoveredUrl && discoveredUrl !== serverUrl && (await isServerReachable(discoveredUrl))) {
-        console.log(`Found the Raisoni ERP server at ${discoveredUrl}`);
-        serverUrl = discoveredUrl;
-        saveUserServerUrl(discoveredUrl);
-        reachable = true;
-      }
+    const checkServer = async (url) => {
+      if (url && await isServerReachable(url, controller.signal)) return url;
+      throw new Error('Server is not ready');
+    };
+    const candidates = [checkServer(serverUrl)];
+    if (!isServerUrlForced) {
+      candidates.push(discoverServer(controller.signal).then(checkServer));
     }
-
-    if (reachable) {
-      await mainWindow.loadURL(serverUrl);
+    const readyUrl = await Promise.any(candidates).catch(() => null);
+    controller.abort();
+    if (mainWindow !== window || window.isDestroyed()) return;
+    if (readyUrl) {
+      if (serverUrl !== readyUrl) saveUserServerUrl(readyUrl);
+      serverUrl = readyUrl;
+      await window.loadURL(serverUrl);
       return;
     }
     await showOfflinePage();
@@ -228,6 +242,8 @@ async function connectToServer() {
     await showOfflinePage().catch(() => {});
     scheduleReconnect();
   } finally {
+    controller.abort();
+    if (connectionController === controller) connectionController = null;
     isConnecting = false;
   }
 }
@@ -300,6 +316,7 @@ async function createWindow() {
 
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   mainWindow.on('closed', () => {
+    connectionController?.abort();
     clearTimeout(retryTimer);
     retryTimer = null;
     mainWindow = null;
