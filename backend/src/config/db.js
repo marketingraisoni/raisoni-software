@@ -28,7 +28,7 @@ export async function connectDB() {
   const uri = config.mongoUri;
   // Retrying only helps when a MongoDB service exists and may still be booting. On a PC that
   // relies on the bundled database, waiting would just delay every start by ~70 seconds.
-  const attempts = isMongoServiceInstalled(uri) ? config.mongoConnectRetries + 1 : 1;
+  const attempts = isMongoServiceStartingOrRunning(uri) ? config.mongoConnectRetries + 1 : 1;
   let lastError = null;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -64,13 +64,13 @@ export async function connectDB() {
   throw lastError;
 }
 
-function isMongoServiceInstalled(uri) {
+function isMongoServiceStartingOrRunning(uri) {
   const isLocalUri = /^mongodb:\/\/(127\.0\.0\.1|localhost)[:/]/i.test(uri);
-  // Remote URIs, or non-Windows hosts: we cannot tell, so honour the configured retries.
   if (!isLocalUri || process.platform !== 'win32') return true;
 
   const result = spawnSync('sc.exe', ['query', 'MongoDB'], { timeout: 3000, windowsHide: true });
-  return result.status === 0;
+  // A stopped service cannot become ready through retries; use the configured fallback.
+  return result.status === 0 && !/\bSTOPPED\b/.test(result.stdout?.toString() || '');
 }
 
 // Remembers where the bundled mongod is listening. If the backend was killed without a

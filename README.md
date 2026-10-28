@@ -57,12 +57,19 @@ node scripts/package-electron.cjs --server=http://<ip>:2000   # different server
 The installer contains no backend or database; it opens the server's UI, so server updates reach every PC without
 reinstalling.
 
+`npm run pack` and `npm run dist` also rebuild `frontend/dist` in production mode. If packaging on a different PC,
+deploy the updated server source and frontend build to the server PC with `npm run pm2:deploy`.
+
 How it finds the server:
 
-1. Tries the last address that worked (first run: http://192.168.1.125:2000).
-2. If that fails, searches the office network (UDP broadcast on port 47800). The production server answers with its
-   address, which the app saves for next time, so a changed server IP needs no configuration.
-3. Otherwise it shows a waiting screen with **Retry now** and keeps retrying every 5 seconds.
+1. Checks the last address that worked (first run: http://192.168.1.125:2000) and searches the office network
+   (UDP broadcast on port 47800) at the same time. An explicit `RAISONI_SERVER_URL` disables discovery.
+2. Opens the first server whose `/api/health/ready` confirms database readiness. A changed server address is saved.
+3. Otherwise it shows a waiting screen with **Retry now** and retries one second after each connection check.
+
+PM2 waits for the backend's ready signal after database initialization and HTTP listening.
+MongoDB services that are still starting retain their configured startup retry window; a stopped service
+gets one connection attempt before the configured embedded fallback is used.
 
 Discovery only works within the same office network/subnet. To set the address by hand, edit
 `%APPDATA%\Raisoni ERP\server.json`:

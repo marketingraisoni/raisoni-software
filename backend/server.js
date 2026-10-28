@@ -100,7 +100,13 @@ app.use('/api/*', apiNotFound);
 
 // 7. Serve frontend static build on configured port (port 2000 in production) for LAN office access
 if (fs.existsSync(frontendDistPath)) {
-  app.use(express.static(frontendDistPath));
+  app.use(express.static(frontendDistPath, {
+    setHeaders(res, filePath) {
+      // Always revalidate the entry point after a server/frontend deployment.
+      // Hashed assets can still use normal static-file caching.
+      if (path.basename(filePath) === 'index.html') res.setHeader('Cache-Control', 'no-store');
+    }
+  }));
   app.get('*', (req, res, next) => {
     if (
       req.originalUrl.startsWith('/api') ||
@@ -109,6 +115,8 @@ if (fs.existsSync(frontendDistPath)) {
     ) {
       return next();
     }
+    if (req.path.startsWith('/assets/')) return res.sendStatus(404);
+    res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
 }
@@ -179,6 +187,7 @@ export async function startServer(port = config.port) {
           logger.info(`   - [${net.interface}]: http://${net.address}:${actualPort}/api`);
         });
         logger.success('====================================================');
+        if (process.send) process.send('ready');
         resolve({ app, httpServer, port: actualPort, primaryLanIp });
       };
 
