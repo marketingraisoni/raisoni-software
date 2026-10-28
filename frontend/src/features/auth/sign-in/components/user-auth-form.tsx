@@ -3,12 +3,13 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
+import { getApiErrorMessage, login } from '@/services/auth-service'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
-import { getApiErrorMessage, login } from '@/services/auth-service'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
@@ -23,6 +24,7 @@ import { PasswordInput } from '@/components/password-input'
 const formSchema = z.object({
   username: z.string().trim().min(1, 'Please enter your username or email.'),
   password: z.string().min(1, 'Please enter your password.'),
+  rememberMe: z.boolean(),
 })
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
@@ -43,6 +45,7 @@ export function UserAuthForm({
     defaultValues: {
       username: '',
       password: '',
+      rememberMe: false,
     },
   })
 
@@ -50,8 +53,12 @@ export function UserAuthForm({
     setIsLoading(true)
 
     try {
-      const response = await login(data.username, data.password)
-      auth.setSession(response.user, response.token)
+      const response = await login(
+        data.username,
+        data.password,
+        data.rememberMe
+      )
+      auth.setSession(response.user, response.token, data.rememberMe)
 
       await navigate({
         to: getSafeRedirectPath(redirectTo),
@@ -103,6 +110,29 @@ export function UserAuthForm({
                 />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name='rememberMe'
+          render={({ field }) => (
+            <FormItem className='flex flex-row items-center gap-2 space-y-0'>
+              <FormControl>
+                <Checkbox
+                  id='remember-me'
+                  checked={field.value}
+                  onCheckedChange={(checked) =>
+                    field.onChange(checked === true)
+                  }
+                />
+              </FormControl>
+              <FormLabel
+                htmlFor='remember-me'
+                className='cursor-pointer font-normal'
+              >
+                Remember me on this device
+              </FormLabel>
             </FormItem>
           )}
         />

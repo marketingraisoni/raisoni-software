@@ -54,7 +54,7 @@ async function removeStoredProfilePhoto(avatarUrl) {
 }
 
 export const login = asyncHandler(async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, rememberMe } = req.body;
   const loginIdentifier = username.toLowerCase();
 
   const user = await User.findOne({
@@ -75,7 +75,11 @@ export const login = asyncHandler(async (req, res) => {
   const token = jwt.sign(
     { id: user._id, username: user.username, userType: user.userType },
     config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn },
+    {
+      expiresIn: rememberMe
+        ? config.jwtRememberMeExpiresIn
+        : config.jwtExpiresIn,
+    },
   );
 
   await logAudit({
@@ -84,7 +88,7 @@ export const login = asyncHandler(async (req, res) => {
     entityId: user._id.toString(),
     user,
     req,
-    details: { userType: user.userType },
+    details: { userType: user.userType, rememberMe },
   });
 
   return sendSuccess(res, {

@@ -58,6 +58,7 @@ export const config = Object.freeze({
     process.env.JWT_SECRET ||
     'fallback_development_secret_only_never_use_in_production_32char',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
+  jwtRememberMeExpiresIn: process.env.JWT_REMEMBER_ME_EXPIRES_IN || '30d',
   corsOrigin: process.env.CORS_ORIGIN || '*',
   appName: process.env.APP_NAME || 'Raisoni ERP',
   appVersion: process.env.APP_VERSION || '1.0.0',

@@ -103,14 +103,34 @@ describe('UserAuthForm', () => {
       await userEvent.click(signInButton)
 
       await vi.waitFor(() => expect(loginMock).toHaveBeenCalledOnce())
-      expect(loginMock).toHaveBeenCalledWith('admin', '123456')
+      expect(loginMock).toHaveBeenCalledWith('admin', '123456', false)
       expect(setSessionMock).toHaveBeenCalledWith(
         expect.objectContaining({ username: 'admin', userType: 2 }),
-        'real-jwt-token'
+        'real-jwt-token',
+        false
       )
 
       await vi.waitFor(() =>
         expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true })
+      )
+    })
+
+    it('creates a persistent session when Remember me is selected', async () => {
+      await userEvent.fill(usernameInput, 'admin')
+      await userEvent.fill(passwordInput, '123456')
+      await userEvent.click(
+        screen.getByRole('checkbox', { name: /Remember me on this device/i })
+      )
+
+      await userEvent.click(signInButton)
+
+      await vi.waitFor(() =>
+        expect(loginMock).toHaveBeenCalledWith('admin', '123456', true)
+      )
+      expect(setSessionMock).toHaveBeenCalledWith(
+        expect.objectContaining({ username: 'admin' }),
+        'real-jwt-token',
+        true
       )
     })
   })

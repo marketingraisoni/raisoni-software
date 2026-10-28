@@ -6,6 +6,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import jwt from 'jsonwebtoken';
 
 // Models
 import { User } from '../src/models/User.js';
@@ -151,6 +152,20 @@ test('3. Authentication - Successfully login and receive JWT', async () => {
   assert.equal(res.status, 200);
   assert.ok(res.body.data.token);
   assert.equal(res.body.data.user.username, 'testadmin');
+
+  const rememberedRes = await request('/api/auth/login', {
+    method: 'POST',
+    body: {
+      username: 'testadmin',
+      password: 'Password@123',
+      rememberMe: true,
+    },
+  });
+  const standardToken = jwt.decode(res.body.data.token);
+  const rememberedToken = jwt.decode(rememberedRes.body.data.token);
+
+  assert.equal(rememberedRes.status, 200);
+  assert.ok(rememberedToken.exp > standardToken.exp);
 });
 
 test('3a. Profile - Signed-in user can update their name and username', async () => {

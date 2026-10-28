@@ -7,6 +7,7 @@ export const loginSchema = z.object({
     .min(1, VALIDATION_MESSAGES.required('Username or email'))
     .trim(),
   password: z.string().min(1, VALIDATION_MESSAGES.required('Password')),
+  rememberMe: z.boolean().optional().default(false),
 });
 
 export const changePasswordSchema = z.object({

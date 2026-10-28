@@ -47,7 +47,11 @@ type LegacyCurrentUserResponse = {
 
 function resolveAvatarUrl(url?: string): string {
   if (!url) return ''
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+  if (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('data:')
+  ) {
     return url
   }
   const baseUrl = (import.meta.env.VITE_API_URL || '').replace(/\/api\/?$/, '')
@@ -78,10 +82,14 @@ function normalizeAuthUser(user: LegacyLoginResponse['user']): AuthUser {
   }
 }
 
-export async function login(username: string, password: string) {
+export async function login(
+  username: string,
+  password: string,
+  rememberMe = false
+) {
   const { data: response } = await apiClient.post<
     ApiResponse<LoginData> | LegacyLoginResponse
-  >('/auth/login', { username, password })
+  >('/auth/login', { username, password, rememberMe })
 
   if ('data' in response) {
     return {
