@@ -83,14 +83,14 @@ function readPackagedServerUrl() {
 function saveUserServerUrl(url) {
   try {
     fs.mkdirSync(path.dirname(getUserConfigPath()), { recursive: true });
-    fs.writeFileSync(getUserConfigPath(), `${JSON.stringify({ serverUrl: url }, null, 2)}
-`, 'utf8');
+    fs.writeFileSync(getUserConfigPath(), `${JSON.stringify({ serverUrl: url }, null, 2)}\n`, 'utf8');
   } catch (error) {
     console.warn('Unable to remember the server address:', error);
   }
 }
 
-// Precedence: RAISONI_SERVER_URL env > %APPDATA%Raisoni ERPserver.json > URL baked in at build > default.
+// Precedence: RAISONI_SERVER_URL env > %APPDATA%\Raisoni ERP\server.json
+// > URL baked in at build > default.
 function resolveServerUrl() {
   const candidates = [
     process.env.RAISONI_SERVER_URL,
@@ -191,6 +191,15 @@ function scheduleReconnect() {
     retryTimer = null;
     connectToServer().catch(console.error);
   }, RETRY_DELAY_MS);
+}
+
+function isAllowedInAppUrl(value) {
+  if (value.startsWith('data:text/html')) return true;
+  try {
+    return new URL(value).origin === serverUrl;
+  } catch {
+    return false;
+  }
 }
 
 async function showOfflinePage() {
@@ -301,7 +310,7 @@ async function createWindow() {
         .catch(console.error);
       return;
     }
-    if (!navigationUrl.startsWith(serverUrl) && !navigationUrl.startsWith('data:text/html')) {
+    if (!isAllowedInAppUrl(navigationUrl)) {
       event.preventDefault();
     }
   });
@@ -314,7 +323,6 @@ async function createWindow() {
     scheduleReconnect();
   });
 
-  mainWindow.once('ready-to-show', () => mainWindow?.show());
   mainWindow.on('closed', () => {
     connectionController?.abort();
     clearTimeout(retryTimer);
