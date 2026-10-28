@@ -362,7 +362,7 @@ export function SemiPolishDetailPage({ processId }: Props) {
                     <ClipboardCheck />
                     {isReturned
                       ? 'Packet return records'
-                      : 'Planning & returns'}
+                      : 'Receive packets'}
                   </Link>
                 </Button>
               )}

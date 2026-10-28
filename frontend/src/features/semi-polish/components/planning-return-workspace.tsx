@@ -87,6 +87,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Tooltip,
   TooltipContent,
@@ -261,7 +262,7 @@ export function PlanningReturnWorkspace({
   const [resolutionPacketNumber, setResolutionPacketNumber] = useState<
     number | null
   >(null)
-  const [issueType, setIssueType] = useState('Piece count mismatch')
+  const [issueType, setIssueType] = useState('')
   const [issueDetails, setIssueDetails] = useState('')
   const [receivedDiamondDrafts, setReceivedDiamondDrafts] = useState<
     Record<number, Record<number, ReceivedDiamondDraft>>
@@ -665,7 +666,7 @@ export function PlanningReturnWorkspace({
   function resetInlineForms() {
     setDifferencePacketNumber(null)
     setResolutionPacketNumber(null)
-    setIssueType('Piece count mismatch')
+    setIssueType('')
     setIssueDetails('')
     setReturnNotes('')
     setResolutionNote('')
@@ -989,8 +990,15 @@ export function PlanningReturnWorkspace({
                   className={cn(isReceived && 'bg-emerald-500/[0.035]')}
                 >
                   <TableCell className='sticky left-0 z-[5] bg-background font-semibold'>
-                    <div className='flex items-center gap-2'>
+                    <Label
+                      htmlFor={`${inputPrefix}-selected`}
+                      className={cn(
+                        'flex items-center gap-2 py-1',
+                        canEdit && !isReceived && 'cursor-pointer'
+                      )}
+                    >
                       <Checkbox
+                        id={`${inputPrefix}-selected`}
                         aria-label={`Select planned piece ${piece.pieceNumber}`}
                         checked={isReceived || draft.selected}
                         disabled={isReceived || !canEdit}
@@ -1001,7 +1009,7 @@ export function PlanningReturnWorkspace({
                         }
                       />
                       <span>#{piece.pieceNumber}</span>
-                    </div>
+                    </Label>
                   </TableCell>
                   <TableCell className='font-mono font-semibold'>
                     {formatCarat(piece.polishedCarat)}
@@ -1129,6 +1137,76 @@ export function PlanningReturnWorkspace({
           </TableBody>
         </Table>
       </div>
+    )
+  }
+
+  function renderReportIssueDialog(
+    plan: SemiPolishPacketPlan,
+    returned: SemiPolishPacketReturn | null,
+    source: ReceivePacketInput['source']
+  ) {
+    const receiptSelection = getReceivedDiamondSelection(plan, returned)
+    const fieldPrefix = `report-${plan.packetNumber}`
+
+    return (
+      <ConfirmDialog
+        open={differencePacketNumber === plan.packetNumber}
+        onOpenChange={(open) => {
+          if (!open && !receiveMutation.isPending) resetInlineForms()
+        }}
+        title={`Report issue - Packet #${plan.packetNumber}`}
+        desc={`Report an issue for ${plan.rawPacketLabel || `packet #${plan.packetNumber}`}.`}
+        confirmText='Report issue'
+        destructive
+        isLoading={receiveMutation.isPending}
+        disabled={
+          !issueType.trim() ||
+          !issueDetails.trim() ||
+          (receiptSelection.receivedPieces.length > 0 && !receiptSelection.isValid)
+        }
+        className='max-h-[85vh] overflow-y-auto'
+        handleConfirm={() =>
+          receiveMutation.mutate({
+            plan,
+            hasDifference: true,
+            issueType,
+            issueDetails,
+            receivedPieces: receiptSelection.receivedPieces,
+            notes: returnNotes,
+            source,
+          })
+        }
+      >
+        <div className='space-y-4'>
+          <div className='space-y-1.5'>
+            <Label htmlFor={`${fieldPrefix}-type`}>Issue type</Label>
+            <Input
+              id={`${fieldPrefix}-type`}
+              placeholder='Piece count mismatch'
+              value={issueType}
+              onChange={(event) => setIssueType(event.target.value)}
+            />
+          </div>
+          <div className='space-y-1.5'>
+            <Label htmlFor={`${fieldPrefix}-details`}>Issue details</Label>
+            <Textarea
+              id={`${fieldPrefix}-details`}
+              placeholder='Describe the issue'
+              value={issueDetails}
+              onChange={(event) => setIssueDetails(event.target.value)}
+            />
+          </div>
+          <div className='space-y-1.5'>
+            <Label htmlFor={`${fieldPrefix}-notes`}>Return notes (optional)</Label>
+            <Textarea
+              id={`${fieldPrefix}-notes`}
+              placeholder='Add return notes'
+              value={returnNotes}
+              onChange={(event) => setReturnNotes(event.target.value)}
+            />
+          </div>
+        </div>
+      </ConfirmDialog>
     )
   }
 
@@ -1373,71 +1451,7 @@ export function PlanningReturnWorkspace({
                   ))}
               </div>
             ) : differenceActive ? (
-              <div className='space-y-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3'>
-                <div className='grid gap-3 sm:grid-cols-2'>
-                  <div className='space-y-1.5'>
-                    <Label htmlFor={`${fieldPrefix}-issue-type`}>
-                      Issue type
-                    </Label>
-                    <Input
-                      id={`${fieldPrefix}-issue-type`}
-                      value={issueType}
-                      onChange={(event) => setIssueType(event.target.value)}
-                    />
-                  </div>
-                  <div className='space-y-1.5 sm:col-span-2'>
-                    <Label htmlFor={`${fieldPrefix}-issue-details`}>
-                      Issue details
-                    </Label>
-                    <Textarea
-                      id={`${fieldPrefix}-issue-details`}
-                      value={issueDetails}
-                      onChange={(event) => setIssueDetails(event.target.value)}
-                    />
-                  </div>
-                  <div className='space-y-1.5 sm:col-span-2'>
-                    <Label htmlFor={`${fieldPrefix}-return-notes`}>
-                      Return notes (optional)
-                    </Label>
-                    <Textarea
-                      id={`${fieldPrefix}-return-notes`}
-                      value={returnNotes}
-                      onChange={(event) => setReturnNotes(event.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={resetInlineForms}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant='destructive'
-                    disabled={
-                      receiveMutation.isPending ||
-                      !issueType.trim() ||
-                      !issueDetails.trim() ||
-                      (receiptSelection.receivedPieces.length > 0 &&
-                        !receiptSelection.isValid)
-                    }
-                    onClick={() =>
-                      receiveMutation.mutate({
-                        plan,
-                        hasDifference: true,
-                        issueType,
-                        issueDetails,
-                        receivedPieces: receiptSelection.receivedPieces,
-                        notes: returnNotes,
-                        source: receiptSource,
-                      })
-                    }
-                  >
-                    {receivingThisPacket && (
-                      <Loader2 className='animate-spin' />
-                    )}
-                    Record issue
-                  </Button>
-                </div>
-              </div>
+              renderReportIssueDialog(plan, returned, receiptSource)
             ) : (
               <div className='flex flex-wrap items-end justify-between gap-3'>
                 <div className='space-y-1.5'>
@@ -1591,6 +1605,23 @@ export function PlanningReturnWorkspace({
                   }}
                 >
                   <AlertTriangle /> Review pending import
+                </Button>
+              )}
+              {processIsActive && (
+                <Button
+                  size='sm'
+                  variant='outline'
+                  disabled={uploadMutation.isPending || confirmMutation.isPending}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploadMutation.isPending ? (
+                    <Loader2 className='animate-spin' />
+                  ) : (
+                    <UploadCloud />
+                  )}
+                  {uploadMutation.isPending
+                    ? 'Uploading planning file...'
+                    : 'Replace planning file'}
                 </Button>
               )}
               <Button
@@ -2190,113 +2221,11 @@ export function PlanningReturnWorkspace({
                                                 ))}
                                             </div>
                                           ) : differenceActive ? (
-                                            <div className='space-y-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3'>
-                                              <div className='grid gap-3 sm:grid-cols-2'>
-                                                <div className='space-y-1.5'>
-                                                  <Label
-                                                    htmlFor={
-                                                      'issue-type-' +
-                                                      plan.packetNumber
-                                                    }
-                                                  >
-                                                    Issue type
-                                                  </Label>
-                                                  <Input
-                                                    id={
-                                                      'issue-type-' +
-                                                      plan.packetNumber
-                                                    }
-                                                    value={issueType}
-                                                    onChange={(event) =>
-                                                      setIssueType(
-                                                        event.target.value
-                                                      )
-                                                    }
-                                                  />
-                                                </div>
-                                                <div className='space-y-1.5 sm:col-span-2'>
-                                                  <Label
-                                                    htmlFor={
-                                                      'issue-details-' +
-                                                      plan.packetNumber
-                                                    }
-                                                  >
-                                                    Issue details
-                                                  </Label>
-                                                  <Textarea
-                                                    id={
-                                                      'issue-details-' +
-                                                      plan.packetNumber
-                                                    }
-                                                    value={issueDetails}
-                                                    onChange={(event) =>
-                                                      setIssueDetails(
-                                                        event.target.value
-                                                      )
-                                                    }
-                                                  />
-                                                </div>
-                                                <div className='space-y-1.5 sm:col-span-2'>
-                                                  <Label
-                                                    htmlFor={
-                                                      'return-notes-' +
-                                                      plan.packetNumber
-                                                    }
-                                                  >
-                                                    Return notes (optional)
-                                                  </Label>
-                                                  <Textarea
-                                                    id={
-                                                      'return-notes-' +
-                                                      plan.packetNumber
-                                                    }
-                                                    value={returnNotes}
-                                                    onChange={(event) =>
-                                                      setReturnNotes(
-                                                        event.target.value
-                                                      )
-                                                    }
-                                                  />
-                                                </div>
-                                              </div>
-                                              <div className='flex justify-end gap-2'>
-                                                <Button
-                                                  variant='outline'
-                                                  onClick={resetInlineForms}
-                                                >
-                                                  Cancel
-                                                </Button>
-                                                <Button
-                                                  variant='destructive'
-                                                  disabled={
-                                                    receiveMutation.isPending ||
-                                                    !issueType.trim() ||
-                                                    !issueDetails.trim() ||
-                                                    (receiptSelection
-                                                      .receivedPieces.length >
-                                                      0 &&
-                                                      !receiptSelection.isValid)
-                                                  }
-                                                  onClick={() =>
-                                                    receiveMutation.mutate({
-                                                      plan,
-                                                      hasDifference: true,
-                                                      issueType,
-                                                      issueDetails,
-                                                      receivedPieces:
-                                                        receiptSelection.receivedPieces,
-                                                      notes: returnNotes,
-                                                      source: 'manual',
-                                                    })
-                                                  }
-                                                >
-                                                  {receivingThisPacket && (
-                                                    <Loader2 className='animate-spin' />
-                                                  )}
-                                                  Record issue
-                                                </Button>
-                                              </div>
-                                            </div>
+                                            renderReportIssueDialog(
+                                              plan,
+                                              returned,
+                                              PACKET_RETURN_SOURCE.MANUAL
+                                            )
                                           ) : (
                                             <div className='flex flex-wrap items-end justify-between gap-3'>
                                               <div className='space-y-1.5'>
@@ -2322,7 +2251,6 @@ export function PlanningReturnWorkspace({
                                                   }
                                                 >
                                                   <AlertTriangle /> Report
-                                                  difference
                                                 </Button>
                                                 <Button
                                                   size='sm'
@@ -2582,17 +2510,6 @@ export function PlanningReturnWorkspace({
               >
                 <Download /> Original Excel
               </Button>
-              {processIsActive && (
-                <Button
-                  className='w-full flex-1'
-                  onClick={() => {
-                    setPlanningDetailsOpen(false)
-                    fileInputRef.current?.click()
-                  }}
-                >
-                  <UploadCloud /> Replace planning
-                </Button>
-              )}
             </SheetFooter>
           </SheetContent>
         </Sheet>

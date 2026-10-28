@@ -101,7 +101,9 @@ export function SemiPolishPlanningReturnPage({
                 <div className='flex flex-wrap items-center gap-2'>
                   <ClipboardCheck className='size-5 text-primary' />
                   <h1 className='truncate text-xl font-bold tracking-tight'>
-                    Planning and packet returns
+                    {process.status === 'returned'
+                      ? 'Packet return records'
+                      : 'Receive packets'}
                   </h1>
                   <Badge variant='outline'>
                     {statusLabels[process.status]}
@@ -118,6 +120,11 @@ export function SemiPolishPlanningReturnPage({
             </div>
           </div>
 
+          <p className='text-sm text-muted-foreground'>
+            {process.status === 'in_process'
+              ? 'Upload the planning Excel file, check returned packets, and confirm receipt. Uploaded the wrong file? Use Replace planning file in the toolbar.'
+              : 'View the planning file and packet return records for this process.'}
+          </p>
           <PlanningReturnWorkspace
             process={process}
             processId={processId}
