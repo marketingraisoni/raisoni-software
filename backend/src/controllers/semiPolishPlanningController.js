@@ -137,16 +137,6 @@ export const importPlanningWorkbook = asyncHandler(async (req, res) => {
     .createHash("sha256")
     .update(req.body)
     .digest("hex");
-  const duplicate = await SemiPolishPlanningImport.findOne({
-    process: process._id,
-    checksumSha256,
-    status: { $in: ["active", "needs_confirmation"] },
-  });
-  if (duplicate) {
-    throw ApiError.conflict(
-      "This planning file has already been imported for this 4P process.",
-    );
-  }
 
   let parsed;
   try {

@@ -31,6 +31,8 @@
     "backup": "npm run backup:production",
     "backup:development": "cross-env APP_ENV=development NODE_ENV=development node backend/scripts/backup.js",
     "backup:production": "cross-env APP_ENV=production NODE_ENV=production node backend/scripts/backup.js",
+    "planning-imports:clear:development": "cross-env APP_ENV=development NODE_ENV=development node backend/scripts/clear-planning-imports.js",
+    "planning-imports:clear:production": "cross-env APP_ENV=production NODE_ENV=production node backend/scripts/clear-planning-imports.js",
     "env:development": "cross-env APP_ENV=development NODE_ENV=development node backend/scripts/show-environment.js",
     "env:production": "cross-env APP_ENV=production NODE_ENV=production node backend/scripts/show-environment.js",
     "test": "node --test backend/tests/*.test.js",
