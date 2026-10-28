@@ -193,13 +193,16 @@ function scheduleReconnect() {
   }, RETRY_DELAY_MS);
 }
 
-function isAllowedInAppUrl(value) {
-  if (value.startsWith('data:text/html')) return true;
+function isServerOriginUrl(value) {
   try {
     return new URL(value).origin === serverUrl;
   } catch {
     return false;
   }
+}
+
+function isAllowedInAppUrl(value) {
+  return value.startsWith('data:text/html') || isServerOriginUrl(value);
 }
 
 async function showOfflinePage() {
@@ -318,7 +321,7 @@ async function createWindow() {
   // Server went away (reboot, network drop) while the user reloads or navigates.
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, _description, validatedUrl, isMainFrame) => {
     const isAborted = errorCode === -3;
-    if (isConnecting || !isMainFrame || isAborted || !validatedUrl.startsWith(serverUrl)) return;
+    if (isConnecting || !isMainFrame || isAborted || !isServerOriginUrl(validatedUrl)) return;
     showOfflinePage().catch(() => {});
     scheduleReconnect();
   });
