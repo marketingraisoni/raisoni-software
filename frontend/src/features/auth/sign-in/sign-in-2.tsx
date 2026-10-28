@@ -1,4 +1,9 @@
+import { useEffect, useState } from 'react'
 import { useSearch } from '@tanstack/react-router'
+import {
+  getPublicBranding,
+  resolveBrandingImageUrl,
+} from '@/services/branding-service'
 import { Logo } from '@/assets/logo'
 import { cn } from '@/lib/utils'
 import DashboardImg from './assets/dashboard-light.webp'
@@ -6,9 +11,33 @@ import { UserAuthForm } from './components/user-auth-form'
 
 export function SignIn2() {
   const { redirect } = useSearch({ from: '/(auth)/sign-in' })
+  const [brandingImage, setBrandingImage] = useState<string | null>(null)
+  const [brandingLoaded, setBrandingLoaded] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    getPublicBranding()
+      .then(({ loginImageUrl }) => {
+        if (active) setBrandingImage(resolveBrandingImageUrl(loginImageUrl))
+      })
+      .catch(() => {
+        if (active) setBrandingImage('')
+      })
+      .finally(() => {
+        if (active) setBrandingLoaded(true)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const imageSource = brandingLoaded ? brandingImage || DashboardImg : null
+
   return (
     <div className='relative container grid h-svh flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0'>
-      <div className='lg:p-8 border border-secondary max-w-max mx-auto bg-secondary rounded-md'>
+      <div className='mx-auto max-w-max rounded-md border border-secondary bg-secondary lg:p-8'>
         <div className='mx-auto flex w-full flex-col justify-center space-y-2 py-8'>
           <div className='mb-4 flex flex-col items-center justify-center gap-2'>
             <Logo width={128} height={128} />
@@ -28,16 +57,19 @@ export function SignIn2() {
 
       <div
         className={cn(
-          'relative h-full overflow-hidden flex items-center justify-center bg-muted max-lg:hidden',
+          'relative flex h-full items-center justify-center overflow-hidden bg-muted max-lg:hidden'
           // '[&>img]:absolute [&>img]:top-[15%] [&>img]:left-20 [&>img]:h-full [&>img]:w-full [&>img]:object-cover [&>img]:object-top-left [&>img]:select-none'
         )}
       >
-        <img
-          src={DashboardImg}
-          width={800}
-          height={800}
-          alt='Raisoni ERP dashboard'
-        />
+        {imageSource && (
+          <img
+            src={imageSource}
+            width={800}
+            height={800}
+            alt='Raisoni ERP dashboard'
+            onError={brandingImage ? () => setBrandingImage('') : undefined}
+          />
+        )}
       </div>
     </div>
   )

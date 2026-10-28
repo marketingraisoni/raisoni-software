@@ -135,6 +135,27 @@ test('1. API Health Check endpoint returns valid status', async () => {
   assert.ok(res.body.data.database.connected);
 });
 
+test('1a. Public branding returns the saved login image without authentication', async () => {
+  const updateRes = await request('/api/settings', {
+    method: 'POST',
+    token: adminToken,
+    body: {
+      key: 'loginImageUrl',
+      value: '/uploads/branding/login.webp',
+    },
+  });
+  assert.equal(updateRes.status, 200);
+
+  const res = await request('/api/settings/public/branding');
+
+  assert.equal(res.status, 200);
+  assert.equal(
+    res.body.data.branding.loginImageUrl,
+    '/uploads/branding/login.webp',
+  );
+  assert.equal(res.body.data.branding.appName, 'Raisoni ERP');
+});
+
 test('2. Authentication - Reject invalid login credentials', async () => {
   const res = await request('/api/auth/login', {
     method: 'POST',

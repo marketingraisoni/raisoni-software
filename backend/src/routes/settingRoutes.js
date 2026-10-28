@@ -11,6 +11,8 @@ import { updateSettingSchema } from '../validators/settingValidator.js';
 
 const router = Router();
 
+router.get('/public/branding', settingController.getPublicBranding);
+
 router.use(authenticate);
 
 router.get('/support', settingController.getSupportContacts);

@@ -129,6 +129,12 @@ export async function seedDatabase(options = { reset: false }) {
         description: 'Company legal entity',
       },
       {
+        key: 'loginImageUrl',
+        value: '',
+        category: 'branding',
+        description: 'Image shown on the right side of the sign-in page',
+      },
+      {
         key: 'currencySymbol',
         value: '₹',
         category: 'financial',

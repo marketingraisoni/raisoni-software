@@ -17,6 +17,33 @@ const supportContactDefaults = Object.freeze({
   softwareDepartmentPhone: '9974602511',
 });
 
+export const getPublicBranding = asyncHandler(async (_req, res) => {
+  const settingsDocs = await Setting.find({
+    key: { $in: ['appName', 'loginImageUrl'] },
+  }).lean();
+  const settings = Object.fromEntries(
+    settingsDocs.map(({ key, value }) => [key, value]),
+  );
+  const savedLoginImageUrl =
+    typeof settings.loginImageUrl === 'string'
+      ? settings.loginImageUrl.trim()
+      : '';
+  const savedAppName =
+    typeof settings.appName === 'string' ? settings.appName.trim() : '';
+
+  res.set('Cache-Control', 'no-store');
+
+  return sendSuccess(res, {
+    message: 'Public branding retrieved successfully',
+    data: {
+      branding: {
+        appName: savedAppName || config.appName,
+        loginImageUrl: savedLoginImageUrl,
+      },
+    },
+  });
+});
+
 export const getSupportContacts = asyncHandler(async (_req, res) => {
   const keys = Object.keys(supportContactDefaults);
   const settingsDocs = await Setting.find({ key: { $in: keys } }).lean();
