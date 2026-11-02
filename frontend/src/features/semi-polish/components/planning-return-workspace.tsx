@@ -821,10 +821,12 @@ export function PlanningReturnWorkspace({
   function getDefaultReceivedDiamondDraft(
     piece: SemiPolishPacketPlan['pieces'][number]
   ): ReceivedDiamondDraft {
+    // HPHT and 4P carats are actual weighed values entered by the user;
+    // the imported Planned CT must not prefill them.
     return {
       selected: false,
       hphtCarat: '',
-      fourPCarat: String(piece.polishedCarat),
+      fourPCarat: '',
       shape: piece.shape || '',
       barcode: '',
     }
@@ -1025,7 +1027,7 @@ export function PlanningReturnWorkspace({
                       <Input
                         id={`${inputPrefix}-hpht-carat`}
                         aria-label={`HPHT carat for piece ${piece.pieceNumber}`}
-                        className='h-8 font-mono placeholder:font-sans placeholder:normal-case'
+                        className='h-8 font-mono placeholder:font-sans placeholder:normal-case [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
                         type='number'
                         min='0.001'
                         step='0.001'
@@ -1053,11 +1055,11 @@ export function PlanningReturnWorkspace({
                       <Input
                         id={`${inputPrefix}-four-p-carat`}
                         aria-label={`4P carat for piece ${piece.pieceNumber}`}
-                        className='h-8 font-mono'
+                        className='h-8 font-mono placeholder:font-sans placeholder:normal-case [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
                         type='number'
                         min='0.001'
                         step='0.001'
-                        placeholder='0.000'
+                        placeholder='Optional'
                         data-ignore-packet-scanner='true'
                         disabled={!canEdit}
                         value={draft.fourPCarat}

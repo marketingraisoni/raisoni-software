@@ -59,10 +59,12 @@ type DiamondDraft = {
 }
 
 function defaultDraft(piece: PlannedPiece): DiamondDraft {
+  // HPHT and 4P carats are actual weighed values entered by the user;
+  // the imported Planned CT must not prefill them.
   return {
     selected: false,
     hphtCarat: '',
-    fourPCarat: String(piece.polishedCarat),
+    fourPCarat: '',
     shape: piece.shape || '',
     barcode: '',
   }
@@ -582,7 +584,7 @@ export function SemiPolishPacketReturnScannerPage() {
                                   min='0.001'
                                   step='0.001'
                                   placeholder='Optional'
-                                  className='h-8 font-mono placeholder:font-sans placeholder:normal-case'
+                                  className='h-8 font-mono placeholder:font-sans placeholder:normal-case [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
                                   disabled={!canReceive}
                                   value={draft.hphtCarat}
                                   onChange={(event) =>
@@ -606,7 +608,8 @@ export function SemiPolishPacketReturnScannerPage() {
                                   type='number'
                                   min='0.001'
                                   step='0.001'
-                                  className='h-8 font-mono'
+                                  placeholder='Optional'
+                                  className='h-8 font-mono placeholder:font-sans placeholder:normal-case [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
                                   disabled={!canReceive}
                                   value={draft.fourPCarat}
                                   onChange={(event) =>
