@@ -45,7 +45,7 @@ export function sendSuccess(
   });
 }
 
-export function sendError(res, { statusCode, message, errors }) {
+export function sendError(res, { statusCode, message, errors, requestId }) {
   const payload = {
     success: false,
     message,
@@ -53,6 +53,10 @@ export function sendError(res, { statusCode, message, errors }) {
 
   if (errors !== undefined) {
     payload.errors = serializeApiData(errors);
+  }
+  // Lets a user quote the exact failing call; search the logs for this id.
+  if (requestId) {
+    payload.requestId = requestId;
   }
 
   return res.status(statusCode).json(payload);

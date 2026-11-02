@@ -408,9 +408,9 @@ test('9. Orders - Server-side price, discount, and tax calculations', async () =
     method: 'POST',
     token: adminToken,
     body: {
-      customer: testCustomer._id,
+      customer: testCustomer.id,
       items: [
-        { product: testProduct._id, quantity: 2 }, // 2 * 7500 = 15000
+        { product: testProduct.id, quantity: 2 }, // 2 * 7500 = 15000
       ],
       discountPercent: 10, // 1500 discount -> 13500
       taxPercent: 18, // 18% of 13500 = 2430 -> total 15930
@@ -425,7 +425,7 @@ test('9. Orders - Server-side price, discount, and tax calculations', async () =
   assert.equal(res.body.data.order.totalAmount, 15930);
 
   // Verify stock decremented from 25 to 23
-  const updatedProd = await Product.findById(testProduct._id);
+  const updatedProd = await Product.findById(testProduct.id);
   assert.equal(updatedProd.stockQuantity, 23);
 });
 
@@ -434,9 +434,9 @@ test('10. Orders - Reject order when stock is insufficient', async () => {
     method: 'POST',
     token: adminToken,
     body: {
-      customer: testCustomer._id,
+      customer: testCustomer.id,
       items: [
-        { product: testProduct._id, quantity: 999 }, // far exceeds 23
+        { product: testProduct.id, quantity: 999 }, // far exceeds 23
       ],
     },
   });
@@ -452,8 +452,8 @@ test('11. Orders - Idempotency protection prevents duplicate submissions', async
     method: 'POST',
     token: adminToken,
     body: {
-      customer: testCustomer._id,
-      items: [{ product: testProduct._id, quantity: 1 }],
+      customer: testCustomer.id,
+      items: [{ product: testProduct.id, quantity: 1 }],
       idempotencyKey: idemKey,
     },
   });
@@ -464,8 +464,8 @@ test('11. Orders - Idempotency protection prevents duplicate submissions', async
     method: 'POST',
     token: adminToken,
     body: {
-      customer: testCustomer._id,
-      items: [{ product: testProduct._id, quantity: 1 }],
+      customer: testCustomer.id,
+      items: [{ product: testProduct.id, quantity: 1 }],
       idempotencyKey: idemKey,
     },
   });
@@ -482,14 +482,14 @@ test('12. Order Cancellation - Automatically restores inventory', async () => {
     method: 'POST',
     token: adminToken,
     body: {
-      customer: testCustomer._id,
-      items: [{ product: testProduct._id, quantity: 3 }],
+      customer: testCustomer.id,
+      items: [{ product: testProduct.id, quantity: 3 }],
     },
   });
   assert.equal(orderRes.status, 201);
-  const orderId = orderRes.body.data.order._id;
+  const orderId = orderRes.body.data.order.id;
 
-  const stockBeforeCancel = (await Product.findById(testProduct._id))
+  const stockBeforeCancel = (await Product.findById(testProduct.id))
     .stockQuantity;
 
   // Cancel the order
@@ -506,19 +506,19 @@ test('12. Order Cancellation - Automatically restores inventory', async () => {
   assert.equal(cancelRes.body.data.order.status, 'Cancelled');
 
   // Verify stock restored by +3
-  const stockAfterCancel = (await Product.findById(testProduct._id))
+  const stockAfterCancel = (await Product.findById(testProduct.id))
     .stockQuantity;
   assert.equal(stockAfterCancel, stockBeforeCancel + 3);
 });
 
 test('13. Inventory - Manual stock adjustment with audit trail', async () => {
-  const prevStock = (await Product.findById(testProduct._id)).stockQuantity;
+  const prevStock = (await Product.findById(testProduct.id)).stockQuantity;
 
   const adjRes = await request('/api/inventory/adjust', {
     method: 'POST',
     token: adminToken,
     body: {
-      productId: testProduct._id,
+      productId: testProduct.id,
       changeQuantity: 10,
       reason: 'Physical stock intake verification',
     },

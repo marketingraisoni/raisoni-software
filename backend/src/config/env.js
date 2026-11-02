@@ -70,8 +70,41 @@ export const config = Object.freeze({
   discoveryPort: parseInteger(process.env.DISCOVERY_PORT, 47800, 'DISCOVERY_PORT'),
   autoBackupEnabled: process.env.AUTO_BACKUP_ENABLED === 'true',
   backupIntervalHours,
-  backupRetentionDays
+  backupRetentionDays,
+  // Redis is optional: caching and rate limiting fall back to process memory when it is offline.
+  redisEnabled: process.env.REDIS_ENABLED !== 'false',
+  redisHost: process.env.REDIS_HOST || '127.0.0.1',
+  redisPort: parseInteger(process.env.REDIS_PORT, 6379, 'REDIS_PORT'),
+  redisPassword: process.env.REDIS_PASSWORD || undefined,
+  redisDb: parseNonNegativeInteger(process.env.REDIS_DB, 0),
+  redisKeyPrefix: process.env.REDIS_KEY_PREFIX || `raisoni:${environment}:`,
+  redisConnectTimeoutMs: parsePositiveInteger(process.env.REDIS_CONNECT_TIMEOUT_MS, 2000),
+  // A hung Redis must never hang an API request; slow commands fail over to memory.
+  redisCommandTimeoutMs: parsePositiveInteger(process.env.REDIS_COMMAND_TIMEOUT_MS, 1000),
+
+  // Logging
+  logLevel: resolveLogLevel(process.env.LOG_LEVEL, environment),
+  logDir: path.resolve(process.env.LOG_DIR || path.join(dataDir, 'logs')),
+  // node --test sets NODE_TEST_CONTEXT; keep test runs out of the real log files.
+  logToFile: process.env.LOG_TO_FILE
+    ? process.env.LOG_TO_FILE === 'true'
+    : !process.env.NODE_TEST_CONTEXT,
+  logRetentionDays: parsePositiveInteger(process.env.LOG_RETENTION_DAYS, 30),
+  slowRequestMs: parsePositiveInteger(process.env.SLOW_REQUEST_MS, 3000),
 });
+
+function resolveLogLevel(value, environmentName) {
+  const allowed = ['debug', 'http', 'info', 'warn', 'error'];
+  const normalized = String(value || '').trim().toLowerCase();
+  if (allowed.includes(normalized)) return normalized;
+  return environmentName === 'development' ? 'debug' : 'http';
+}
+
+function parsePositiveInteger(value, fallback) {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 function parseInteger(value, fallback, variableName) {
   if (value === undefined || value === '') return fallback;

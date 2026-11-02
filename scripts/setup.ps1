@@ -11,17 +11,93 @@ try {
     $nodeVersion = (node -v).Trim()
     $npmVersion = (npm -v).Trim()
     Write-Host "  [OK] Node.js $nodeVersion; npm $npmVersion" -ForegroundColor Green
+}
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
 } catch {
     Write-Error "Node.js 18+ and npm must be installed and available in PATH."
     exit 1
+}
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
 }
 
 Write-Host "[2/5] Checking MongoDB..." -ForegroundColor Yellow
 $mongoService = Get-Service -Name "MongoDB" -ErrorAction SilentlyContinue
 if ($mongoService -and $mongoService.Status -eq "Running") {
     Write-Host "  [OK] MongoDB Windows service is running." -ForegroundColor Green
+}
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
 } else {
     Write-Host "  [INFO] MongoDB service is not running. The backend falls back to the bundled database (npm run mongodb:download)." -ForegroundColor Cyan
+}
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
 }
 
 Write-Host "[3/5] Creating environment files..." -ForegroundColor Yellow
@@ -31,6 +107,25 @@ if (-not (Test-Path $sharedEnvironmentPath)) {
     Write-Host "  [OK] Created shared .env settings." -ForegroundColor Green
 }
 
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
+}
+
 foreach ($environment in @("development", "production")) {
     $environmentPath = Join-Path $rootDir ".env.$environment"
     if (Test-Path $environmentPath) {
@@ -38,11 +133,68 @@ foreach ($environment in @("development", "production")) {
         continue
     }
 
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
+}
+
     $randomBytes = New-Object byte[] 32
     $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     $rng.GetBytes($randomBytes)
     $rng.Dispose()
-    $jwtSecret = ($randomBytes | ForEach-Object { "{0:x2}" -f $_ }) -join ""
+    $jwtSecret = ($randomBytes | ForEach-Object { "{0:x2}
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
+}" -f $_ }
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
+}) -join ""
     $examplePath = Join-Path $rootDir ".env.$environment.example"
     $environmentContent = Get-Content -LiteralPath $examplePath -Raw
     $environmentContent = $environmentContent -replace '(?m)^JWT_SECRET=.*$', "JWT_SECRET=$jwtSecret"
@@ -50,9 +202,47 @@ foreach ($environment in @("development", "production")) {
     Write-Host "  [OK] Created .env.$environment with a unique JWT secret." -ForegroundColor Green
 }
 
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
+}
+
 Write-Host "[4/5] Installing dependencies..." -ForegroundColor Yellow
 npm install
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
+}
 
 Write-Host "[5/5] Initializing the development database..." -ForegroundColor Yellow
 $env:APP_ENV = "development"
@@ -60,8 +250,46 @@ $env:NODE_ENV = "development"
 try {
     node backend/scripts/seed.js
     Write-Host "  [OK] Development database initialized." -ForegroundColor Green
+}
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
 } catch {
     Write-Warning "Development database seeding could not complete: $_"
+}
+
+Write-Host "[2b/5] Checking Redis..." -ForegroundColor Yellow
+$redisPortOpen = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 6379, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success) {
+        $tcp.EndConnect($iar)
+        $redisPortOpen = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($redisPortOpen) {
+    Write-Host "  [OK] Redis is running on port 6379." -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] Redis is not detected on port 6379. Backend will use high-performance in-memory fallback cache (or install Redis via 'winget install Redis.Redis' or Memurai)." -ForegroundColor Cyan
 }
 
 Write-Host ""

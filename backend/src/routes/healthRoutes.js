@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { getDatabaseHealth } from '../config/db.js';
+import { getRedisHealth } from '../config/redis.js';
+import { cacheService } from '../services/cacheService.js';
 import { config } from '../config/env.js';
 import { API_MESSAGES } from '../constants/messages.js';
 import { getLocalIpAddresses, getPrimaryLanIp } from '../utils/network.js';
@@ -27,7 +29,11 @@ router.get('/ready', asyncHandler(async (_req, res) => {
 }));
 
 router.get('/', asyncHandler(async (_req, res) => {
-  const database = await getDatabaseHealth();
+  const [database, redis] = await Promise.all([
+    getDatabaseHealth(),
+    getRedisHealth(),
+  ]);
+  const cacheStats = cacheService.getStats();
   const primaryLanIp = getPrimaryLanIp();
 
   return sendSuccess(res, {
@@ -42,6 +48,8 @@ router.get('/', asyncHandler(async (_req, res) => {
       primaryLanIp,
       lanAddresses: getLocalIpAddresses(),
       database,
+      redis,
+      cache: cacheStats,
       serverPort: config.port,
     },
   });

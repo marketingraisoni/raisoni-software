@@ -7,6 +7,7 @@ import { USER_STATUS, USER_TYPE_LABEL } from '../constants/user.js';
 import { ApiError } from '../errors/ApiError.js';
 import { User } from '../models/User.js';
 import { ChatMessage } from '../models/ChatMessage.js';
+import { cacheService } from '../services/cacheService.js';
 import { emitToUser, isUserOnline, getOnlineUserIds } from '../sockets/socketManager.js';
 import { sendSuccess } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -84,60 +85,70 @@ export const getChatUsers = asyncHandler(async (req, res) => {
     .select('name username email userType lastLogin createdAt')
     .lean();
 
-  const userList = await Promise.all(
-    users.map(async (u) => {
-      const otherId = u._id;
+  // Two aggregations for all contacts instead of two queries per contact (this endpoint is polled).
+  const [lastMessages, unreadCounts] = await Promise.all([
+    ChatMessage.aggregate([
+      { $match: { $or: [{ sender: currentUserId }, { recipient: currentUserId }] } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: { $cond: [{ $eq: ['$sender', currentUserId] }, '$recipient', '$sender'] },
+          message: { $first: '$message' },
+          attachments: { $first: '$attachments' },
+          sender: { $first: '$sender' },
+          recipient: { $first: '$recipient' },
+          read: { $first: '$read' },
+          createdAt: { $first: '$createdAt' },
+          messageId: { $first: '$_id' },
+        },
+      },
+    ]).allowDiskUse(true),
+    ChatMessage.aggregate([
+      { $match: { recipient: currentUserId, read: false } },
+      { $group: { _id: '$sender', count: { $sum: 1 } } },
+    ]),
+  ]);
 
-      // Find the most recent message in the conversation
-      const lastMessage = await ChatMessage.findOne({
-        $or: [
-          { sender: currentUserId, recipient: otherId },
-          { sender: otherId, recipient: currentUserId },
-        ],
-      })
-        .sort({ createdAt: -1 })
-        .select('message attachments sender recipient read createdAt')
-        .lean();
-
-      // Count unread messages received from this user
-      const unreadCount = await ChatMessage.countDocuments({
-        sender: otherId,
-        recipient: currentUserId,
-        read: false,
-      });
-
-      const online = isUserOnline(otherId.toString());
-
-      return {
-        id: String(u._id),
-        name: u.name,
-        username: u.username,
-        email: u.email,
-        userType: u.userType,
-        userTypeLabel: USER_TYPE_LABEL[u.userType] || 'Staff',
-        isOnline: online,
-        lastLogin: u.lastLogin || null,
-        unreadCount,
-        lastMessage: lastMessage
-          ? {
-              id: String(lastMessage._id),
-              message:
-                lastMessage.message ||
-                (lastMessage.attachments?.length
-                  ? lastMessage.attachments[0].mimeType?.startsWith('image/')
-                    ? '📷 Photo'
-                    : '📎 Attachment'
-                  : ''),
-              hasAttachments: Boolean(lastMessage.attachments?.length),
-              senderId: String(lastMessage.sender),
-              recipientId: String(lastMessage.recipient),
-              read: lastMessage.read,
-              createdAt: lastMessage.createdAt,
-            }
-          : null,
-      };
-    })
+  const lastMessageByUser = new Map(
+    lastMessages.map((m) => [String(m._id), { ...m, _id: m.messageId }])
   );
+  const unreadByUser = new Map(unreadCounts.map((u) => [String(u._id), u.count]));
+
+  const userList = users.map((u) => {
+    const otherId = String(u._id);
+    const lastMessage = lastMessageByUser.get(otherId) || null;
+    const unreadCount = unreadByUser.get(otherId) || 0;
+    const online = isUserOnline(otherId);
+
+    return {
+      id: String(u._id),
+      name: u.name,
+      username: u.username,
+      email: u.email,
+      userType: u.userType,
+      userTypeLabel: USER_TYPE_LABEL[u.userType] || 'Staff',
+      isOnline: online,
+      lastLogin: u.lastLogin || null,
+      unreadCount,
+      lastMessage: lastMessage
+        ? {
+            id: String(lastMessage._id),
+            message:
+              lastMessage.message ||
+              (lastMessage.attachments?.length
+                ? lastMessage.attachments[0].mimeType?.startsWith('image/')
+                  ? '📷 Photo'
+                  : '📎 Attachment'
+                : ''),
+            hasAttachments: Boolean(lastMessage.attachments?.length),
+            senderId: String(lastMessage.sender),
+            recipientId: String(lastMessage.recipient),
+            read: lastMessage.read,
+            createdAt: lastMessage.createdAt,
+          }
+        : null,
+    };
+  });
 
   // Sort contacts: most recent conversation first, then online status, then alphabetical
   userList.sort((a, b) => {
@@ -250,6 +261,8 @@ export const getChatMessages = asyncHandler(async (req, res) => {
         { sender: userId, recipient: currentUserId, read: false },
         { $set: { read: true, readAt: new Date(), delivered: true } }
       );
+      // Clear cached lists/counters before notifying, so the refetch triggered by the socket event is fresh.
+      await cacheService.invalidateChatUsers(currentUserId, userId);
       emitToUser(userId, 'chat:read', { readerId: String(currentUserId) });
     }
   }
@@ -362,6 +375,9 @@ export const sendMessage = asyncHandler(async (req, res) => {
     createdAt: populated.createdAt,
   };
 
+  // Clear cached lists/counters of both users before the socket events make their clients refetch.
+  await cacheService.invalidateChatUsers(currentUserId, recipientId);
+
   // Real-time live reflection: emit to recipient and sender via WebSockets
   emitToUser(recipientId, 'chat:message', formattedMessage);
   emitToUser(currentUserId, 'chat:message', formattedMessage);
@@ -386,6 +402,7 @@ export const markMessagesRead = asyncHandler(async (req, res) => {
   );
 
   if (result.modifiedCount > 0) {
+    await cacheService.invalidateChatUsers(currentUserId, userId);
     emitToUser(userId, 'chat:read', { readerId: String(currentUserId) });
   }
 

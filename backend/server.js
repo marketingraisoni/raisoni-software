@@ -7,12 +7,16 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { config } from './src/config/env.js';
 import { connectDB, disconnectDB } from './src/config/db.js';
+import { initRedis, disconnectRedis, isRedisConnected } from './src/config/redis.js';
 import { initSocketIO } from './src/sockets/socketManager.js';
-import { logger } from './src/utils/logger.js';
+import { logger, startLogMaintenance, closeLogger } from './src/utils/logger.js';
+import { registerProcessGuards, startResourceMonitor, stopResourceMonitor } from './src/utils/processGuard.js';
 import { getLocalIpAddresses, getPrimaryLanIp } from './src/utils/network.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 import { apiNotFound } from './src/middleware/notFoundMiddleware.js';
 import { requestLogger } from './src/middleware/requestLogger.js';
+import { highFrequencyApiLimiter } from './src/middleware/rateLimitMiddleware.js';
+import { invalidateDashboardOnWrite } from './src/middleware/cacheMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +56,9 @@ import chatRoutes from './src/routes/chatRoutes.js';
 const app = express();
 const httpServer = http.createServer(app);
 
+// 0. Request id + logging first, so even body-parsing failures are logged with an id
+app.use(requestLogger);
+
 // 1. Security & Headers
 app.use(helmet({
   contentSecurityPolicy: false, // For desktop / SPA flexibility
@@ -63,18 +70,23 @@ app.use(cors({
   origin: config.corsOrigin === '*' ? true : config.corsOrigin.split(','),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-Id', 'X-No-Cache'],
+  exposedHeaders: ['X-Request-Id', 'X-Cache']
 }));
 
 // 3. Request body parsing with strict size limits
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// 4. Request logging
-app.use(requestLogger);
-
 // 5. Mount API Routes
 app.use('/api/health', healthRoutes);
+
+// Per-IP safety net against runaway clients (health checks above are not limited)
+app.use('/api', highFrequencyApiLimiter);
+// Any successful write clears the cached dashboard so it never shows stale totals
+app.use('/api', invalidateDashboardOnWrite({
+  excludePrefixes: ['/api/auth/login', '/api/auth/logout', '/api/chats'],
+}));
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/users', userRoutes);
@@ -132,7 +144,11 @@ initSocketIO(httpServer);
  */
 export async function startServer(port = config.port) {
   try {
+    logger.info(`Starting ${config.appName} backend v${config.appVersion} (${config.env}, pid ${process.pid}, node ${process.version})`);
+    if (config.logToFile) logger.info(`Log files: ${config.logDir} (level: ${config.logLevel}, kept ${config.logRetentionDays} days)`);
+    startLogMaintenance();
     await connectDB();
+    await initRedis();
     // Replace the former global Kapan uniqueness index with the active-only
     // index required by soft deletion and Kapan reuse.
     await Lot.syncIndexes();
@@ -171,6 +187,7 @@ export async function startServer(port = config.port) {
         httpServer.off('error', handleStartupError);
         startDatabaseBackupScheduler();
         startDiscoveryResponder();
+        startResourceMonitor();
         const primaryLanIp = getPrimaryLanIp();
         const lanIps = getLocalIpAddresses();
 
@@ -178,6 +195,7 @@ export async function startServer(port = config.port) {
         logger.success(` ${config.appName} Backend API Started`);
         logger.success(` Environment:  ${config.env}`);
         logger.success(` Database:     ${config.databaseName}`);
+        logger.success(` Cache:        ${isRedisConnected() ? 'Redis' : 'In-Memory Fallback'}`);
         const address = httpServer.address();
         const actualPort = typeof address === 'object' && address ? address.port : port;
         logger.success(` Local URL:    http://127.0.0.1:${actualPort}/api`);
@@ -196,7 +214,7 @@ export async function startServer(port = config.port) {
       httpServer.listen(port, config.host);
     });
   } catch (err) {
-    logger.error(`Server startup failed: ${err.message}`);
+    logger.error(`Server startup failed: ${err.message}`, { error: err });
     throw err;
   }
 }
@@ -210,12 +228,14 @@ export function stopServer() {
   logger.info('Shutting down server gracefully...');
   stopPromise = (async () => {
     stopDiscoveryResponder();
+    stopResourceMonitor();
     await stopDatabaseBackupScheduler();
     if (httpServer.listening) {
       await new Promise((resolve) => httpServer.close(() => resolve()));
     }
     await disconnectDB();
-    logger.info('Server and DB stopped.');
+    await disconnectRedis();
+    logger.info('Server, DB, and Redis stopped.');
   })();
   return stopPromise;
 }
@@ -224,25 +244,45 @@ export function stopServer() {
 const isDirectExecution = process.argv[1] && path.resolve(process.argv[1]) === __filename;
 const isPm2Execution = process.env.NODE_APP_INSTANCE !== undefined || process.env.pm_id !== undefined;
 
+const SHUTDOWN_TIMEOUT_MS = 8000; // below PM2 kill_timeout (10s)
+
+let exiting = false;
+async function shutdownAndExit(reason, exitCode = 0) {
+  if (exiting) return;
+  exiting = true;
+  logger[exitCode === 0 ? 'info' : 'error'](`Shutdown requested (${reason}).`);
+  const forceExit = setTimeout(() => {
+    logger.error(`Graceful shutdown took longer than ${SHUTDOWN_TIMEOUT_MS}ms; forcing exit.`);
+    closeLogger().finally(() => process.exit(exitCode || 1));
+  }, SHUTDOWN_TIMEOUT_MS);
+  forceExit.unref();
+  try {
+    await stopServer();
+  } catch (err) {
+    logger.error(`Error during shutdown: ${err.message}`, { error: err });
+  }
+  logger.info(`Process exiting with code ${exitCode}.`);
+  await closeLogger();
+  process.exit(exitCode);
+}
+
 if (isDirectExecution || isPm2Execution) {
-  startServer().catch(async () => {
+  registerProcessGuards({
+    onFatal: () => shutdownAndExit('uncaught exception', 1),
+  });
+
+  startServer().catch(() => {
     // Exit for real so PM2 restarts us; an open DB handle would otherwise keep a
     // non-listening process alive and PM2 would report it as "online".
-    await stopServer();
-    process.exit(1);
+    shutdownAndExit('startup failure', 1);
   });
 }
 
-async function shutdownAndExit() {
-  await stopServer();
-  process.exit(0);
-}
-
-process.on('SIGINT', shutdownAndExit);
-process.on('SIGTERM', shutdownAndExit);
+process.on('SIGINT', () => shutdownAndExit('SIGINT'));
+process.on('SIGTERM', () => shutdownAndExit('SIGTERM'));
 // PM2 on Windows cannot deliver signals; with shutdown_with_message it sends this instead.
 process.on('message', (message) => {
-  if (message === 'shutdown') shutdownAndExit();
+  if (message === 'shutdown') shutdownAndExit('PM2 shutdown message');
 });
 
 export { app, httpServer };

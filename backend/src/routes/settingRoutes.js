@@ -8,10 +8,16 @@ import {
   PERMISSION_MODULE,
 } from '../constants/permissions.js';
 import { updateSettingSchema } from '../validators/settingValidator.js';
+import { cacheResponse, invalidateCacheMiddleware } from '../middleware/cacheMiddleware.js';
 
 const router = Router();
 
-router.get('/public/branding', settingController.getPublicBranding);
+// Public branding is requested by every client login page
+router.get(
+  '/public/branding',
+  cacheResponse(300, { prefix: 'settings:branding' }),
+  settingController.getPublicBranding
+);
 
 router.use(authenticate);
 
@@ -24,19 +30,24 @@ router.post(
     type: ['image/jpeg', 'image/png', 'image/webp'],
     limit: '9mb',
   }),
-  settingController.uploadLoginImage,
+  invalidateCacheMiddleware('settings:*'),
+  settingController.uploadLoginImage
 );
 
 router.get(
   '/',
   permit(PERMISSION_MODULE.SETTINGS),
-  settingController.getSettings,
+  // Short TTL: the response also carries live system info (uptime, database health).
+  cacheResponse(60, { prefix: 'settings:all' }),
+  settingController.getSettings
 );
+
 router.post(
   '/',
   permit(PERMISSION_MODULE.SETTINGS, PERMISSION_ACTION.UPDATE),
   validate(updateSettingSchema),
-  settingController.updateSetting,
+  invalidateCacheMiddleware('settings:*'),
+  settingController.updateSetting
 );
 
 export default router;

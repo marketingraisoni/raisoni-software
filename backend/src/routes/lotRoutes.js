@@ -27,8 +27,8 @@ router.get(
   permit(PERMISSION_MODULE.ASSORTMENT),
   assortmentPacketController.getAssortmentPackets,
 );
+
 // Multi-grade routes are intentionally disabled. Assortment now uses built-in Grade A only.
-// The controller logic is retained so the former workflow can be restored if requirements change.
 router.put(
   "/:lotId/packets/:packetId",
   permit(PERMISSION_MODULE.ASSORTMENT),
@@ -56,6 +56,10 @@ router.put(
   validate(updateLotSchema),
   lotController.updateLot,
 );
-router.delete("/:id", permit(PERMISSION_MODULE.LOTS), lotController.deleteLot);
+router.delete(
+  "/:id",
+  permit(PERMISSION_MODULE.LOTS),
+  lotController.deleteLot,
+);
 
 export default router;

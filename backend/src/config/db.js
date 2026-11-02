@@ -10,7 +10,39 @@ export const persistentDbDir = path.resolve(config.dataDir, 'db');
 let embeddedMongoServer = null;
 let isUsingEmbedded = false;
 
+let connectionEventsAttached = false;
+let isDisconnecting = false;
+
+// Logs drops and recoveries after startup; mongoose reconnects on its own, but the
+// log shows exactly when the database went away and which requests failed meanwhile.
+function attachConnectionEventLogging() {
+  if (connectionEventsAttached) return;
+  connectionEventsAttached = true;
+  let disconnectedAt = null;
+  let hasConnected = false;
+
+  mongoose.connection.on('connected', () => {
+    hasConnected = true;
+  });
+  mongoose.connection.on('disconnected', () => {
+    // Failed startup attempts are already logged by connectDB itself.
+    if (isDisconnecting || !hasConnected) return;
+    disconnectedAt = Date.now();
+    logger.error('MongoDB connection lost. Requests needing the database will fail until it reconnects.');
+  });
+  mongoose.connection.on('reconnected', () => {
+    const seconds = disconnectedAt ? Math.round((Date.now() - disconnectedAt) / 1000) : null;
+    disconnectedAt = null;
+    logger.success(`MongoDB reconnected${seconds !== null ? ` after ${seconds}s` : ''}.`);
+  });
+  mongoose.connection.on('error', (err) => {
+    logger.error(`MongoDB connection error: ${err.message}`, { error: err });
+  });
+}
+
 export async function connectDB() {
+  attachConnectionEventLogging();
+  isDisconnecting = false;
   if (mongoose.connection.readyState === 1) {
     return mongoose.connection;
   }
@@ -150,6 +182,7 @@ async function connectEmbeddedDatabase() {
 }
 
 export async function disconnectDB() {
+  isDisconnecting = true;
   try {
     if (mongoose.connection.readyState !== 0) {
       await mongoose.disconnect();
